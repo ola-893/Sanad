@@ -1,0 +1,117 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17.5-alpine
+    container_name: sanad-postgres
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sanad-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis for caching and job queues
+  redis:
+    image: redis:7-alpine
+    container_name: sanad-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - sanad-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Ollama for AI services
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sanad-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - sanad-network
+    restart: unless-stopped
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /usr/bin/ollama serve &
+        sleep 5
+        ollama pull llama3.1:8b
+        wait
+
+  # Phoenix for observability
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: sanad-phoenix
+    ports:
+      - "6006:6006"
+    networks:
+      - sanad-network
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: ./dockerfile
+    container_name: sanad-backend
+    ports:
+      - "9926:9487"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sanad-network
+    volumes:
+      - ./backend/src:/app/src
+      - uploads_data:/app/public/uploads
+    environment:
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006/v1/traces
+      - UPLOADS_PATH=/app/public/uploads
+    env_file:
+      - ./backend/.env.production
+    restart: unless-stopped
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: sanad-frontend
+    ports:
+      - "9927:3000"
+    depends_on:
+      - backend
+    networks:
+      - sanad-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  sanad-network:
+    driver: bridge
