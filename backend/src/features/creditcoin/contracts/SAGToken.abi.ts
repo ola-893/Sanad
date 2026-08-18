@@ -33,6 +33,7 @@ export const SAG_TOKEN_ABI = [
   // AccessControl Functions
   "function COMPLIANCE_ROLE() external view returns (bytes32)",
   "function MINTER_ROLE() external view returns (bytes32)",
+  "function SETTLEMENT_ROLE() external view returns (bytes32)",
   "function DEFAULT_ADMIN_ROLE() external view returns (bytes32)",
   "function hasRole(bytes32 role, address account) external view returns (bool)",
   "function grantRole(bytes32 role, address account) external",

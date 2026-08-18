@@ -11,9 +11,10 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *      with on-chain AccessControl role-gated controls and OpenZeppelin v5 transfer hooks.
  */
 contract SAGToken is ERC721, AccessControl {
-    // Roles
+    // Segregated Roles for Compliance & Operations
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant SETTLEMENT_ROLE = keccak256("SETTLEMENT_ROLE");
 
     enum CollateralStatus { 
         PendingValuation, // 0
@@ -71,6 +72,7 @@ contract SAGToken is ERC721, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(COMPLIANCE_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
+        _grantRole(SETTLEMENT_ROLE, msg.sender);
     }
 
     // =========================================================================
@@ -137,7 +139,7 @@ contract SAGToken is ERC721, AccessControl {
     }
 
     // =========================================================================
-    // CORE MINTING & SETTLEMENT ACTIONS (MINTER_ROLE)
+    // ORIGINATION & MINTING ACTIONS (MINTER_ROLE)
     // =========================================================================
 
     /**
@@ -191,10 +193,14 @@ contract SAGToken is ERC721, AccessControl {
         return tokenId;
     }
 
+    // =========================================================================
+    // SETTLEMENT & LIFECYCLE ACTIONS (SETTLEMENT_ROLE)
+    // =========================================================================
+
     /**
      * @notice Updates the status of a collateral token
      */
-    function setStatus(uint256 tokenId, CollateralStatus status) external onlyRole(MINTER_ROLE) {
+    function setStatus(uint256 tokenId, CollateralStatus status) external onlyRole(SETTLEMENT_ROLE) {
         address owner = _ownerOf(tokenId);
         require(owner != address(0), "Token does not exist");
         require(!frozenToken[tokenId], "Compliance: Token is frozen");
@@ -205,9 +211,9 @@ contract SAGToken is ERC721, AccessControl {
     }
 
     /**
-     * @notice Marks a collateral loan as settled/repaid
+     * @notice Marks a collateral loan as settled/repaid upon verified proof
      */
-    function settleLoan(uint256 tokenId) external onlyRole(MINTER_ROLE) {
+    function settleLoan(uint256 tokenId) external onlyRole(SETTLEMENT_ROLE) {
         address owner = _ownerOf(tokenId);
         require(owner != address(0), "Token does not exist");
         require(!frozenToken[tokenId], "Compliance: Token is frozen");
@@ -235,7 +241,6 @@ contract SAGToken is ERC721, AccessControl {
 
         // 2. Transfer check: if existing token is being transferred (not minted and not admin wiped)
         if (from != address(0)) {
-            // For standard transfers (to != address(0)):
             if (to != address(0)) {
                 require(!frozenToken[tokenId], "Compliance: Token is frozen");
                 require(!frozenAddress[from], "Compliance: Sender address is frozen");

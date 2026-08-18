@@ -42,7 +42,7 @@ export function compileContracts() {
       },
       outputSelection: {
         '*': {
-          '*': ['abi', 'evm.bytecode'],
+          '*': ['abi', 'evm.bytecode', 'evm.deployedBytecode'],
         },
       },
     },
@@ -59,15 +59,30 @@ export function compileContracts() {
     }
   }
 
-  const compiled: Record<string, { abi: any; bytecode: string }> = {};
+  const compiled: Record<string, { abi: any; bytecode: string; deployedBytecode: string }> = {};
+  const EIP170_LIMIT = 24576; // 24 KB max runtime bytecode
 
-  for (const file of Object.keys(output.contracts || {})) {
+  console.log('\n--- CONTRACT SIZES & EIP-170 RUNTIME LIMIT (24,576 bytes) ---');
+  for (const file of ['RepaymentGateway.sol', 'SAGToken.sol', 'SanadLiquidityPool.sol']) {
+    if (!output.contracts[file]) continue;
     for (const name of Object.keys(output.contracts[file])) {
+      const contractData = output.contracts[file][name];
+      const initHex = contractData.evm.bytecode.object || '';
+      const runtimeHex = contractData.evm.deployedBytecode?.object || '';
+
+      const initBytes = initHex.length / 2;
+      const runtimeBytes = runtimeHex.length / 2;
+      const pctOfLimit = ((runtimeBytes / EIP170_LIMIT) * 100).toFixed(2);
+
       compiled[name] = {
-        abi: output.contracts[file][name].abi,
-        bytecode: output.contracts[file][name].evm.bytecode.object,
+        abi: contractData.abi,
+        bytecode: initHex,
+        deployedBytecode: runtimeHex,
       };
-      console.log(`[Compiler] Contract ${name} compiled successfully (bytecode length: ${compiled[name].bytecode.length})`);
+
+      console.log(`[Compiler] Contract ${name}:`);
+      console.log(`  - Creation/Init Bytecode: ${initBytes} bytes (${initHex.length} hex chars)`);
+      console.log(`  - Deployed Runtime Bytecode: ${runtimeBytes} bytes (${runtimeHex.length} hex chars) [${pctOfLimit}% of 24KB EIP-170 limit]`);
     }
   }
 
