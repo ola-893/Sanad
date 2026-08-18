@@ -13,7 +13,7 @@ import { UserNav } from "@/components/user-nav"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import { UserRole } from "@/hooks/use-user-role"
-import { Menu, X, LayoutDashboard, Search, Briefcase } from "lucide-react"
+import { Menu, X, LayoutDashboard, Wallet, CreditCard, Briefcase, LogOut } from "lucide-react"
 
 // Marketing nav — shown to visitors
 const marketingNavItems = [
@@ -25,24 +25,13 @@ const marketingNavItems = [
   { href: "/contact", key: "nav.contact" },
 ]
 
-// Portal nav — shown to logged-in users
-const portalNavByRole: Record<string, { href: string; label: string; icon: typeof LayoutDashboard }[]> = {
-  admin: [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/sag-listings", label: "SAG Listings", icon: Briefcase },
-    { href: "/admin/investors", label: "Investors", icon: Search },
-  ],
-  pawnshop: [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/sag-listings", label: "SAG Listings", icon: Briefcase },
-    { href: "/admin/repayment", label: "Repayments", icon: Briefcase },
-  ],
-  investor: [
-    { href: "/investor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/investor/browse", label: "Browse NFTs", icon: Search },
-    { href: "/investor/portfolio", label: "Investments", icon: Briefcase },
-  ],
-}
+// Portal nav — shown to logged-in users (all roles)
+const portalNav = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
+  { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/nft-collateral", label: "NFT Collateral", icon: Briefcase },
+]
 
 export function Header() {
   const { t } = useLanguage()
@@ -53,7 +42,6 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const loggedIn = isAuthenticated || !!user
-  const portalNav = portalNavByRole[role || ""] || []
 
   return (
     <header className="site-header sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
@@ -113,13 +101,22 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <LanguageToggle />
-          <ModeToggle />
-
           {loggedIn ? (
-            <UserNav user={user} role={role || ""} onLogout={logout} />
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full text-[#4A4A4A] hover:bg-white/50 hover:text-[#171414]"
+                onClick={() => logout()}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </>
           ) : (
             <>
+              <LanguageToggle />
+              <ModeToggle />
               <Button
                 variant="ghost"
                 size="sm"
