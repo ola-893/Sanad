@@ -40,8 +40,8 @@ def get_loan_details(loan_id: str) -> dict:
     Returns:
         dict: parsed loan details ready for LoanInput model
     """
-    base_url = os.getenv("SILSILAT_API_BASE", "https://api.sanad.finance")
-    api_key = os.getenv("SILSILAT_API_KEY")
+    base_url = os.getenv("SANAD_API_BASE", "https://api.sanad.finance")
+    api_key = os.getenv("SANAD_API_KEY")
 
     url = f"{base_url}/Sanad/{loan_id}"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -175,14 +175,14 @@ def get_yesterday_gold_price_myr() -> Optional[float]:
     Fetch yesterday's gold price in MYR per gram from the backend API.
     
     Environment:
-        SILSILAT_API_BASE
-        SILSILAT_API_KEY (optional, for authentication)
+        SANAD_API_BASE
+        SANAD_API_KEY (optional, for authentication)
     
     Returns:
         Optional[float]: yesterday's gold price in MYR per gram, or None if unavailable
     """
-    base_url = os.getenv("SILSILAT_API_BASE", "http://localhost:9487")
-    api_key = os.getenv("SILSILAT_API_KEY")
+    base_url = os.getenv("SANAD_API_BASE", "http://localhost:9487")
+    api_key = os.getenv("SANAD_API_KEY")
     url = f"{base_url}/api/v1/gold-price/yesterday"
     
     # Prepare headers with authentication if API key is available
@@ -206,7 +206,7 @@ def get_yesterday_gold_price_myr() -> Optional[float]:
             
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
-            print(f"[WARN] Authentication required for gold price API. Set SILSILAT_API_KEY in environment.")
+            print(f"[WARN] Authentication required for gold price API. Set SANAD_API_KEY in environment.")
         elif e.response.status_code == 404:
             print(f"[WARN] No gold price data found for yesterday")
         else:
