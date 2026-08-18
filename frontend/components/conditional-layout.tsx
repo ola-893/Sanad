@@ -1,7 +1,8 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Header } from "@/components/header"
+import { ExternalHeader } from "@/components/external-header"
+import { InternalHeader } from "@/components/internal-header"
 import { Footer } from "@/components/footer"
 import { useAuth } from "@/hooks/use-auth"
 import { useAtom } from "jotai"
@@ -17,36 +18,46 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const [user] = useAtom(userAtom)
   const loggedIn = isAuthenticated || !!user
   
-  // Routes that should not show header/footer (full layout pages)
-  // These have their own layout with header/sidebar
+  // Routes that have their own layout with header/sidebar
   const fullLayoutRoutes = [
     '/investor',
     '/pawnshop',
     '/admin',
   ]
   
-  // Check if current path starts with any of the full layout routes
   const isFullLayout = fullLayoutRoutes.some(route => pathname.startsWith(route))
   
+  // Full layout pages — no global header/footer
   if (isFullLayout) {
-    // For full layout pages (investor, admin, pawnshop), render children without header/footer
     return <div className="min-h-screen">{children}</div>
   }
   
-  // For authenticated users on non-layout routes: header only, no footer
+  // Landing page — always show external header + footer
+  const isLanding = pathname === "/"
+  if (isLanding) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <ExternalHeader />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
+    )
+  }
+  
+  // Authenticated users on other pages — internal header, no footer
   if (loggedIn) {
     return (
       <div className="flex flex-col min-h-screen">
-        <Header />
+        <InternalHeader />
         <main className="flex-1">{children}</main>
       </div>
     )
   }
   
-  // For regular pages (visitors), render with header and footer
+  // Visitors on other public pages — external header + footer
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <ExternalHeader />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>

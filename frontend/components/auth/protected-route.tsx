@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { UserRole } from '@/lib/auth/auth-service'
 import { useAtom } from 'jotai'
 import { userAtom } from '@/store/atoms'
+import { BrandedLoader } from '@/components/branded-loader'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -15,11 +16,13 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
-  fallback = null, 
+  fallback,
   redirectTo 
 }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuth();
   const [user] = useAtom(userAtom);
+
+  const loadingFallback = fallback ?? <BrandedLoader message="Verifying access..." />
   // const router = useRouter()
   // const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
 
@@ -98,7 +101,7 @@ export function ProtectedRoute({
   // }
 
   if (!isAuthenticated || !user) {
-    return fallback
+    return loadingFallback
   }
 
   /**
