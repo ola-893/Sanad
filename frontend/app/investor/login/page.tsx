@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ShieldIcon, Loader2 } from "lucide-react"
-import { Logo } from "@/components/logo"
+import { EyeIcon, EyeOffIcon, Loader2, LockIcon, MailIcon, UserIcon } from "lucide-react"
+import { AuthShell } from "@/components/auth/auth-shell"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -47,128 +47,116 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px] md:w-[450px]">
-        <div className="flex flex-col items-center space-y-2 text-center">
-          <div className="mx-auto mb-4">
-            <Logo />
-          </div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#171414]">Welcome back</h1>
-          <p className="text-sm text-muted-foreground">Sign in to your account to continue</p>
-        </div>
+    <AuthShell
+      kicker="Investor Portal"
+      title="Investor Login"
+      subtitle="Sign in to your investor account to continue"
+      auditNote="Secure access with encrypted authentication"
+      footerLinks={[
+        { href: "/admin/login", label: "Admin / Ar Rahnu Login" },
+        { href: "/", label: "Return to Homepage" },
+      ]}
+    >
+      <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardHeader className="rounded-t-3xl border-b border-[#171414]/10">
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="h-5 w-5" />
+                Investor Login
+              </CardTitle>
+              <CardDescription className="text-[#4A4A4A]">Enter your credentials to access your account</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email address</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <MailIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          autoComplete="email"
+                          className="pl-10"
+                          placeholder="name@example.com"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <CardHeader>
-                <CardTitle>Investor Login</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MailIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            autoComplete="email"
-                            className="pl-10"
-                            placeholder="name@example.com"
-                            disabled={isSubmitting}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      Password
+                      <Link href="/forgot-password" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
+                        Forgot password?
+                      </Link>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <LockIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          placeholder="Enter your password"
+                          className="pl-10 pr-10"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 h-4 w-4 text-muted-foreground disabled:opacity-50"
+                          disabled={isSubmitting}
+                        >
+                          {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4 p-6">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing in...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-4 w-4" />
+                    Sign In
+                  </div>
+                )}
+              </Button>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex justify-between">
-                        Password
-                        <Link href="/forgot-password" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
-                          Forgot password?
-                        </Link>
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <LockIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type={showPassword ? "text" : "password"}
-                            autoComplete="current-password"
-                            placeholder="Enter your password"
-                            className="pl-10"
-                            disabled={isSubmitting}
-                            {...field}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
-                            disabled={isSubmitting}
-                          >
-                            {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-
-                <div className="flex items-center gap-2 w-full">
-                  <hr className="flex-1 border-t" />
-                  <span className="text-xs text-muted-foreground">OR</span>
-                  <hr className="flex-1 border-t" />
-                </div>
-
-                <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/admin/login")}>
-                  <ShieldIcon className="mr-2 h-4 w-4" />
-                  Admin Login
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  Don&apos;t have an account?{" "}
-                  <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                    Register
-                  </Link>
-                </p>
-              </CardFooter>
-            </form>
-          </Form>
-        </Card>
-
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            🔒 Secure customer access with encrypted authentication
-          </p>
-        </div>
-      </div>
-    </div>
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+                  Register
+                </Link>
+              </p>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </AuthShell>
   )
 }

@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Camera, Check, FileText, Upload, User } from "lucide-react"
+import { Camera, Check, FileText, Loader2, ScanFace, Upload, User } from "lucide-react"
+
+const idTypes = {
+  nin: { label: "NIN Number", placeholder: "e.g., 12345678901" },
+  passport: { label: "Passport Number", placeholder: "e.g., A01234567" },
+  license: { label: "License Number", placeholder: "e.g., ABC1234567" },
+} as const
+
+type IdType = keyof typeof idTypes
 
 export default function KycVerificationPage() {
   const router = useRouter()
@@ -28,11 +36,11 @@ export default function KycVerificationPage() {
     state: "",
     postalCode: "",
     dateOfBirth: "",
-    nationality: "Malaysia",
+    nationality: "Nigeria",
   })
 
   // ID Verification
-  const [idType, setIdType] = useState("myKad")
+  const [idType, setIdType] = useState<IdType>("nin")
   const [idNumber, setIdNumber] = useState("")
   const [idFrontUploaded, setIdFrontUploaded] = useState(false)
   const [idBackUploaded, setIdBackUploaded] = useState(false)
@@ -84,62 +92,56 @@ export default function KycVerificationPage() {
     router.push("/dashboard")
   }
 
+  const stepCircle = (n: number, done: boolean) =>
+    `flex h-10 w-10 items-center justify-center rounded-full font-mono text-sm transition-colors ${
+      done || step > n
+        ? "bg-[#171414] text-[#E1BAC2]"
+        : step === n
+          ? "border border-[#171414] bg-[#171414] text-[#E1BAC2]"
+          : "border border-[#171414]/15 bg-white/60 text-muted-foreground"
+    }`
+
   return (
-    <div className="container max-w-4xl py-10 px-4 md:px-6">
-      <div className="flex flex-col items-center justify-center mb-10">
-        <h1 className="text-3xl font-bold mb-2">KYC Verification</h1>
-        <p className="text-muted-foreground text-center max-w-2xl">
+    <div className="container max-w-4xl px-4 py-14 md:px-6">
+      <div className="mb-10 flex flex-col items-center justify-center text-center">
+        <p className="kicker-gold">Identity Verification</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">KYC Verification</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Complete your identity verification to access all features of Sanad.
         </p>
       </div>
 
       {/* Progress Steps */}
-      <div className="mb-8">
+      <div className="mb-10">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
+            <div className="w-full border-t border-[#171414]/15"></div>
           </div>
           <div className="relative flex justify-between">
             <div className="flex flex-col items-center">
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step > 1 ? <Check className="h-6 w-6" /> : "1"}
-              </div>
-              <span className="mt-2 text-sm font-medium">Personal Info</span>
+              <div className={stepCircle(1, step > 1)}>{step > 1 ? <Check className="h-5 w-5" /> : "1"}</div>
+              <span className="mt-2 font-mono text-[10px] uppercase tracking-[0.15em] text-[#4A4A4A]">Personal Info</span>
             </div>
             <div className="flex flex-col items-center">
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step > 2 ? <Check className="h-6 w-6" /> : "2"}
-              </div>
-              <span className="mt-2 text-sm font-medium">ID Verification</span>
+              <div className={stepCircle(2, step > 2)}>{step > 2 ? <Check className="h-5 w-5" /> : "2"}</div>
+              <span className="mt-2 font-mono text-[10px] uppercase tracking-[0.15em] text-[#4A4A4A]">ID Verification</span>
             </div>
             <div className="flex flex-col items-center">
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 3 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {verificationComplete ? <Check className="h-6 w-6" /> : "3"}
+              <div className={stepCircle(3, verificationComplete)}>
+                {verificationComplete ? <Check className="h-5 w-5" /> : "3"}
               </div>
-              <span className="mt-2 text-sm font-medium">Facial Verification</span>
+              <span className="mt-2 font-mono text-[10px] uppercase tracking-[0.15em] text-[#4A4A4A]">Facial Verification</span>
             </div>
           </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
+        <CardHeader className="rounded-t-3xl border-b border-[#171414]/10">
+          <CardTitle className="font-display">
             {step === 1 ? "Personal Information" : step === 2 ? "ID Verification" : "Facial Verification"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-[#4A4A4A]">
             {step === 1
               ? "Provide your personal details"
               : step === 2
@@ -147,10 +149,10 @@ export default function KycVerificationPage() {
                 : "Complete facial verification for security"}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {step === 1 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
@@ -173,7 +175,7 @@ export default function KycVerificationPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -190,7 +192,7 @@ export default function KycVerificationPage() {
                   <Input
                     id="phone"
                     name="phone"
-                    placeholder="Enter your phone number"
+                    placeholder="+234 801 234 5678"
                     value={personalInfo.phone}
                     onChange={handlePersonalInfoChange}
                   />
@@ -208,13 +210,13 @@ export default function KycVerificationPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
                     name="city"
-                    placeholder="Enter your city"
+                    placeholder="e.g., Abuja"
                     value={personalInfo.city}
                     onChange={handlePersonalInfoChange}
                   />
@@ -224,7 +226,7 @@ export default function KycVerificationPage() {
                   <Input
                     id="state"
                     name="state"
-                    placeholder="Enter your state"
+                    placeholder="e.g., FCT"
                     value={personalInfo.state}
                     onChange={handlePersonalInfoChange}
                   />
@@ -234,14 +236,14 @@ export default function KycVerificationPage() {
                   <Input
                     id="postalCode"
                     name="postalCode"
-                    placeholder="Enter your postal code"
+                    placeholder="e.g., 900001"
                     value={personalInfo.postalCode}
                     onChange={handlePersonalInfoChange}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
                   <Input
@@ -262,10 +264,11 @@ export default function KycVerificationPage() {
                       <SelectValue placeholder="Select nationality" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Nigeria">Nigeria</SelectItem>
                       <SelectItem value="Malaysia">Malaysia</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
                       <SelectItem value="Indonesia">Indonesia</SelectItem>
-                      <SelectItem value="Thailand">Thailand</SelectItem>
+                      <SelectItem value="Saudi Arabia">Saudi Arabia</SelectItem>
+                      <SelectItem value="United Arab Emirates">United Arab Emirates</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -278,137 +281,158 @@ export default function KycVerificationPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>ID Type</Label>
-                <RadioGroup value={idType} onValueChange={setIdType} className="flex flex-col space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="myKad" id="myKad" />
-                    <Label htmlFor="myKad">MyKad (Malaysian ID)</Label>
+                <RadioGroup
+                  value={idType}
+                  onValueChange={(v) => setIdType(v as IdType)}
+                  className="grid grid-cols-1 gap-2 md:grid-cols-3"
+                >
+                  <div className="flex items-center space-x-2 rounded-2xl border border-[#171414]/15 bg-white/50 p-3 has-[[data-state=checked]]:border-[#171414] has-[[data-state=checked]]:bg-white/80">
+                    <RadioGroupItem value="nin" id="nin" />
+                    <Label htmlFor="nin" className="cursor-pointer">NIN (National ID)</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 rounded-2xl border border-[#171414]/15 bg-white/50 p-3 has-[[data-state=checked]]:border-[#171414] has-[[data-state=checked]]:bg-white/80">
                     <RadioGroupItem value="passport" id="passport" />
-                    <Label htmlFor="passport">Passport</Label>
+                    <Label htmlFor="passport" className="cursor-pointer">International Passport</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 rounded-2xl border border-[#171414]/15 bg-white/50 p-3 has-[[data-state=checked]]:border-[#171414] has-[[data-state=checked]]:bg-white/80">
+                    <RadioGroupItem value="license" id="license" />
+                    <Label htmlFor="license" className="cursor-pointer">Driver&apos;s License</Label>
                   </div>
                 </RadioGroup>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="id-number">{idType === "myKad" ? "MyKad Number" : "Passport Number"}</Label>
+                <Label htmlFor="id-number">{idTypes[idType].label}</Label>
                 <Input
                   id="id-number"
-                  placeholder={idType === "myKad" ? "e.g., 901231-14-5581" : "e.g., A12345678"}
+                  placeholder={idTypes[idType].placeholder}
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
-                        {idFrontUploaded ? (
-                          <div className="flex flex-col items-center">
-                            <Check className="h-10 w-10 text-success" />
-                            <p className="text-sm text-muted-foreground">Front uploaded</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <FileText className="h-10 w-10 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Front of ID</p>
-                          </div>
-                        )}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {(["front", "back"] as const).map((side) => {
+                  const uploaded = side === "front" ? idFrontUploaded : idBackUploaded
+                  return (
+                    <div key={side} className="rounded-2xl border border-[#171414]/10 bg-white/50 p-4">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div
+                          className={`flex h-40 w-full items-center justify-center rounded-2xl border-2 border-dashed ${
+                            uploaded
+                              ? "border-success/40 bg-success/5"
+                              : "border-[#171414]/20 bg-white/40"
+                          }`}
+                        >
+                          {uploaded ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Check className="h-10 w-10 text-success" />
+                              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {side} uploaded
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <FileText className="h-10 w-10 text-muted-foreground" />
+                              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {side} of ID
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="rounded-full border-[#171414]/15 text-[#171414] hover:bg-white/60"
+                          onClick={() => handleIdUpload(side)}
+                          disabled={uploaded}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload {side === "front" ? "Front" : "Back"}
+                        </Button>
                       </div>
-                      <Button variant="outline" onClick={() => handleIdUpload("front")} disabled={idFrontUploaded}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Front
-                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
-                        {idBackUploaded ? (
-                          <div className="flex flex-col items-center">
-                            <Check className="h-10 w-10 text-success" />
-                            <p className="text-sm text-muted-foreground">Back uploaded</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <FileText className="h-10 w-10 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Back of ID</p>
-                          </div>
-                        )}
-                      </div>
-                      <Button variant="outline" onClick={() => handleIdUpload("back")} disabled={idBackUploaded}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Back
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                  )
+                })}
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="flex flex-col items-center justify-center space-y-4">
-              <Card className="w-full max-w-md">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="flex items-center justify-center w-full h-64 bg-muted rounded-md border-2 border-dashed border-border">
-                      {selfieUploaded ? (
-                        <div className="flex flex-col items-center">
-                          <Check className="h-16 w-16 text-success" />
-                          <p className="text-sm text-muted-foreground">Selfie uploaded</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <User className="h-16 w-16 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">Take a selfie or upload a photo</p>
-                          <p className="text-xs text-muted-foreground mt-2">Make sure your face is clearly visible</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={handleSelfieUpload} disabled={selfieUploaded}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Photo
-                      </Button>
-                      <Button variant="outline" onClick={handleSelfieUpload} disabled={selfieUploaded}>
-                        <Camera className="mr-2 h-4 w-4" />
-                        Take Photo
-                      </Button>
-                    </div>
-
-                    {selfieUploaded && !verificationComplete && (
-                      <div className="text-center mt-4">
-                        <p className="text-sm text-muted-foreground">Our AI system is verifying your identity...</p>
-                      </div>
-                    )}
-
-                    {verificationComplete && (
-                      <div className="text-center mt-4 space-y-2">
-                        <div className="flex items-center justify-center">
-                          <Check className="h-8 w-8 text-success" />
-                        </div>
-                        <p className="font-medium text-success">Verification Successful!</p>
-                        <p className="text-sm text-muted-foreground">
-                          Your identity has been verified. You can now proceed to your dashboard.
+              <div className="w-full max-w-md rounded-2xl border border-[#171414]/10 bg-white/50 p-4">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div
+                    className={`flex h-64 w-full items-center justify-center rounded-2xl border-2 border-dashed ${
+                      selfieUploaded ? "border-success/40 bg-success/5" : "border-[#171414]/20 bg-white/40"
+                    }`}
+                  >
+                    {selfieUploaded ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Check className="h-16 w-16 text-success" />
+                        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                          Selfie uploaded
                         </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <ScanFace className="h-16 w-16 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Take a selfie or upload a photo</p>
+                        <p className="text-xs text-muted-foreground">Make sure your face is clearly visible</p>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-full border-[#171414]/15 text-[#171414] hover:bg-white/60"
+                      onClick={handleSelfieUpload}
+                      disabled={selfieUploaded}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-full border-[#171414]/15 text-[#171414] hover:bg-white/60"
+                      onClick={handleSelfieUpload}
+                      disabled={selfieUploaded}
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      Take Photo
+                    </Button>
+                  </div>
+
+                  {selfieUploaded && !verificationComplete && (
+                    <div className="mt-2 flex items-center gap-2 text-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#4A4A4A]" />
+                      <p className="text-sm text-muted-foreground">Our AI system is verifying your identity...</p>
+                    </div>
+                  )}
+
+                  {verificationComplete && (
+                    <div className="mt-2 space-y-2 text-center">
+                      <div className="flex items-center justify-center">
+                        <Check className="h-8 w-8 text-success" />
+                      </div>
+                      <p className="font-medium text-success">Verification Successful!</p>
+                      <p className="text-sm text-muted-foreground">
+                        Your identity has been verified. You can now proceed to your dashboard.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between p-6">
           {step > 1 ? (
-            <Button variant="outline" onClick={handlePrevStep}>
+            <Button
+              variant="outline"
+              className="rounded-full border-[#171414]/15 text-[#171414] hover:bg-white/60"
+              onClick={handlePrevStep}
+            >
               Previous Step
             </Button>
           ) : (
@@ -416,13 +440,16 @@ export default function KycVerificationPage() {
           )}
 
           {verificationComplete ? (
-            <Button onClick={handleComplete} className="bg-primary hover:bg-primary/90">
+            <Button
+              onClick={handleComplete}
+              className="rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black"
+            >
               Go to Dashboard
             </Button>
           ) : (
             <Button
               onClick={handleNextStep}
-              className="bg-primary hover:bg-primary/90"
+              className="rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-50"
               disabled={
                 (step === 1 &&
                   (!personalInfo.firstName || !personalInfo.lastName || !personalInfo.email || !personalInfo.phone)) ||
@@ -431,7 +458,16 @@ export default function KycVerificationPage() {
                 isLoading
               }
             >
-              {isLoading ? "Processing..." : step === 3 ? "Complete Verification" : "Next Step"}
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </span>
+              ) : step === 3 ? (
+                "Complete Verification"
+              ) : (
+                "Next Step"
+              )}
             </Button>
           )}
         </CardFooter>

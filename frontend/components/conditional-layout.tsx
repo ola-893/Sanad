@@ -14,13 +14,13 @@ interface ConditionalLayoutProps {
 /**
  * Routes that have their own layout with header/sidebar — no global header/footer.
  */
-const fullLayoutRoutes = ['/investor', '/pawnshop', '/admin']
+const fullLayoutRoutes = ['/investor', '/pawnshop', '/admin', '/login']
 
 /**
  * Public pages that always show the external (marketing) header + footer,
  * regardless of auth state.
  */
-const publicPages = ['/', '/about', '/how-it-works', '/ar-rahnu-industry', '/faq', '/contact', '/login', '/register', '/apply', '/forgot-password']
+const publicPages = ['/', '/about', '/how-it-works', '/ar-rahnu-industry', '/faq', '/contact', '/register', '/apply', '/forgot-password']
 
 function isPublicPage(pathname: string) {
   return publicPages.some(p => pathname === p || pathname === p + '/')

@@ -54,7 +54,7 @@ export default function ContactPage() {
             <Phone className="h-5 w-5 text-[#E1BAC2]" />
           </div>
           <h3 className="font-display text-lg font-bold text-[#171414]">Phone</h3>
-          <p className="mt-1 text-[#4A4A4A]">+60 3-2201 1834</p>
+          <p className="mt-1 text-[#4A4A4A]">+234 901 234 5678</p>
           <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
             Monday to Friday, 9AM to 6PM
           </p>
@@ -193,20 +193,31 @@ export default function ContactPage() {
 
         <div>
           <h2 className="mb-6 font-display text-2xl font-extrabold tracking-tight text-[#171414]">Our Location</h2>
-          <div className="h-[400px] overflow-hidden rounded-3xl border border-[#171414]/15 bg-[#F5F5F3]">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.8279222233335!2d101.67624391475846!3d3.1298089977285457!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc49c91f66cb71%3A0x2ad6ffe11a0a0351!2sMenara%20UOA%20Bangsar%2C%20Kuala%20Lumpur%2C%20Malaysia!5e0!3m2!1sen!2sus!4v1616613979789!5m2!1sen!2sus"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen
-              loading="lazy"
-              title="Sanad office location"
-            ></iframe>
+
+          <div className="overflow-hidden rounded-3xl border border-[#171414]/15 bg-[#F5F5F3]">
+            <div className="h-[280px]">
+              <iframe
+                src="https://maps.google.com/maps?q=Abuja%2C%20Nigeria&z=11&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                title="Sanad head office — Abuja, Nigeria"
+              ></iframe>
+            </div>
+            <div className="border-t border-[#171414]/10 bg-white/60 p-6">
+              <p className="kicker-gold">Head Office</p>
+              <h3 className="mt-1 font-display text-xl font-bold text-[#171414]">Abuja, Nigeria</h3>
+              <p className="mt-1 text-sm text-[#4A4A4A]">Federal Capital Territory, Nigeria</p>
+            </div>
           </div>
 
           <div className="glass-panel mt-6 rounded-3xl border border-[#171414]/15 bg-white/60 p-6">
             <h3 className="mb-3 font-display text-xl font-bold text-[#171414]">Business Hours</h3>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
+              Abuja Head Office · WAT (GMT+1)
+            </p>
             <ul className="space-y-2 text-[#4A4A4A]">
               <li className="flex justify-between">
                 <span>Monday - Friday:</span>
