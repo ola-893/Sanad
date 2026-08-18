@@ -122,7 +122,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleNextStep} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleNextStep} className="bg-primary hover:bg-primary/90">
               Next Step
             </Button>
           </div>
@@ -158,16 +158,16 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className="flex items-center justify-center w-full h-40 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                    <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
                       {idFrontUploaded ? (
                         <div className="flex flex-col items-center">
-                          <Check className="h-10 w-10 text-green-500" />
-                          <p className="text-sm text-gray-500">Front uploaded</p>
+                          <Check className="h-10 w-10 text-success" />
+                          <p className="text-sm text-muted-foreground">Front uploaded</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center">
-                          <FileText className="h-10 w-10 text-gray-400" />
-                          <p className="text-sm text-gray-500">Front of ID</p>
+                          <FileText className="h-10 w-10 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Front of ID</p>
                         </div>
                       )}
                     </div>
@@ -182,16 +182,16 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className="flex items-center justify-center w-full h-40 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                    <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
                       {idBackUploaded ? (
                         <div className="flex flex-col items-center">
-                          <Check className="h-10 w-10 text-green-500" />
-                          <p className="text-sm text-gray-500">Back uploaded</p>
+                          <Check className="h-10 w-10 text-success" />
+                          <p className="text-sm text-muted-foreground">Back uploaded</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center">
-                          <FileText className="h-10 w-10 text-gray-400" />
-                          <p className="text-sm text-gray-500">Back of ID</p>
+                          <FileText className="h-10 w-10 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Back of ID</p>
                         </div>
                       )}
                     </div>
@@ -211,7 +211,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
             </Button>
             <Button
               onClick={handleNextStep}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={!idFrontUploaded || !idBackUploaded || !idNumber}
             >
               Next Step
@@ -224,17 +224,17 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
             <Card className="w-full max-w-md">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-full h-64 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                  <div className="flex items-center justify-center w-full h-64 bg-muted rounded-md border-2 border-dashed border-border">
                     {selfieUploaded ? (
                       <div className="flex flex-col items-center">
-                        <Check className="h-16 w-16 text-green-500" />
-                        <p className="text-sm text-gray-500">Selfie uploaded</p>
+                        <Check className="h-16 w-16 text-success" />
+                        <p className="text-sm text-muted-foreground">Selfie uploaded</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
-                        <User className="h-16 w-16 text-gray-400" />
-                        <p className="text-sm text-gray-500">Take a selfie or upload a photo</p>
-                        <p className="text-xs text-gray-400 mt-2">Make sure your face is clearly visible</p>
+                        <User className="h-16 w-16 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Take a selfie or upload a photo</p>
+                        <p className="text-xs text-muted-foreground mt-2">Make sure your face is clearly visible</p>
                       </div>
                     )}
                   </div>
@@ -252,17 +252,17 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
 
                   {selfieUploaded && !verificationComplete && (
                     <div className="text-center mt-4">
-                      <p className="text-sm text-gray-500">Our AI system is verifying your identity...</p>
+                      <p className="text-sm text-muted-foreground">Our AI system is verifying your identity...</p>
                     </div>
                   )}
 
                   {verificationComplete && (
                     <div className="text-center mt-4 space-y-2">
                       <div className="flex items-center justify-center">
-                        <Check className="h-8 w-8 text-green-500" />
+                        <Check className="h-8 w-8 text-success" />
                       </div>
-                      <p className="font-medium text-green-600">Verification Successful!</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-success">Verification Successful!</p>
+                      <p className="text-sm text-muted-foreground">
                         Your identity has been verified. You can now proceed to the next step.
                       </p>
                     </div>
@@ -276,7 +276,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
             <Button variant="outline" onClick={handlePrevStep}>
               Previous Step
             </Button>
-            <Button onClick={handleNextStep} className="bg-emerald-600 hover:bg-emerald-700" disabled={!selfieUploaded}>
+            <Button onClick={handleNextStep} className="bg-primary hover:bg-primary/90" disabled={!selfieUploaded}>
               {verificationComplete ? "Complete Verification" : "Verify Identity"}
             </Button>
           </div>

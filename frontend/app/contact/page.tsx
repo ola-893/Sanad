@@ -4,12 +4,12 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail, Phone } from "lucide-react"
+import { MarketingHero } from "@/components/marketing-hero"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -40,51 +40,47 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="container mx-auto py-16 px-4 md:px-6">
-      <div className="max-w-3xl mx-auto mb-12 text-center">
-        <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-        <p className="text-xl text-muted-foreground">Get in touch with our team for any inquiries or support</p>
+    <div className="flex flex-col min-h-screen">
+      <MarketingHero
+        kicker="Contact"
+        title="Get in touch"
+        description="Reach our team for inquiries, partnership opportunities, or support."
+      />
+
+      <div className="container mx-auto px-4 py-14 md:px-6">
+      <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-7">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+            <Phone className="h-5 w-5 text-[#E1BAC2]" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-[#171414]">Phone</h3>
+          <p className="mt-1 text-[#4A4A4A]">+60 3-2201 1834</p>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
+            Monday to Friday, 9AM to 6PM
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-7">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+            <Mail className="h-5 w-5 text-[#E1BAC2]" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-[#171414]">Email</h3>
+          <p className="mt-1 text-[#4A4A4A]">
+            <a href="mailto:frank@unitedalliedbusiness.com">frank@unitedalliedbusiness.com</a>
+          </p>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
+            We&apos;ll respond as soon as possible
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        <Card>
-          <CardContent className="flex flex-col items-center text-center p-6">
-            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-              <Phone className="h-6 w-6 text-emerald-600" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Phone</h3>
-            <p className="text-muted-foreground">
-              <a href="tel:+60322011834" className="hover:text-emerald-600">
-                
-              </a>
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">Monday to Friday, 9AM to 6PM</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-col items-center text-center p-6">
-            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-              <Mail className="h-6 w-6 text-emerald-600" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Email</h3>
-            <p className="text-muted-foreground">
-              <a href="mailto:frank@unitedalliedbusiness.com" className="hover:text-emerald-600">
-                frank@unitedalliedbusiness.com
-              </a>
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">We&apos;ll respond as soon as possible</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Send Us a Message</h2>
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+        <div className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-8">
+          <h2 className="mb-6 font-display text-2xl font-extrabold tracking-tight text-[#171414]">Send Us a Message</h2>
           {formSubmitted ? (
-            <div className="bg-emerald-50 p-6 rounded-lg border border-emerald-200">
-              <h3 className="text-xl font-medium text-emerald-800 mb-2">Thank You!</h3>
-              <p className="text-emerald-700 mb-4">
+            <div className="border border-accent/40 bg-accent/5 p-6">
+              <h3 className="mb-2 font-display text-xl font-medium">Thank You!</h3>
+              <p className="mb-4 text-muted-foreground">
                 Your message has been successfully submitted. Our team will get back to you shortly.
               </p>
               <Button
@@ -99,7 +95,6 @@ export default function ContactPage() {
                   })
                   setFormSubmitted(false)
                 }}
-                className="bg-emerald-600 hover:bg-emerald-700"
               >
                 Send Another Message
               </Button>
@@ -186,7 +181,10 @@ export default function ContactPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700">
+              <Button
+                type="submit"
+                className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black"
+              >
                 Send Message
               </Button>
             </form>
@@ -194,8 +192,8 @@ export default function ContactPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold mb-6">Our Location</h2>
-          <div className="h-[400px] bg-gray-100 rounded-lg overflow-hidden">
+          <h2 className="mb-6 font-display text-2xl font-extrabold tracking-tight text-[#171414]">Our Location</h2>
+          <div className="h-[400px] overflow-hidden rounded-3xl border border-[#171414]/15 bg-[#F5F5F3]">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.8279222233335!2d101.67624391475846!3d3.1298089977285457!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc49c91f66cb71%3A0x2ad6ffe11a0a0351!2sMenara%20UOA%20Bangsar%2C%20Kuala%20Lumpur%2C%20Malaysia!5e0!3m2!1sen!2sus!4v1616613979789!5m2!1sen!2sus"
               width="100%"
@@ -203,13 +201,13 @@ export default function ContactPage() {
               style={{ border: 0 }}
               allowFullScreen
               loading="lazy"
-              title="Silsilat office location"
+              title="Sanad office location"
             ></iframe>
           </div>
 
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-3">Business Hours</h3>
-            <ul className="space-y-2 text-muted-foreground">
+          <div className="glass-panel mt-6 rounded-3xl border border-[#171414]/15 bg-white/60 p-6">
+            <h3 className="mb-3 font-display text-xl font-bold text-[#171414]">Business Hours</h3>
+            <ul className="space-y-2 text-[#4A4A4A]">
               <li className="flex justify-between">
                 <span>Monday - Friday:</span>
                 <span>9:00 AM - 6:00 PM</span>
@@ -225,6 +223,7 @@ export default function ContactPage() {
             </ul>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

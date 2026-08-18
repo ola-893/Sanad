@@ -462,7 +462,7 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
 
           <Button
             onClick={handleScan}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 mt-4"
+            className="w-full bg-primary hover:bg-primary/90 mt-4"
             disabled={images.length < 1 || scanning || scanComplete}
           >
             {scanning ? "Scanning..." : scanComplete ? "Scan Complete" : "Scan Jewelry"}
@@ -470,11 +470,11 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
 
           {scanComplete && aiAssessment && (
             <div className="space-y-3 mt-4">
-              <Card className="bg-emerald-50 border-emerald-200">
+              <Card className="bg-muted border-border">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Check className="h-5 w-5 text-emerald-600" />
-                    <h3 className="font-semibold text-emerald-800">AI Assessment Complete</h3>
+                    <Check className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-primary">AI Assessment Complete</h3>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -502,7 +502,7 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
               <Card className="border-blue-200">
                 <CardContent className="p-4">
                   <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-600" />
+                    <Shield className="h-4 w-4 text-primary" />
                     Risk Analysis
                   </h4>
                   <div className="space-y-3">
@@ -510,12 +510,12 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
                       <span className="text-sm">Risk Level:</span>
                       <Badge variant="outline" className={
                         aiAssessment.risk_level === 'VERY_LOW' || aiAssessment.risk_level === 'LOW' 
-                          ? 'bg-green-50 text-green-700 border-green-200'
+                          ? 'bg-success/10 text-success border-success/30'
                           : aiAssessment.risk_level === 'MEDIUM'
-                          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          ? 'bg-warning/10 text-warning border-warning/30'
                           : aiAssessment.risk_level === 'HIGH'
                           ? 'bg-orange-50 text-orange-700 border-orange-200'
-                          : 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-destructive/10 text-destructive border-destructive/30'
                       }>
                         {aiAssessment.risk_level.replace('_', ' ')}
                       </Badge>
@@ -524,10 +524,10 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
                       <span className="text-sm">Recommended Action:</span>
                       <Badge variant="outline" className={
                         aiAssessment.action === 'approve'
-                          ? 'bg-green-50 text-green-700 border-green-200'
+                          ? 'bg-success/10 text-success border-success/30'
                           : aiAssessment.action === 'monitor'
-                          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                          : 'bg-red-50 text-red-700 border-red-200'
+                          ? 'bg-warning/10 text-warning border-warning/30'
+                          : 'bg-destructive/10 text-destructive border-destructive/30'
                       }>
                         <span className="flex items-center gap-1">
                           {aiAssessment.action === 'approve' && <Check className="h-3 w-3" />}
@@ -537,10 +537,10 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
                         </span>
                       </Badge>
                     </div>
-                    <div className="pt-2 border-t border-gray-200">
-                      <p className="text-xs text-gray-600 whitespace-pre-line">{aiAssessment.rationale}</p>
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground whitespace-pre-line">{aiAssessment.rationale}</p>
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-muted-foreground">
                       Evaluation ID: {aiAssessment.eval_id}
                     </div>
                   </div>
@@ -589,7 +589,7 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
             }
             nextStep()
           }}
-          className="bg-emerald-600 hover:bg-emerald-700" 
+          className="bg-primary hover:bg-primary/90" 
           disabled={!scanComplete}
         >
           Continue to Loan Configuration

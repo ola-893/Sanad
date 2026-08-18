@@ -92,7 +92,7 @@ export function ProtectedRoute({
   // if (!hasCheckedAuth) {
   //   return (
   //     <div className="flex items-center justify-center min-h-screen">
-  //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+  //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
   //     </div>
   //   )
   // }
@@ -101,13 +101,29 @@ export function ProtectedRoute({
     return fallback
   }
 
+  /**
+   * Normalize a backend role name to the short lowercase identifier
+   * the frontend uses ("admin", "pawnshop", "investor").
+   */
+  const normalize = (role: string) => {
+    const map: Record<string, string> = {
+      SUPER_ADMIN: 'admin',
+      COMPANY_ADMIN: 'admin',
+      PAWNSHOP: 'pawnshop',
+      INVESTOR: 'investor',
+      BORROWER: 'investor',
+    }
+    return map[role] || role.toLowerCase()
+  }
+
+  const userRole = normalize(user?.userInfo?.roleId || '')
   const roles = requiredRole?.split(',');
 
-  if (requiredRole && !roles?.includes(user?.userInfo?.roleId || '')) {
+  if (requiredRole && !roles?.includes(userRole)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+          <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
           <p className="text-muted-foreground">You don&apos;t have permission to access this page.</p>
         </div>
       </div>

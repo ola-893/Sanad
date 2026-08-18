@@ -69,11 +69,11 @@ export default function ComplianceBotPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "answered":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-success" />
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-warning" />
       case "escalated":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />
+        return <AlertTriangle className="h-4 w-4 text-destructive" />
       default:
         return null
     }
@@ -82,20 +82,20 @@ export default function ComplianceBotPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "answered":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       case "pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-warning/10 text-warning-foreground"
       case "escalated":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Bot className="h-6 w-6 text-blue-600" />
+        <Bot className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">AI Compliance Assistant</h1>
       </div>
 
@@ -108,7 +108,7 @@ export default function ComplianceBotPage() {
                 <p className="text-sm text-muted-foreground">Queries Today</p>
                 <p className="text-2xl font-bold">247</p>
               </div>
-              <MessageSquare className="h-8 w-8 text-blue-500" />
+              <MessageSquare className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -119,7 +119,7 @@ export default function ComplianceBotPage() {
                 <p className="text-sm text-muted-foreground">Avg Confidence</p>
                 <p className="text-2xl font-bold">94.2%</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -141,7 +141,7 @@ export default function ComplianceBotPage() {
                 <p className="text-sm text-muted-foreground">Escalations</p>
                 <p className="text-2xl font-bold">3</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -204,7 +204,7 @@ export default function ComplianceBotPage() {
                   {item.confidence > 0 && (
                     <div className="ml-4 text-right">
                       <p className="text-sm text-muted-foreground">Confidence</p>
-                      <p className="font-bold text-green-600">{item.confidence}%</p>
+                      <p className="font-bold text-success">{item.confidence}%</p>
                     </div>
                   )}
                 </div>

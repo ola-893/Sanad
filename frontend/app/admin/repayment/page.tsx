@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/dialog"
 import { CreditCard, CheckCircle, AlertTriangle, DollarSign, Calendar, FileText, Wallet, RefreshCw, ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/hooks/use-auth"
+import { useAtom } from "jotai"
+import { userAtom } from "@/store/atoms"
 import { TopUpDialog } from "@/components/dashboard/topup-dialog"
 import Link from "next/link"
 import { TokenResponse } from "@/types/sag"
@@ -160,7 +161,7 @@ export default function RepaymentPage() {
   const [selectedRepayment, setSelectedRepayment] = useState<RepaymentData | null>(null)
   const [showBuybackProgressTracker, setShowBuybackProgressTracker] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const { user } = useAuth()
+  const [user] = useAtom(userAtom)
   const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -265,19 +266,19 @@ export default function RepaymentPage() {
     switch (status) {
       case "early":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+          <Badge variant="outline" className="bg-muted text-primary">
             Early
           </Badge>
         )
       case "on-time":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             On-Time
           </Badge>
         )
       case "late":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Late
           </Badge>
         )
@@ -370,8 +371,8 @@ export default function RepaymentPage() {
 
     toast.promise(promise, {
       loading: <><div className="flex items-center gap-2">
-        <div className="w-4 h-4 bg-blue-500 rounded-full animate-pulse"></div>
-        <div className="text-sm text-blue-500">Processing settlement... {progress}%</div>
+        <div className="w-4 h-4 bg-muted0 rounded-full animate-pulse"></div>
+        <div className="text-sm text-primary">Processing settlement... {progress}%</div>
       </div></>,
       success: () => {
         return 'Settlement processed successfully!'
@@ -387,17 +388,17 @@ export default function RepaymentPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Repayment & Settlement</h1>
-          <p className="text-gray-600">Monitor repayments and manage settlements</p>
+          <h1 className="text-2xl font-bold text-foreground">Repayment & Settlement</h1>
+          <p className="text-muted-foreground">Monitor repayments and manage settlements</p>
           <div className="mt-2 flex items-center gap-2">
             {balanceLoading ? (
-              <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+              <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border">
                 <Wallet className="h-3 w-3 mr-1" />
                 Loading balance...
               </Badge>
             ) : (
               <>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-base py-1.5 px-3">
+                <Badge variant="outline" className="bg-muted text-primary border-blue-200 text-base py-1.5 px-3">
                   <Wallet className="h-4 w-4 mr-2" />
                   Wallet Balance: RM {walletBalance.toLocaleString()}
                 </Badge>
@@ -416,7 +417,7 @@ export default function RepaymentPage() {
         </div>
         <div className="flex gap-2">
           <TopUpDialog />
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
+          <Button className="bg-primary hover:bg-primary/90">
             <CreditCard className="h-4 w-4 mr-2" />
             Process Settlement
           </Button>
@@ -427,23 +428,23 @@ export default function RepaymentPage() {
       <div className="grid gap-4 md:grid-cols-5">
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900 flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-foreground flex items-center justify-between">
               Wallet Balance
-              <Wallet className="h-4 w-4 text-blue-600" />
+              <Wallet className="h-4 w-4 text-primary" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             {balanceLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold text-blue-700">RM {walletBalance.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-primary">RM {walletBalance.toLocaleString()}</div>
             )}
-            <p className="text-xs text-blue-600 mt-1">Available funds</p>
+            <p className="text-xs text-primary mt-1">Available funds</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Due</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Due</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -451,48 +452,48 @@ export default function RepaymentPage() {
             ) : (
               <div className="text-2xl font-bold">RM {(totalDue / 1000000).toFixed(2)}M</div>
             )}
-            <p className="text-xs text-gray-500">Across all SAGs</p>
+            <p className="text-xs text-muted-foreground">Across all SAGs</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">On-Time Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">On-Time Payments</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold text-green-600">{onTimeCount}</div>
+              <div className="text-2xl font-bold text-success">{onTimeCount}</div>
             )}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {repaymentData.length > 0 ? Math.round((onTimeCount / repaymentData.length) * 100) : 0}% success rate
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Late Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Late Payments</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold text-red-600">{lateCount}</div>
+              <div className="text-2xl font-bold text-destructive">{lateCount}</div>
             )}
-            <p className="text-xs text-gray-500">Require attention</p>
+            <p className="text-xs text-muted-foreground">Require attention</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Settlements Today</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Settlements Today</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold text-blue-600">{dueTodayCount}</div>
+              <div className="text-2xl font-bold text-primary">{dueTodayCount}</div>
             )}
-            <p className="text-xs text-gray-500">To be processed</p>
+            <p className="text-xs text-muted-foreground">To be processed</p>
           </CardContent>
         </Card>
       </div>
@@ -533,13 +534,13 @@ export default function RepaymentPage() {
                   ))
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-red-600">
+                    <TableCell colSpan={7} className="text-center py-8 text-destructive">
                       Failed to load repayment data. Please try again.
                     </TableCell>
                   </TableRow>
                 ) : repaymentData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No active SAG listings with repayment schedules found.
                     </TableCell>
                   </TableRow>
@@ -549,7 +550,7 @@ export default function RepaymentPage() {
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-medium">{repayment.sagId}</div>
-                          <div className="text-xs text-gray-500">{repayment.sagName}</div>
+                          <div className="text-xs text-muted-foreground">{repayment.sagName}</div>
                         </div>
                       </TableCell>
                       <TableCell>{repayment.arRahnu}</TableCell>
@@ -557,7 +558,7 @@ export default function RepaymentPage() {
                       <TableCell>{repayment.dueDate}</TableCell>
                       <TableCell>{getStatusBadge(repayment.status)}</TableCell>
                       <TableCell>
-                        <span className={repayment.daysRemaining < 0 ? "text-red-600" : "text-gray-600"}>
+                        <span className={repayment.daysRemaining < 0 ? "text-destructive" : "text-muted-foreground"}>
                           {repayment.daysRemaining < 0
                             ? `${Math.abs(repayment.daysRemaining)} days overdue`
                             : `${repayment.daysRemaining} days`}
@@ -567,8 +568,8 @@ export default function RepaymentPage() {
                         <div className="flex gap-2 items-center">
                           {!hasSufficientBalance(repayment.investorPayout) && (
                             <div className="relative group">
-                              <AlertTriangle className="h-4 w-4 text-red-600" />
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-foreground text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                                 Insufficient balance
                               </div>
                             </div>
@@ -597,43 +598,43 @@ export default function RepaymentPage() {
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                       <label className="text-sm font-medium">SAG ID</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.sagId}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.sagId}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">SAG Name</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.sagName}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.sagName}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Ar Rahnu Branch</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.arRahnu}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.arRahnu}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Asset Type</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.assetType} - {selectedRepayment.weight} ({selectedRepayment.karat}K)</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.assetType} - {selectedRepayment.weight} ({selectedRepayment.karat}K)</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Loan Amount</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.amount}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.amount}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Investor Payout</label>
-                                      <p className="text-sm font-semibold text-green-700">{selectedRepayment.investorPayout}</p>
+                                      <p className="text-sm font-semibold text-success">{selectedRepayment.investorPayout}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">ROI Percentage</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.roiPercentage}%</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.roiPercentage}%</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Tenor</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.tenor} months</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.tenor} months</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Due Date</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.dueDate}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.dueDate}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Last Payment</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.lastPayment}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.lastPayment}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Status</label>
@@ -641,14 +642,14 @@ export default function RepaymentPage() {
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Invoice Status</label>
-                                      <p className="text-sm text-gray-600">{selectedRepayment.invoiceSent ? "Sent ✓" : "Not Sent"}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRepayment.invoiceSent ? "Sent ✓" : "Not Sent"}</p>
                                     </div>
                                   </div>
 
                                   <div className="border-t pt-4">
                                     <h4 className="font-medium mb-3">Settlement Actions</h4>
                                     <div className="flex gap-2 flex-wrap">
-                                      <Button onClick={() => handleSettlement()} size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                                      <Button onClick={() => handleSettlement()} size="sm" className="bg-primary hover:bg-primary/90">
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Trigger Settlement
                                       </Button>
@@ -690,21 +691,21 @@ export default function RepaymentPage() {
                                       </div>
                                       
                                       {!hasSufficientBalance(selectedRepayment.investorPayout) && (
-                                        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm">
+                                        <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm">
                                           <div className="flex items-start gap-2">
-                                            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
-                                              <p className="font-medium text-red-800">Insufficient Balance</p>
-                                              <p className="text-red-600 mt-1">
+                                              <p className="font-medium text-destructive">Insufficient Balance</p>
+                                              <p className="text-destructive mt-1">
                                                 Required: <span className="font-semibold">{selectedRepayment.investorPayout}</span>
                                               </p>
-                                              <p className="text-red-600">
+                                              <p className="text-destructive">
                                                 Available: <span className="font-semibold">RM {walletBalance.toLocaleString()}</span>
                                               </p>
-                                              <p className="text-red-600 mt-1">
+                                              <p className="text-destructive mt-1">
                                                 Shortfall: <span className="font-semibold">RM {(parseFloat(selectedRepayment.investorPayout.replace(/[^\d.]/g, '')) - walletBalance).toLocaleString()}</span>
                                               </p>
-                                              <p className="text-red-600 mt-2 text-xs">
+                                              <p className="text-destructive mt-2 text-xs">
                                                 Please top up your account to proceed with the buyback.
                                               </p>
                                             </div>
@@ -741,7 +742,7 @@ export default function RepaymentPage() {
             <CardDescription>Process multiple settlements at once</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700">Process All Due Today</Button>
+            <Button className="w-full bg-primary hover:bg-primary/90">Process All Due Today</Button>
           </CardContent>
         </Card>
         <Card>

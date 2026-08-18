@@ -82,7 +82,13 @@ export function EnhancedChatWidget() {
       // Generate AI response
       const response = await generateEnhancedResponse(
         input.trim(),
-        messages.filter((m) => m.role !== "system"),
+        messages
+          .filter((m) => m.role !== "system")
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            timestamp: m.timestamp,
+          })),
       )
 
       // Remove thinking message
@@ -155,7 +161,7 @@ export function EnhancedChatWidget() {
                 <li key={index} className="text-sm">
                   <a
                     href={link.url}
-                    className="text-emerald-600 hover:underline flex items-center"
+                    className="text-primary hover:underline flex items-center"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -176,7 +182,7 @@ export function EnhancedChatWidget() {
       {/* Chat button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg bg-emerald-600 hover:bg-emerald-700"
+        className="fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90"
         size="icon"
       >
         <MessageSquare className="h-6 w-6" />
@@ -190,7 +196,7 @@ export function EnhancedChatWidget() {
         )}
       >
         <Card className="border shadow-xl">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between bg-emerald-600 text-white rounded-t-lg">
+          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between bg-primary text-primary-foreground rounded-t-lg">
             <CardTitle className="text-base font-medium flex items-center">
               <Bot className="mr-2 h-5 w-5" />
               Sanad AI Assistant
@@ -199,7 +205,7 @@ export function EnhancedChatWidget() {
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
-              className="h-8 w-8 text-white hover:bg-emerald-700 rounded-full"
+              className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/10 rounded-full"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -223,7 +229,7 @@ export function EnhancedChatWidget() {
                       <div
                         className={cn(
                           "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                          message.role === "user" ? "bg-emerald-600 text-white" : "bg-gray-100 dark:bg-gray-800",
+                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted dark:bg-card",
                         )}
                       >
                         {formatMessageContent(message)}
@@ -252,7 +258,7 @@ export function EnhancedChatWidget() {
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 <Send className="h-4 w-4" />
               </Button>

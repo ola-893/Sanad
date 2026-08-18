@@ -1,72 +1,75 @@
 import { HowItWorks } from "@/components/how-it-works"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { MarketingHero } from "@/components/marketing-hero"
+import { Reveal } from "@/components/reveal"
+import { SectionHeading } from "@/components/section-heading"
+import { Shield, Zap, FileCheck } from "lucide-react"
+
+const benefits = [
+  {
+    icon: Shield,
+    title: "Shariah Compliant",
+    description: "Fully compliant with Islamic finance principles and Ar-Rahnu practice.",
+  },
+  {
+    icon: Zap,
+    title: "Fast & Secure",
+    description: "AI-assisted appraisal with on-chain security for rapid processing.",
+  },
+  {
+    icon: FileCheck,
+    title: "Tokenized Collateral",
+    description: "Your gold becomes a SAG note — transparent, verifiable ownership.",
+  },
+]
 
 export default function HowItWorksPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="bg-gradient-to-br from-emerald-50 to-gold-50 py-16 px-4">
-          <div className="container mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-emerald-800 mb-6">
-              How It Works
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-              Get financing for your jewelry through our innovative Shariah-compliant platform. 
-              Our AI-powered system makes the process simple, secure, and transparent.
-            </p>
-            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full border border-emerald-200">
-              <span className="text-sm font-medium text-emerald-700">✨ Powered by Hedera Blockchain</span>
-            </div>
+        <MarketingHero
+          kicker="How It Works"
+          title="How it works"
+          description="Turn physical gold into Shariah-compliant financing through a transparent, auditable pipeline — appraisal, tokenization, funding, and settlement."
+          children={
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#E1BAC2]/40 bg-[#E1BAC2]/5 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[#E1BAC2]">
+              Creditcoin CC3 · Gold-Backed
+            </span>
+          }
+        />
+
+        <section className="bg-[#F5F5F3] py-16 md:py-20">
+          <div className="container mx-auto px-4 md:px-6">
+            <SectionHeading
+              tag="The Process"
+              title="From gold to liquidity,"
+              accent="in five steps."
+            />
+            <Reveal>
+              <HowItWorks />
+            </Reveal>
           </div>
         </section>
 
-        {/* How It Works Steps */}
-        <section className="py-16 px-4">
-          <div className="container mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-emerald-800 mb-4">
-                Simple Steps to Get Financing
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Follow these easy steps to turn your jewelry into instant liquidity
-              </p>
-            </div>
-            <HowItWorks />
-          </div>
-        </section>
-
-        {/* Benefits Section */}
-        <section className="bg-emerald-50 py-16 px-4">
-          <div className="container mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-emerald-800 mb-4">
-                Why Choose Our Platform?
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-emerald-100">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🛡️</span>
+        <section className="border-t border-[#171414]/15 bg-[#F5F5F3] py-16 md:py-20">
+          <div className="container mx-auto px-4 md:px-6">
+            <SectionHeading
+              tag="Why Sanad"
+              title="Why choose"
+              accent="our platform."
+            />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {benefits.map((benefit) => (
+                <div
+                  key={benefit.title}
+                  className="glass-panel-hover glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-8"
+                >
+                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+                    <benefit.icon className="h-6 w-6 text-[#E1BAC2]" aria-hidden />
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-[#171414]">{benefit.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4A4A4A]">{benefit.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold text-emerald-800 mb-2">Shariah Compliant</h3>
-                <p className="text-muted-foreground">Fully compliant with Islamic finance principles and regulations</p>
-              </div>
-              <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-emerald-100">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">⚡</span>
-                </div>
-                <h3 className="text-xl font-semibold text-emerald-800 mb-2">Fast & Secure</h3>
-                <p className="text-muted-foreground">AI-powered assessment with blockchain security for quick processing</p>
-              </div>
-              <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-emerald-100">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">💎</span>
-                </div>
-                <h3 className="text-xl font-semibold text-emerald-800 mb-2">NFT Collateral</h3>
-                <p className="text-muted-foreground">Your jewelry becomes a digital asset with transparent ownership</p>
-              </div>
+              ))}
             </div>
           </div>
         </section>

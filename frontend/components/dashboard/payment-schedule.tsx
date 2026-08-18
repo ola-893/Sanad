@@ -68,16 +68,16 @@ export function PaymentSchedule({ showAll = false }: PaymentScheduleProps) {
             <Badge
               className={
                 payment.status === "paid"
-                  ? "bg-green-500"
+                  ? "bg-success/100"
                   : payment.status === "upcoming"
                     ? "bg-amber-500"
-                    : "bg-red-500"
+                    : "bg-destructive/100"
               }
             >
               {payment.status === "paid" ? "Paid" : payment.status === "upcoming" ? "Upcoming" : "Overdue"}
             </Badge>
             {payment.status === "upcoming" && (
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+              <Button size="sm" className="bg-primary hover:bg-primary/90">
                 <CreditCard className="mr-2 h-3 w-3" />
                 Pay Now
               </Button>

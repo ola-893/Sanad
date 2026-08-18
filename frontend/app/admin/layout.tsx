@@ -29,15 +29,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // Full admin shell with auth protection
   return (
     <ProtectedRoute requiredRole="admin,pawnshop">
-      <div className="flex h-screen w-full overflow-hidden bg-gray-50">
-        <aside className="w-64 flex-shrink-0 border-r border-gray-200 bg-white">
+      <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+        <aside className="w-64 flex-shrink-0 border-r border-border bg-card">
           <ScrollArea className="h-full">
             <AdminSidebar />
           </ScrollArea>
         </aside>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <header className="border-b border-gray-200 bg-white">
+          <header className="border-b border-border bg-card">
             <AdminHeader />
           </header>
 

@@ -142,7 +142,7 @@ export default function RegisterPage() {
                       onChange={handleChange}
                     />
                   </div>
-                  {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
+                  {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
@@ -153,7 +153,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                   />
-                  {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
+                  {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
                 </div>
               </div>
 
@@ -171,7 +171,7 @@ export default function RegisterPage() {
                     onChange={handleChange}
                   />
                 </div>
-                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
@@ -194,7 +194,7 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+                {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 <p className="text-xs text-muted-foreground">Password must be at least 8 characters long</p>
               </div>
 
@@ -211,7 +211,7 @@ export default function RegisterPage() {
                     onChange={handleChange}
                   />
                 </div>
-                {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
               </div>
 
               <div className="space-y-2">
@@ -231,27 +231,27 @@ export default function RegisterPage() {
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       By checking this box, you agree to our{" "}
-                      <Link href="/terms" className="text-emerald-600 underline-offset-4 hover:underline">
+                      <Link href="/terms" className="text-primary underline-offset-4 hover:underline">
                         Terms of Service
                       </Link>{" "}
                       and{" "}
-                      <Link href="/privacy" className="text-emerald-600 underline-offset-4 hover:underline">
+                      <Link href="/privacy" className="text-primary underline-offset-4 hover:underline">
                         Privacy Policy
                       </Link>
                       .
                     </p>
                   </div>
                 </div>
-                {errors.agreeTerms && <p className="text-xs text-red-500">{errors.agreeTerms}</p>}
+                {errors.agreeTerms && <p className="text-xs text-destructive">{errors.agreeTerms}</p>}
               </div>
             </CardContent>
             <CardFooter className="flex flex-col">
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
                 {isLoading ? "Creating account..." : "Create Account"}
               </Button>
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <Link href="/login" className="text-emerald-600 underline-offset-4 hover:underline">
+                <Link href="/login" className="text-primary underline-offset-4 hover:underline">
                   Sign in
                 </Link>
               </p>

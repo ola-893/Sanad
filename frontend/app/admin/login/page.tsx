@@ -53,6 +53,8 @@ export default function AdminLoginPage() {
     admin: {
       title: "Super Admin",
       description: "Full platform control & access",
+      email: "admin@silsilat.finance",
+      password: "admin123",
       features: [
         "🔐 Full Access & Security Control",
         "🏛️ Complete SAG Management",
@@ -136,6 +138,7 @@ export default function AdminLoginPage() {
         {
           email: values.email,
           password: values.password,
+          isAdmin: true,
         },
       )
 
@@ -161,23 +164,23 @@ export default function AdminLoginPage() {
   const currentRole = adminRoles[selectedRole as keyof typeof adminRoles]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-gold-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="flex flex-col items-center space-y-2 text-center mb-8">
           <div className="mx-auto mb-4">
             <Logo />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-800">Admin Access Portal</h1>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">Admin Access Portal</h1>
           <p className="text-sm text-muted-foreground">Comprehensive platform management & control</p>
         </div>
 
-        <Card className="shadow-2xl border-emerald-200">
-          <CardHeader className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-t-lg">
+        <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
+          <CardHeader className="rounded-t-3xl border-b border-[#171414]/10">
             <CardTitle className="flex items-center gap-2">
               <ShieldIcon className="h-5 w-5" />
               Admin Panel Access
             </CardTitle>
-            <CardDescription className="text-emerald-100">
+            <CardDescription className="text-[#4A4A4A]">
               Select your role and enter credentials to access the admin panel
             </CardDescription>
           </CardHeader>
@@ -204,24 +207,24 @@ export default function AdminLoginPage() {
 
               {Object.entries(adminRoles).map(([key, role]) => (
                 <TabsContent key={key} value={key} className="space-y-4">
-                  <div className="bg-gradient-to-r from-emerald-50 to-gold-50 p-4 rounded-lg border border-emerald-200">
+                  <div className="bg-gradient-to-r from-background to-muted p-4 rounded-lg border border-border">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-emerald-800 flex items-center gap-2">
+                        <h3 className="font-semibold text-primary flex items-center gap-2">
                           <UserIcon className="h-4 w-4" />
                           {role.title}
                         </h3>
                         <p className="text-sm text-muted-foreground">{role.description}</p>
                       </div>
-                      <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300">
+                      <Badge variant="outline" className="bg-accent/10 text-primary border-accent/40">
                         {role.features.length} Features
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                       {role.features.map((feature, index) => (
-                        <div key={index} className="flex items-center gap-1 text-emerald-700">
-                          <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                        <div key={index} className="flex items-center gap-1 text-primary">
+                          <span className="w-2 h-2 bg-accent rounded-full"></span>
                           {feature}
                         </div>
                       ))}
@@ -234,7 +237,7 @@ export default function AdminLoginPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4 mt-6">
                 {error && (
-                  <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200">{error}</div>
+                  <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm border border-destructive/30">{error}</div>
                 )}
 
                 <FormField
@@ -267,7 +270,7 @@ export default function AdminLoginPage() {
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel>Password</FormLabel>
-                        <Link href="/forgot-password" className="text-xs text-emerald-600 underline-offset-4 hover:underline">
+                        <Link href="/forgot-password" className="text-xs text-primary underline-offset-4 hover:underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -296,7 +299,7 @@ export default function AdminLoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white"
+                  className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black"
                   // disabled={isLoading}
                 >
                   {/* {isLoading ? (
@@ -315,18 +318,18 @@ export default function AdminLoginPage() {
             </Form>
           </CardContent>
 
-          <CardFooter className="bg-gray-50 rounded-b-lg">
+          <CardFooter className="rounded-b-3xl border-t border-[#171414]/10 bg-white/40">
             <div className="w-full text-center space-y-2">
               <p className="text-sm text-muted-foreground">
                 <WalletIcon className="inline h-4 w-4 mr-1" />
                 Secure admin access with role-based permissions
               </p>
               <p className="text-xs text-muted-foreground">
-                <Link href="/login" className="text-emerald-600 underline-offset-4 hover:underline">
+                <Link href="/login" className="text-primary underline-offset-4 hover:underline">
                   Back to User Login
                 </Link>
                 {" | "}
-                <Link href="/" className="text-emerald-600 underline-offset-4 hover:underline">
+                <Link href="/" className="text-primary underline-offset-4 hover:underline">
                   Return to Homepage
                 </Link>
               </p>

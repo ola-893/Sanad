@@ -212,51 +212,51 @@ function BuyBackDialog({ sag }: { sag: SAG }) {
               <Skeleton className="h-4 w-3/4" />
             </div>
           ) : tokenError ? (
-            <div className="text-sm text-red-600 dark:text-red-400">
+            <div className="text-sm text-destructive dark:text-red-400">
               Failed to load token information
             </div>
           ) : tokenInfo ? (
-            <div className="bg-muted dark:bg-gray-800 p-3 rounded-lg space-y-2 border dark:border-gray-700">
+            <div className="bg-muted dark:bg-card p-3 rounded-lg space-y-2 border dark:border-border">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground dark:text-gray-400">Total Shares:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{tokenInfo.data.totalSupply}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Total Shares:</span>
+                <span className="font-medium text-foreground dark:text-gray-100">{tokenInfo.data.totalSupply}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground dark:text-gray-400">Sold to Investors:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">
+                <span className="text-muted-foreground dark:text-muted-foreground">Sold to Investors:</span>
+                <span className="font-medium text-destructive dark:text-red-400">
                   {Number(tokenInfo.data.totalSupply) - Number(tokenInfo.data.remainingSupply)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground dark:text-gray-400">Remaining:</span>
-                <span className="font-medium text-green-600 dark:text-green-400">{tokenInfo.data.remainingSupply}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Remaining:</span>
+                <span className="font-medium text-success dark:text-success">{tokenInfo.data.remainingSupply}</span>
               </div>
             </div>
           ) : null}
 
           {/* Buy Back Calculation */}
           <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg space-y-2 border dark:border-orange-700">
-            <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Buy Back Calculation</h4>
+            <h4 className="font-medium text-sm text-foreground dark:text-gray-100">Buy Back Calculation</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-700 dark:text-gray-300">Share Price:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.currency} {sharePrice.toFixed(2)}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Share Price:</span>
+                <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.currency} {sharePrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-700 dark:text-gray-300">Shares Sold:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{soldShares}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Shares Sold:</span>
+                <span className="font-medium text-foreground dark:text-gray-100">{soldShares}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-700 dark:text-gray-300">Principal Amount:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.currency} {totalRepaymentAmount.toFixed(2)}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Principal Amount:</span>
+                <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.currency} {totalRepaymentAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-700 dark:text-gray-300">Interest ({sag.sagProperties.investorRoiPercentage}% × {monthsPassed} months):</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.currency} {totalInterest.toFixed(2)}</span>
+                <span className="text-muted-foreground dark:text-muted-foreground">Interest ({sag.sagProperties.investorRoiPercentage}% × {monthsPassed} months):</span>
+                <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.currency} {totalInterest.toFixed(2)}</span>
               </div>
               <div className="border-t dark:border-gray-600 pt-1 mt-2">
                 <div className="flex justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Total Buy Back Cost:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">Total Buy Back Cost:</span>
                   <span className="font-bold text-orange-600 dark:text-orange-400">{sag.sagProperties.currency} {totalBuyBackCost.toFixed(2)}</span>
                 </div>
               </div>
@@ -265,12 +265,12 @@ function BuyBackDialog({ sag }: { sag: SAG }) {
 
           {soldShares === 0 ? (
             <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground dark:text-gray-400">No shares have been sold to investors.</p>
-              <p className="text-sm text-muted-foreground dark:text-gray-400">Your NFT is already fully owned by you.</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">No shares have been sold to investors.</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">Your NFT is already fully owned by you.</p>
             </div>
           ) : (
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
+            <div className="bg-muted dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
+              <p className="text-sm text-primary dark:text-blue-300">
                 <strong>Note:</strong> By buying back, you will repay all investors and regain full ownership of your NFT.
                 This action cannot be undone.
               </p>
@@ -371,26 +371,26 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Name:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagName}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Name:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Description:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagDescription}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Description:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagDescription}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Type:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagType}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Type:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagType}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Status:</span>
-                  <span className={`font-medium ${sag.status === 'closed' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Status:</span>
+                  <span className={`font-medium ${sag.status === 'closed' ? 'text-destructive dark:text-red-400' : 'text-success dark:text-success'}`}>
                     {sag.status === 'closed' ? 'Closed' : 'Active'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Certificate No:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.certNo}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Certificate No:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.certNo}</span>
                 </div>
               </CardContent>
             </Card>
@@ -401,24 +401,24 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Asset Type:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Asset Type:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Weight:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.weightG}g</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Weight:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.weightG}g</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Karat:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.karat}K</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Karat:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.karat}K</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Currency:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.currency}</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Currency:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.currency}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Valuation:</span>
-                  <span className="font-medium text-green-600 dark:text-green-400">
+                  <span className="text-muted-foreground dark:text-muted-foreground">Valuation:</span>
+                  <span className="font-medium text-success dark:text-success">
                     {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                   </span>
                 </div>
@@ -437,32 +437,32 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Minting Enabled:</span>
-                  <span className={`font-medium ${sag.sagProperties.enableMinting ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Minting Enabled:</span>
+                  <span className={`font-medium ${sag.sagProperties.enableMinting ? 'text-success dark:text-success' : 'text-muted-foreground dark:text-muted-foreground'}`}>
                     {sag.sagProperties.enableMinting ? 'Yes' : 'No'}
                   </span>
                 </div>
                 {sag.sagProperties.enableMinting ? (
                   <>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Total Shares:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()}</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Total Shares:</span>
+                      <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Share Price:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.currency} {sharePrice.toFixed(2)}</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Share Price:</span>
+                      <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.currency} {sharePrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Financing Type:</span>
-                      <span className="font-medium capitalize text-gray-900 dark:text-gray-100">{sag.sagProperties.investorFinancingType}</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Financing Type:</span>
+                      <span className="font-medium capitalize text-foreground dark:text-gray-100">{sag.sagProperties.investorFinancingType}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Monthly ROI:</span>
-                      <span className="font-medium text-green-600 dark:text-green-400">{sag.sagProperties.investorRoiPercentage}%</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Monthly ROI:</span>
+                      <span className="font-medium text-success dark:text-success">{sag.sagProperties.investorRoiPercentage}%</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Investment Tenor:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.tenorM} months</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Investment Tenor:</span>
+                      <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.tenorM} months</span>
                     </div>
                   </>
                 ): null}
@@ -478,12 +478,12 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Loan Percentage:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.loanPercentage}%</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Loan Percentage:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.loanPercentage}%</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Loan Amount:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                  <span className="text-muted-foreground dark:text-muted-foreground">Loan Amount:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">
                     {sag.sagProperties.loan
                       ? `${sag.sagProperties.currency} ${sag.sagProperties.loan.toLocaleString()}`
                       : `${sag.sagProperties.currency} ${sag.sagProperties.valuation * ((sag.sagProperties.loanPercentage) ?? 0) / 100}`
@@ -491,13 +491,13 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground dark:text-gray-400">Pawner Interest:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.pawnerInterestP}%</span>
+                  <span className="text-muted-foreground dark:text-muted-foreground">Pawner Interest:</span>
+                  <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.pawnerInterestP}%</span>
                 </div>
                 {sag.sagProperties.investorRoiFixedAmount ? (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground dark:text-gray-400">Fixed ROI Amount:</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-muted-foreground dark:text-muted-foreground">Fixed ROI Amount:</span>
+                    <span className="font-medium text-foreground dark:text-gray-100">
                       {sag.sagProperties.currency} {sag.sagProperties.investorRoiFixedAmount.toLocaleString()}
                     </span>
                   </div>
@@ -519,9 +519,9 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground dark:text-gray-400">Token ID:</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground">Token ID:</span>
                       <a
-                        className="text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
+                        className="text-primary dark:text-blue-400 hover:underline hover:text-primary dark:hover:text-blue-300 text-sm font-medium"
                         href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -531,22 +531,22 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
                     </div>
                     {tokenLoading ? (
                       <div className="space-y-1">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+                        <div className="h-4 bg-muted dark:bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-4 bg-muted dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
                       </div>
                     ) : tokenInfo ? (
                       <>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground dark:text-gray-400">Total Supply:</span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{tokenInfo.data.totalSupply}</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground">Total Supply:</span>
+                          <span className="font-medium text-foreground dark:text-gray-100">{tokenInfo.data.totalSupply}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground dark:text-gray-400">Remaining Supply:</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">{tokenInfo.data.remainingSupply}</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground">Remaining Supply:</span>
+                          <span className="font-medium text-success dark:text-success">{tokenInfo.data.remainingSupply}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground dark:text-gray-400">Sold Shares:</span>
-                          <span className="font-medium text-red-600 dark:text-red-400">{soldShares}</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground">Sold Shares:</span>
+                          <span className="font-medium text-destructive dark:text-red-400">{soldShares}</span>
                         </div>
                       </>
                     ) : null}
@@ -555,20 +555,20 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
                   {tokenInfo && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground dark:text-gray-400">Created:</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <span className="text-muted-foreground dark:text-muted-foreground">Created:</span>
+                        <span className="font-medium text-foreground dark:text-gray-100">
                           {new Date(parseFloat(tokenInfo.data.createdAt) * 1000).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground dark:text-gray-400">Expires:</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <span className="text-muted-foreground dark:text-muted-foreground">Expires:</span>
+                        <span className="font-medium text-foreground dark:text-gray-100">
                           {new Date(parseFloat(tokenInfo.data.expiredAt) * 1000).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground dark:text-gray-400">Treasury Account:</span>
-                        <span className="font-medium text-xs text-gray-900 dark:text-gray-100">{tokenInfo.data.treasuryAccountId}</span>
+                        <span className="text-muted-foreground dark:text-muted-foreground">Treasury Account:</span>
+                        <span className="font-medium text-xs text-foreground dark:text-gray-100">{tokenInfo.data.treasuryAccountId}</span>
                       </div>
                     </div>
                   )}
@@ -585,29 +585,29 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
-                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  <div className="bg-muted dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
+                    <div className="text-lg font-bold text-primary dark:text-blue-400">
                       {sag.sagProperties.currency} {totalInvestment.toFixed(2)}
                     </div>
-                    <div className="text-xs text-muted-foreground dark:text-gray-400">Total Investment</div>
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">Total Investment</div>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border dark:border-green-700">
-                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                  <div className="bg-success/10 dark:bg-green-900/20 p-3 rounded-lg border dark:border-green-700">
+                    <div className="text-lg font-bold text-success dark:text-success">
                       {sag.sagProperties.currency} {totalInterestEarned.toFixed(2)}
                     </div>
-                    <div className="text-xs text-muted-foreground dark:text-gray-400">Interest Earned</div>
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">Interest Earned</div>
                   </div>
                   <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border dark:border-orange-700">
                     <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
                       {monthsPassed}
                     </div>
-                    <div className="text-xs text-muted-foreground dark:text-gray-400">Months Active</div>
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">Months Active</div>
                   </div>
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border dark:border-purple-700">
-                    <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                    <div className="text-lg font-bold text-primary dark:text-purple-400">
                       {((soldShares / sag.sagProperties.mintShare) * 100).toFixed(1)}%
                     </div>
-                    <div className="text-xs text-muted-foreground dark:text-gray-400">Shares Sold</div>
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">Shares Sold</div>
                   </div>
                 </div>
               </CardContent>
@@ -644,8 +644,8 @@ function PawnshopNFTs() {
   if (isLoading) {
     return (
       <div>
-        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">My NFTs</h1>
-        <p className="text-muted-foreground mb-8 dark:text-gray-400">Manage your NFT listings and collateral.</p>
+        <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-gray-100">My NFTs</h1>
+        <p className="text-muted-foreground mb-8 dark:text-muted-foreground">Manage your NFT listings and collateral.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={`loading-card-${i}`}>
@@ -670,9 +670,9 @@ function PawnshopNFTs() {
   if (error) {
     return (
       <div>
-        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">My NFTs</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-gray-100">My NFTs</h1>
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4 dark:text-gray-400">Failed to load NFTs</p>
+          <p className="text-muted-foreground mb-4 dark:text-muted-foreground">Failed to load NFTs</p>
           <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </div>
@@ -700,11 +700,11 @@ function PawnshopNFTs() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
+        return <Badge className="bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300">Active</Badge>
       case "closed":
-        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Closed</Badge>
+        return <Badge className="bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-300">Closed</Badge>
       default:
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
+        return <Badge className="bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300">Active</Badge>
     }
   }
 
@@ -716,19 +716,19 @@ function PawnshopNFTs() {
     switch (risk) {
       case "Low":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
             Low Risk
           </Badge>
         )
       case "Medium":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
             Medium Risk
           </Badge>
         )
       case "High":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
             High Risk
           </Badge>
         )
@@ -760,7 +760,7 @@ function PawnshopNFTs() {
     if (nfts.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4 dark:text-gray-400">No NFTs found</p>
+          <p className="text-muted-foreground mb-4 dark:text-muted-foreground">No NFTs found</p>
           <Button asChild>
             <Link href="/pawnshop/nfts/new">Create Your First NFT</Link>
           </Button>
@@ -788,25 +788,25 @@ function PawnshopNFTs() {
                 <TableRow key={sag.sagId} className={sag.status === 'closed' ? 'opacity-75' : ''}>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagName}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagId}</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagDescription}</div>
+                      <div className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</div>
+                      <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagId}</div>
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagDescription}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagProperties.weightG}g</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagProperties.karat}K Gold</div>
+                      <div className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</div>
+                      <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.weightG}g</div>
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.karat}K Gold</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                      <div className="font-medium text-foreground dark:text-gray-100">
                         {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                       </div>
                       {sag.sagProperties.loan && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                           Loan: {sag.sagProperties.currency} {sag.sagProperties.loan.toLocaleString()}
                         </div>
                       )}
@@ -814,9 +814,9 @@ function PawnshopNFTs() {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()} shares</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagProperties.investorRoiPercentage}% ROI</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagProperties.tenorM} months</div>
+                      <div className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()} shares</div>
+                      <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.investorRoiPercentage}% ROI</div>
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.tenorM} months</div>
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(sag.status || 'active')}</TableCell>
@@ -888,7 +888,7 @@ function PawnshopNFTs() {
         </div>
 
         {/* Page Info */}
-        <div className="text-center mt-4 text-sm text-muted-foreground dark:text-gray-400">
+        <div className="text-center mt-4 text-sm text-muted-foreground dark:text-muted-foreground">
           Page {currentPage} of {totalPages}
         </div>
       </>
@@ -900,7 +900,7 @@ function PawnshopNFTs() {
     if (nfts.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4 dark:text-gray-400">No NFTs found</p>
+          <p className="text-muted-foreground mb-4 dark:text-muted-foreground">No NFTs found</p>
           <Button asChild>
             <Link href="/pawnshop/nfts/new">Create Your First NFT</Link>
           </Button>
@@ -915,33 +915,33 @@ function PawnshopNFTs() {
             <Card
               key={sag.sagId}
               className={`hover:shadow-lg dark:hover:shadow-gray-700/20 transition-all duration-200 ${sag.status === 'closed'
-                  ? 'border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-900/10 hover:bg-red-50/50 dark:hover:bg-red-900/20 opacity-80 dark:border-gray-700'
-                  : 'border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-900/10 hover:bg-green-50/50 dark:hover:bg-green-900/20 dark:border-gray-700'
+                  ? 'border-l-4 border-l-red-500 bg-destructive/10/30 dark:bg-red-900/10 hover:bg-destructive/10/50 dark:hover:bg-red-900/20 opacity-80 dark:border-border'
+                  : 'border-l-4 border-l-green-500 bg-success/10/30 dark:bg-green-900/10 hover:bg-success/10/50 dark:hover:bg-green-900/20 dark:border-border'
                 }`}
             >
               <CardHeader className={sag.status === 'closed' ? 'opacity-75' : ''}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className={`text-lg ${sag.status === 'closed' ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <CardTitle className={`text-lg ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-foreground dark:text-gray-100'}`}>
                       {sag.sagName}
                       {sag.status === 'closed' ? (
-                        <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-normal">[CLOSED]</span>
+                        <span className="ml-2 text-xs text-destructive dark:text-red-400 font-normal">[CLOSED]</span>
                       ): null}
                     </CardTitle>
-                    <CardDescription className={`mt-1 ${sag.status === 'closed' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                    <CardDescription className={`mt-1 ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-muted-foreground dark:text-muted-foreground'}`}>
                       {sag.sagDescription}
                     </CardDescription>
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'closed'
-                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                        ? 'bg-muted dark:bg-gray-700 text-muted-foreground dark:text-muted-foreground'
+                        : 'bg-muted dark:bg-blue-900/30 text-primary dark:text-blue-300'
                       }`}>
                       {sag.sagType}
                     </span>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${sag.status === 'closed'
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700'
-                        : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700'
+                        ? 'bg-destructive/10 dark:bg-red-900/30 text-destructive dark:text-red-300 border border-destructive/30 dark:border-red-700'
+                        : 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300 border border-success/30 dark:border-green-700'
                       }`}>
                       {sag.status === 'closed' ? 'CLOSED' : 'ACTIVE'}
                     </span>
@@ -951,69 +951,69 @@ function PawnshopNFTs() {
               <CardContent className={sag.status === 'closed' ? 'opacity-75' : ''}>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Asset Type:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Asset Type:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Valuation:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Valuation:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">
                       {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                     </span>
                   </div>
 
                   {sag.sagProperties.loan ? (
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground dark:text-gray-400">Loan Amount:</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <span className="text-sm text-muted-foreground dark:text-muted-foreground">Loan Amount:</span>
+                      <span className="text-sm font-medium text-foreground dark:text-gray-100">
                         {sag.sagProperties.currency} {sag.sagProperties.loan.toLocaleString()}
                       </span>
                     </div>
                   ) : null}
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Weight:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.weightG}g</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Weight:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.weightG}g</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Karat:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.karat}K</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Karat:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.karat}K</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Mint Shares:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Mint Shares:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()}</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">ROI:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.investorRoiPercentage}%</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">ROI:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.investorRoiPercentage}%</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Cert No:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{sag.certNo}</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Cert No:</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.certNo}</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-gray-400">Token ID:</span>
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Token ID:</span>
                     <span className="text-xs font-medium">
                       {sag.tokenId ? (
-                        <a className={`text-blue-600 dark:text-blue-400 flex gap-1 hover:text-blue-700 dark:hover:text-blue-300`} href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target='_blank'>
+                        <a className={`text-primary dark:text-blue-400 flex gap-1 hover:text-primary dark:hover:text-blue-300`} href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target='_blank'>
                           {sag.tokenId}
                           <ExternalLinkIcon size={14} />
                         </a>
                       ) : (
-                        <span className="text-gray-900 dark:text-gray-100">-</span>
+                        <span className="text-foreground dark:text-gray-100">-</span>
                       )}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center pt-2">
                     <span className={`text-xs px-2 py-1 rounded-full ${sag.sagProperties.enableMinting
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                      ? 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300'
+                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-muted-foreground'
                       }`}>
                       {sag.sagProperties.enableMinting ? 'Minting Enabled' : 'Minting Disabled'}
                     </span>
@@ -1086,7 +1086,7 @@ function PawnshopNFTs() {
         </div>
 
         {/* Page Info */}
-        <div className="text-center mt-4 text-sm text-muted-foreground dark:text-gray-400">
+        <div className="text-center mt-4 text-sm text-muted-foreground dark:text-muted-foreground">
           Page {currentPage} of {totalPages}
         </div>
       </>
@@ -1097,8 +1097,8 @@ function PawnshopNFTs() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My NFTs</h1>
-          <p className="text-muted-foreground dark:text-gray-400">Manage your NFT listings and collateral.</p>
+          <h1 className="text-3xl font-bold text-foreground dark:text-gray-100">My NFTs</h1>
+          <p className="text-muted-foreground dark:text-muted-foreground">Manage your NFT listings and collateral.</p>
         </div>
         <Button asChild>
           <Link href="/pawnshop/nfts/new">
@@ -1109,23 +1109,23 @@ function PawnshopNFTs() {
       </div>
 
       {/* Summary Stats */}
-      <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 dark:bg-gray-800/50 rounded-lg border dark:border-gray-700">
+      <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 dark:bg-card/50 rounded-lg border dark:border-border">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Total NFTs:</span>
-          <span className="text-sm text-muted-foreground dark:text-gray-400">{sags.length}</span>
+          <span className="text-sm font-medium text-foreground dark:text-gray-100">Total NFTs:</span>
+          <span className="text-sm text-muted-foreground dark:text-muted-foreground">{sags.length}</span>
           {filteredSags.length !== sags.length && (
-            <span className="text-xs text-muted-foreground dark:text-gray-400">({filteredSags.length} filtered)</span>
+            <span className="text-xs text-muted-foreground dark:text-muted-foreground">({filteredSags.length} filtered)</span>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Active:</span>
-          <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full border dark:border-green-700">
+          <span className="text-sm font-medium text-foreground dark:text-gray-100">Active:</span>
+          <span className="bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300 text-xs px-2 py-1 rounded-full border dark:border-green-700">
             {activeSags.length}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Closed:</span>
-          <span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs px-2 py-1 rounded-full border dark:border-red-700">
+          <span className="text-sm font-medium text-foreground dark:text-gray-100">Closed:</span>
+          <span className="bg-destructive/10 dark:bg-red-900/30 text-destructive dark:text-red-300 text-xs px-2 py-1 rounded-full border dark:border-red-700">
             {closedSags.length}
           </span>
         </div>
@@ -1188,7 +1188,7 @@ function PawnshopNFTs() {
         {/* Page Size Selector */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground dark:text-gray-400">Show:</span>
+            <span className="text-sm text-muted-foreground dark:text-muted-foreground">Show:</span>
 
             <Select
               onValueChange={(value) => handlePageSizeChange(Number(value))}
@@ -1208,10 +1208,10 @@ function PawnshopNFTs() {
               </SelectContent>
             </Select>
 
-            <span className="text-sm text-muted-foreground dark:text-gray-400">per page</span>
+            <span className="text-sm text-muted-foreground dark:text-muted-foreground">per page</span>
 
             {pagination ? (
-              <div className="text-sm text-muted-foreground dark:text-gray-400 ml-4">
+              <div className="text-sm text-muted-foreground dark:text-muted-foreground ml-4">
                 Showing {((pagination.currentPage - 1) * pageSize) + 1} to {Math.min(pagination.currentPage * pageSize, pagination.totalCount)}
                 {` of ${pagination.totalCount}`} results
               </div>

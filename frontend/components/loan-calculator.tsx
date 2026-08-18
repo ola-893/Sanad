@@ -89,19 +89,22 @@ export function LoanCalculator() {
         </div>
       </div>
 
-      <Button onClick={calculateLoan} className="w-full bg-brightGold hover:bg-gold text-deepGreen">
+      <Button
+        onClick={calculateLoan}
+        className="w-full rounded-full bg-deepGreen font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-gold transition-all hover:bg-black"
+      >
         Calculate
       </Button>
 
       {estimatedValue > 0 && (
-        <div className="mt-6 p-4 bg-softBeige rounded-lg border border-gold/20">
+        <div className="mt-6 rounded-xl border border-gold/20 bg-softBeige p-4">
           <div className="mb-2">
             <span className="text-sm text-darkOlive">Estimated Value:</span>
-            <p className="text-lg font-semibold text-deepGreen">RM {estimatedValue.toLocaleString()}</p>
+            <p className="text-lg font-extrabold text-deepGreen">RM {estimatedValue.toLocaleString()}</p>
           </div>
           <div>
             <span className="text-sm text-darkOlive">Potential Financing Amount:</span>
-            <p className="text-2xl font-bold text-gold">RM {loanAmount.toLocaleString()}</p>
+            <p className="text-2xl font-extrabold text-deepGreen">RM {loanAmount.toLocaleString()}</p>
           </div>
           <p className="text-xs text-darkOlive mt-2">
             Note: Final valuation will be determined after physical assessment.

@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
@@ -11,77 +13,176 @@ import { UserNav } from "@/components/user-nav"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import { UserRole } from "@/hooks/use-user-role"
+import { Menu, X, LayoutDashboard, Search, Briefcase } from "lucide-react"
+
+// Marketing nav — shown to visitors
+const marketingNavItems = [
+  { href: "/", key: "nav.home" },
+  { href: "/about", key: "nav.aboutUs" },
+  { href: "/how-it-works", key: "nav.howItWorks" },
+  { href: "/ar-rahnu-industry", key: "nav.arRahnuIndustry" },
+  { href: "/faq", key: "nav.faq" },
+  { href: "/contact", key: "nav.contact" },
+]
+
+// Portal nav — shown to logged-in users
+const portalNavByRole: Record<string, { href: string; label: string; icon: typeof LayoutDashboard }[]> = {
+  admin: [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/sag-listings", label: "SAG Listings", icon: Briefcase },
+    { href: "/admin/investors", label: "Investors", icon: Search },
+  ],
+  pawnshop: [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/sag-listings", label: "SAG Listings", icon: Briefcase },
+    { href: "/admin/repayment", label: "Repayments", icon: Briefcase },
+  ],
+  investor: [
+    { href: "/investor/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/investor/browse", label: "Browse NFTs", icon: Search },
+    { href: "/investor/portfolio", label: "Investments", icon: Briefcase },
+  ],
+}
 
 export function Header() {
   const { t } = useLanguage()
   const { isAuthenticated, logout } = useAuth()
   const [user] = useAtom(userAtom)
   const role = user?.userInfo?.roleId as UserRole
+  const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const loggedIn = isAuthenticated || !!user
+  const portalNav = portalNavByRole[role || ""] || []
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 hidden md:flex">
-          <Logo />
-          <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.home")}
-            </Link>
-            <Link href="/about" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.aboutUs")}
-            </Link>
-            <Link href="/how-it-works" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.howItWorks")}
-            </Link>
-            <Link href="/ar-rahnu-industry" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.arRahnuIndustry")}
-            </Link>
-            <Link href="/faq" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.faq")}
-            </Link>
-            <Link href="/contact" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {t("nav.contact")}
-            </Link>
-          </nav>
-        </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:w-auto md:flex-none">
-            <Button variant="ghost" className="h-8 w-8 px-0 md:hidden">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="h-4 w-4"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </div>
-          <nav className="flex items-center space-x-2">
-            <LanguageToggle />
-            <ModeToggle />
+    <header className="site-header sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between rounded-full border border-white/45 bg-white/55 px-2 shadow-[0_18px_50px_rgba(30,30,30,0.08)] backdrop-blur-xl sm:px-3">
+        {/* Logo — dark ink pill */}
+        <Link
+          href="/"
+          className="hidden items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-5 text-[#F5F5F3] transition-colors hover:bg-black sm:flex"
+          aria-label="Sanad home"
+        >
+          <Logo asLink={false} surface="dark" />
+        </Link>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#171414] hover:bg-white/60 sm:hidden"
+          aria-label="Menu"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
 
-            {isAuthenticated || user ? (
-              <UserNav user={user} role={role || ''} onLogout={logout} />
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">{t("nav.login")}</Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin/login">{t("nav.admin")}</Link>
-                </Button>
-              </>
-              // <Button size="sm" asChild>
-              //   <Link href="/apply">{t("nav.applyNow")}</Link>
-              // </Button>
-            )}
-          </nav>
+        {/* Pill nav — marketing or portal depending on auth state */}
+        <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
+          {loggedIn
+            ? portalNav.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
+                      isActive
+                        ? "bg-white/80 text-[#171414] shadow-sm"
+                        : "hover:bg-white/50 hover:text-[#171414]"
+                    }`}
+                  >
+                    <item.icon className="h-3 w-3" />
+                    {item.label}
+                  </Link>
+                )
+              })
+            : marketingNavItems.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`rounded-full px-4 py-2 transition-all duration-200 ${
+                      isActive
+                        ? "bg-white/80 text-[#171414] shadow-sm"
+                        : "hover:bg-white/50 hover:text-[#171414]"
+                    }`}
+                  >
+                    {t(item.key)}
+                  </Link>
+                )
+              })}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <ModeToggle />
+
+          {loggedIn ? (
+            <UserNav user={user} role={role || ""} onLogout={logout} />
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden rounded-full text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414] lg:inline-flex"
+                asChild
+              >
+                <Link href="/login">{t("nav.login")}</Link>
+              </Button>
+              <Link
+                href="/apply"
+                className="flux-pill hidden items-center gap-2 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] sm:inline-flex"
+              >
+                {t("nav.applyNow")}
+              </Link>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Mobile nav drawer */}
+      {mobileOpen && (
+        <div className="absolute left-3 right-3 top-[72px] rounded-2xl border border-[rgba(23,20,20,0.1)] bg-[#F5F5F3] p-2 shadow-[0_24px_64px_rgba(23,20,20,0.12)] md:hidden">
+          {loggedIn
+            ? portalNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
+                    pathname === item.href || pathname.startsWith(item.href + "/")
+                      ? "bg-[#171414] text-[#E1BAC2]"
+                      : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
+                  }`}
+                >
+                  <item.icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </Link>
+              ))
+            : marketingNavItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
+                    pathname === item.href
+                      ? "bg-[#171414] text-[#E1BAC2]"
+                      : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
+                  }`}
+                >
+                  {t(item.key)}
+                </Link>
+              ))}
+          {!loggedIn && (
+            <Link
+              href="/apply"
+              onClick={() => setMobileOpen(false)}
+              className="mt-1 block rounded-xl bg-[#171414] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#E1BAC2]"
+            >
+              {t("nav.applyNow")}
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   )
 }

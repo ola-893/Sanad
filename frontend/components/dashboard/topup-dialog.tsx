@@ -62,7 +62,7 @@ export function TopUpDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+        <Button className="w-full bg-primary hover:bg-primary/90">
           <ArrowUpCircle className="mr-2 h-4 w-4" />
           Top Up Wallet
         </Button>
@@ -120,7 +120,7 @@ export function TopUpDialog() {
           >
             Cancel
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" type="submit" onClick={handleTopUp} disabled={isLoading}>
+          <Button className="bg-primary hover:bg-primary/90" type="submit" onClick={handleTopUp} disabled={isLoading}>
             {isLoading ? "Processing..." : "Confirm Top Up"}
           </Button>
         </DialogFooter>

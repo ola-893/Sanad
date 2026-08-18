@@ -93,19 +93,19 @@ export default function SupportPage() {
         return <Badge variant="destructive">Urgent</Badge>
       case "high":
         return (
-          <Badge variant="secondary" className="bg-red-100 text-red-800">
+          <Badge variant="secondary" className="bg-destructive/10 text-destructive">
             High
           </Badge>
         )
       case "medium":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
             Medium
           </Badge>
         )
       case "low":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Low
           </Badge>
         )
@@ -118,13 +118,13 @@ export default function SupportPage() {
     switch (status) {
       case "open":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800">
+          <Badge variant="outline" className="bg-muted text-primary">
             Open
           </Badge>
         )
       case "in-progress":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
             In Progress
           </Badge>
         )
@@ -132,7 +132,7 @@ export default function SupportPage() {
         return <Badge variant="destructive">Escalated</Badge>
       case "resolved":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Resolved
           </Badge>
         )
@@ -146,15 +146,15 @@ export default function SupportPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "open":
-        return <Clock className="h-4 w-4 text-blue-500" />
+        return <Clock className="h-4 w-4 text-primary" />
       case "in-progress":
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-warning" />
       case "escalated":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4 text-destructive" />
       case "resolved":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-success" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -175,12 +175,12 @@ export default function SupportPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Support Desk</h1>
-          <p className="text-gray-600">Manage customer support tickets and inquiries</p>
+          <h1 className="text-2xl font-bold text-foreground">Support Desk</h1>
+          <p className="text-muted-foreground">Manage customer support tickets and inquiries</p>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               New Ticket
             </Button>
@@ -272,7 +272,7 @@ export default function SupportPage() {
               <Button
                 onClick={() => alert("Ticket created successfully!")}
                 disabled={!newTicket.title || !newTicket.customer || !newTicket.email}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 Create Ticket
               </Button>
@@ -285,45 +285,45 @@ export default function SupportPage() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Open Tickets</CardTitle>
-            <Clock className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Open Tickets</CardTitle>
+            <Clock className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">23</div>
-            <div className="text-xs text-gray-500">Awaiting response</div>
+            <div className="text-2xl font-bold text-foreground">23</div>
+            <div className="text-xs text-muted-foreground">Awaiting response</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">In Progress</CardTitle>
-            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">In Progress</CardTitle>
+            <AlertCircle className="h-5 w-5 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">15</div>
-            <div className="text-xs text-gray-500">Being worked on</div>
+            <div className="text-2xl font-bold text-foreground">15</div>
+            <div className="text-xs text-muted-foreground">Being worked on</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Resolved Today</CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Resolved Today</CardTitle>
+            <CheckCircle className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">8</div>
-            <div className="text-xs text-gray-500">Completed</div>
+            <div className="text-2xl font-bold text-foreground">8</div>
+            <div className="text-xs text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Avg Response Time</CardTitle>
-            <Clock className="h-5 w-5 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Response Time</CardTitle>
+            <Clock className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">2.4h</div>
-            <div className="text-xs text-gray-500">This week</div>
+            <div className="text-2xl font-bold text-foreground">2.4h</div>
+            <div className="text-xs text-muted-foreground">This week</div>
           </CardContent>
         </Card>
       </div>
@@ -338,7 +338,7 @@ export default function SupportPage() {
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search tickets, customers, or ticket IDs..."
                   className="pl-10"
@@ -376,15 +376,15 @@ export default function SupportPage() {
           {/* Tickets List */}
           <div className="space-y-4">
             {filteredTickets.map((ticket) => (
-              <div key={ticket.id} className="border rounded-lg p-4 hover:bg-gray-50">
+              <div key={ticket.id} className="border rounded-lg p-4 hover:bg-muted/40">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     {getStatusIcon(ticket.status)}
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-foreground">
                         #{ticket.id} - {ticket.title}
                       </h4>
-                      <p className="text-sm text-gray-600">{ticket.description}</p>
+                      <p className="text-sm text-muted-foreground">{ticket.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -393,7 +393,7 @@ export default function SupportPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     <span>{ticket.customer}</span>
@@ -413,7 +413,7 @@ export default function SupportPage() {
                 </div>
 
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Assigned to: <span className="font-medium">{ticket.assignee}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export default function SupportPage() {
                       Reply
                     </Button>
                     {ticket.status !== "resolved" && (
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                      <Button size="sm" className="bg-primary hover:bg-primary/90">
                         Resolve
                       </Button>
                     )}

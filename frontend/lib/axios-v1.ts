@@ -9,7 +9,7 @@ if (!process.env.NEXT_PUBLIC_API_URL) {
 console.log("ℹ️ Running API URL on: ", process.env.NEXT_PUBLIC_API_URL );
 
 const apiInstance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/v1`,
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api/v1`,
   timeout: 300000,
 }
 );

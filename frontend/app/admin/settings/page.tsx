@@ -45,10 +45,10 @@ export default function SettingsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-          <p className="text-gray-600">Configure platform settings and system parameters</p>
+          <h1 className="text-2xl font-bold text-foreground">System Settings</h1>
+          <p className="text-muted-foreground">Configure platform settings and system parameters</p>
         </div>
-        <Button onClick={handleSave} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button onClick={handleSave} disabled={isLoading} className="bg-primary hover:bg-primary/90">
           {isLoading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
           ) : (
@@ -59,10 +59,10 @@ export default function SettingsPage() {
       </div>
 
       {/* System Status Alert */}
-      <Alert className="border-green-200 bg-green-50">
-        <CheckCircle className="h-4 w-4 text-green-600" />
-        <AlertTitle className="text-green-800">System Status: Operational</AlertTitle>
-        <AlertDescription className="text-green-700">
+      <Alert className="border-success/30 bg-success/10">
+        <CheckCircle className="h-4 w-4 text-success" />
+        <AlertTitle className="text-success">System Status: Operational</AlertTitle>
+        <AlertDescription className="text-success">
           All systems are running normally. Last backup: 2 hours ago
         </AlertDescription>
       </Alert>
@@ -189,7 +189,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>KYC Verification Required</Label>
-                  <p className="text-sm text-gray-500">Require KYC verification for all users</p>
+                  <p className="text-sm text-muted-foreground">Require KYC verification for all users</p>
                 </div>
                 <Switch
                   checked={settings.kycRequired}
@@ -199,7 +199,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Two-Factor Authentication</Label>
-                  <p className="text-sm text-gray-500">Enable 2FA for admin accounts</p>
+                  <p className="text-sm text-muted-foreground">Enable 2FA for admin accounts</p>
                 </div>
                 <Switch
                   checked={settings.twoFactorAuth}
@@ -238,7 +238,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Send email notifications for important events</p>
+                  <p className="text-sm text-muted-foreground">Send email notifications for important events</p>
                 </div>
                 <Switch
                   checked={settings.emailNotifications}
@@ -248,7 +248,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>SMS Notifications</Label>
-                  <p className="text-sm text-gray-500">Send SMS alerts for critical events</p>
+                  <p className="text-sm text-muted-foreground">Send SMS alerts for critical events</p>
                 </div>
                 <Switch
                   checked={settings.smsNotifications}
@@ -273,7 +273,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Maintenance Mode</Label>
-                  <p className="text-sm text-gray-500">Enable maintenance mode to restrict access</p>
+                  <p className="text-sm text-muted-foreground">Enable maintenance mode to restrict access</p>
                 </div>
                 <Switch
                   checked={settings.maintenanceMode}
@@ -284,7 +284,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <Label>Database Backup</Label>
-                    <p className="text-sm text-gray-500">Last backup: 2 hours ago</p>
+                    <p className="text-sm text-muted-foreground">Last backup: 2 hours ago</p>
                   </div>
                   <Button variant="outline" size="sm">
                     Backup Now
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <Label>System Logs</Label>
-                    <p className="text-sm text-gray-500">View system activity logs</p>
+                    <p className="text-sm text-muted-foreground">View system activity logs</p>
                   </div>
                   <Button variant="outline" size="sm">
                     View Logs

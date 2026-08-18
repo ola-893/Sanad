@@ -57,28 +57,28 @@ const highRiskLoans = [
 
 export default function DefaultPredictionPage() {
   const getRiskColor = (score: number) => {
-    if (score >= 80) return "text-red-600 bg-red-50"
+    if (score >= 80) return "text-destructive bg-destructive/10"
     if (score >= 60) return "text-orange-600 bg-orange-50"
-    return "text-green-600 bg-green-50"
+    return "text-success bg-success/10"
   }
 
   const getImpactColor = (impact: string) => {
     switch (impact) {
       case "High":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       case "Medium":
         return "bg-orange-100 text-orange-800"
       case "Low":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <TrendingUp className="h-6 w-6 text-red-600" />
+        <TrendingUp className="h-6 w-6 text-destructive" />
         <h1 className="text-2xl font-bold">Default Prediction Engine</h1>
       </div>
 
@@ -89,10 +89,10 @@ export default function DefaultPredictionPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Current Default Rate</p>
-                <p className="text-2xl font-bold text-red-600">3.3%</p>
-                <p className="text-xs text-green-600">↓ 0.2% from last month</p>
+                <p className="text-2xl font-bold text-destructive">3.3%</p>
+                <p className="text-xs text-success">↓ 0.2% from last month</p>
               </div>
-              <TrendingDown className="h-8 w-8 text-red-500" />
+              <TrendingDown className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -102,7 +102,7 @@ export default function DefaultPredictionPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Predicted Next Month</p>
                 <p className="text-2xl font-bold text-orange-600">3.8%</p>
-                <p className="text-xs text-red-600">↑ 0.5% increase</p>
+                <p className="text-xs text-destructive">↑ 0.5% increase</p>
               </div>
               <TrendingUp className="h-8 w-8 text-orange-500" />
             </div>
@@ -116,7 +116,7 @@ export default function DefaultPredictionPage() {
                 <p className="text-2xl font-bold">47</p>
                 <p className="text-xs text-muted-foreground">Requiring attention</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -125,10 +125,10 @@ export default function DefaultPredictionPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Model Accuracy</p>
-                <p className="text-2xl font-bold text-green-600">94.7%</p>
-                <p className="text-xs text-green-600">↑ 1.2% improvement</p>
+                <p className="text-2xl font-bold text-success">94.7%</p>
+                <p className="text-xs text-success">↑ 1.2% improvement</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -230,7 +230,7 @@ export default function DefaultPredictionPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Days Overdue</p>
-                      <p className="font-medium text-red-600">{loan.daysOverdue}</p>
+                      <p className="font-medium text-destructive">{loan.daysOverdue}</p>
                     </div>
                   </div>
                   <div className="mt-2">

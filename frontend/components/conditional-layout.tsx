@@ -12,11 +12,11 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname()
   
   // Routes that should not show header/footer (full layout pages)
+  // These have their own layout with header/sidebar
   const fullLayoutRoutes = [
     '/investor',
     '/pawnshop',
-    // '/admin',
-    // '/ceo'
+    '/admin',
   ]
   
   // Check if current path starts with any of the full layout routes

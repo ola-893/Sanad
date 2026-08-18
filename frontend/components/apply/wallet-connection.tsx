@@ -77,10 +77,10 @@ export function WalletConnection() {
 
             {walletConnected ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-center p-4 bg-emerald-50 rounded-md">
+                <div className="flex items-center justify-center p-4 bg-muted rounded-md">
                   <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-emerald-600" />
-                    <span className="font-medium text-emerald-800">Wallet Connected</span>
+                    <Check className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-primary">Wallet Connected</span>
                   </div>
                 </div>
 
@@ -96,10 +96,10 @@ export function WalletConnection() {
 
                 <div className="space-y-2">
                   <Label>Wallet Balance</Label>
-                  <div className="p-3 border rounded-md bg-gray-50">
+                  <div className="p-3 border rounded-md bg-muted/40">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">HBAR</span>
-                      <span className="font-bold text-emerald-600">100.00</span>
+                      <span className="font-bold text-primary">100.00</span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">≈ $30.00 USD</div>
                   </div>
@@ -107,8 +107,8 @@ export function WalletConnection() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center space-y-4 py-8">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <Wallet className="h-8 w-8 text-emerald-600" />
+                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                  <Wallet className="h-8 w-8 text-primary" />
                 </div>
                 <div className="text-center">
                   <h3 className="font-medium text-lg">No Wallet Connected</h3>
@@ -118,7 +118,7 @@ export function WalletConnection() {
                 </div>
                 <Button
                   onClick={handleConnectWallet}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-primary hover:bg-primary/90"
                   disabled={isConnecting}
                 >
                   {isConnecting ? (
@@ -184,7 +184,7 @@ export function WalletConnection() {
       <div className="flex justify-between gap-2">
         <Button variant="outline">Previous Step</Button>
         <Button
-          className="bg-emerald-600 hover:bg-emerald-700"
+          className="bg-primary hover:bg-primary/90"
           disabled={
             connectionMethod === "hedera"
               ? !walletConnected

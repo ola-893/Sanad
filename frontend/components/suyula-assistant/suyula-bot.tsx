@@ -221,13 +221,13 @@ export function SuyulaBot() {
   const getModeColor = (mode: UserMode) => {
     switch (mode) {
       case "investor":
-        return "bg-blue-100 text-blue-800"
+        return "bg-muted text-primary"
       case "arRahnu":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       case "admin":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -236,12 +236,12 @@ export function SuyulaBot() {
       {/* Floating Bot Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 rounded-full w-16 h-16 shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 z-50"
+        className="fixed bottom-6 right-6 rounded-full w-16 h-16 shadow-lg bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90 z-50"
         size="icon"
       >
         <div className="relative">
-          <Bot className="h-8 w-8 text-white" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+          <Bot className="h-8 w-8 text-primary-foreground" />
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
         </div>
       </Button>
 
@@ -252,13 +252,13 @@ export function SuyulaBot() {
           isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0 pointer-events-none",
         )}
       >
-        <Card className="border shadow-2xl bg-white">
-          <CardHeader className="py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+        <Card className="border shadow-2xl bg-card">
+          <CardHeader className="py-4 px-6 bg-gradient-to-r from-primary to-primary text-primary-foreground rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <Bot className="h-8 w-8" />
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full"></div>
                 </div>
                 <div>
                   <CardTitle className="text-lg font-semibold">{t("chatbot.title")}</CardTitle>
@@ -269,7 +269,7 @@ export function SuyulaBot() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(false)}
-                className="h-8 w-8 text-white hover:bg-white/20 rounded-full"
+                className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -297,8 +297,8 @@ export function SuyulaBot() {
                       className={cn(
                         "max-w-[85%] rounded-lg px-4 py-2",
                         message.role === "user"
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                          : "bg-gray-100 dark:bg-gray-800",
+                          ? "bg-gradient-to-r from-primary to-primary text-primary-foreground"
+                          : "bg-muted dark:bg-card",
                       )}
                     >
                       <div className="text-sm">{message.content}</div>
@@ -323,14 +323,14 @@ export function SuyulaBot() {
 
                       {/* Data Display */}
                       {message.data && (
-                        <div className="mt-3 p-3 bg-white rounded border">
+                        <div className="mt-3 p-3 bg-card rounded border">
                           {message.data.type === "sag_list" && (
                             <div className="space-y-2">
                               {message.data.items.map((sag: any, index: number) => (
                                 <div key={index} className="flex justify-between items-center p-2 border rounded">
                                   <div>
                                     <div className="font-medium">SAG #{sag.id}</div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs text-muted-foreground">
                                       {sag.duration} • {sag.profit}% profit
                                     </div>
                                   </div>
@@ -350,11 +350,11 @@ export function SuyulaBot() {
                               </div>
                               <div className="flex justify-between">
                                 <span>Current Value:</span>
-                                <span className="font-bold text-green-600">RM {message.data.currentValue}</span>
+                                <span className="font-bold text-success">RM {message.data.currentValue}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Total Profit:</span>
-                                <span className="font-bold text-green-600">+RM {message.data.profit}</span>
+                                <span className="font-bold text-success">+RM {message.data.profit}</span>
                               </div>
                             </div>
                           )}
@@ -366,7 +366,7 @@ export function SuyulaBot() {
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2 flex items-center">
+                    <div className="bg-muted dark:bg-card rounded-lg px-4 py-2 flex items-center">
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       <span className="text-sm">{t("chatbot.responses.processing")}</span>
                     </div>
@@ -398,7 +398,7 @@ export function SuyulaBot() {
                     onClick={handleVoiceInput}
                     disabled={isLoading}
                   >
-                    <Mic className={cn("h-3 w-3", isListening && "text-red-500 animate-pulse")} />
+                    <Mic className={cn("h-3 w-3", isListening && "text-destructive animate-pulse")} />
                   </Button>
                   <Button type="button" variant="ghost" size="icon" className="h-6 w-6" disabled={isLoading}>
                     <Paperclip className="h-3 w-3" />
@@ -409,7 +409,7 @@ export function SuyulaBot() {
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90"
               >
                 <Send className="h-4 w-4" />
               </Button>

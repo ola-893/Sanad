@@ -69,15 +69,15 @@ export default function ReportingPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       case "generating":
-        return "bg-blue-100 text-blue-800"
+        return "bg-muted text-primary"
       case "in_progress":
         return "bg-orange-100 text-orange-800"
       case "overdue":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -99,7 +99,7 @@ export default function ReportingPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <FileText className="h-6 w-6 text-green-600" />
+        <FileText className="h-6 w-6 text-success" />
         <h1 className="text-2xl font-bold">Automated Regulatory Reporting</h1>
       </div>
 
@@ -111,9 +111,9 @@ export default function ReportingPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Reports Generated</p>
                 <p className="text-2xl font-bold">47</p>
-                <p className="text-xs text-green-600">This month</p>
+                <p className="text-xs text-success">This month</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-500" />
+              <FileText className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -122,10 +122,10 @@ export default function ReportingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">On-time Delivery</p>
-                <p className="text-2xl font-bold text-green-600">100%</p>
-                <p className="text-xs text-green-600">Perfect record</p>
+                <p className="text-2xl font-bold text-success">100%</p>
+                <p className="text-xs text-success">Perfect record</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -135,7 +135,7 @@ export default function ReportingPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Avg Generation Time</p>
                 <p className="text-2xl font-bold">4.2min</p>
-                <p className="text-xs text-green-600">↓ 2.1min faster</p>
+                <p className="text-xs text-success">↓ 2.1min faster</p>
               </div>
               <Clock className="h-8 w-8 text-orange-500" />
             </div>
@@ -146,10 +146,10 @@ export default function ReportingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Compliance Score</p>
-                <p className="text-2xl font-bold text-green-600">98.5%</p>
-                <p className="text-xs text-green-600">↑ 0.3% improvement</p>
+                <p className="text-2xl font-bold text-success">98.5%</p>
+                <p className="text-xs text-success">↑ 0.3% improvement</p>
               </div>
-              <BarChart3 className="h-8 w-8 text-green-500" />
+              <BarChart3 className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export default function ReportingPage() {
               <div key={key} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</span>
-                  <span className="font-bold text-green-600">{value}%</span>
+                  <span className="font-bold text-success">{value}%</span>
                 </div>
                 <Progress value={value} className="h-2" />
               </div>
@@ -272,7 +272,7 @@ export default function ReportingPage() {
                       {report.modelAccuracy && (
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Model Accuracy</p>
-                          <p className="text-lg font-bold text-green-600">{report.modelAccuracy}%</p>
+                          <p className="text-lg font-bold text-success">{report.modelAccuracy}%</p>
                         </div>
                       )}
                     </div>
@@ -285,7 +285,7 @@ export default function ReportingPage() {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Recommendations</p>
-                          <p className="font-medium text-blue-600">{report.recommendations}</p>
+                          <p className="font-medium text-primary">{report.recommendations}</p>
                         </div>
                       </div>
                     )}

@@ -41,7 +41,7 @@ export function AutoPayment() {
           <div className="space-y-4">
             <Label>Select Loans for Auto Payment</Label>
             {loans.map((loan) => (
-              <Card key={loan.id} className={selectedLoans.includes(loan.id) ? "border-emerald-600" : ""}>
+              <Card key={loan.id} className={selectedLoans.includes(loan.id) ? "border-primary" : ""}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-2">
                     <Checkbox
@@ -73,7 +73,7 @@ export function AutoPayment() {
               onValueChange={setPaymentMethod}
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
-              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="hedera" id="auto-hedera" />
@@ -84,7 +84,7 @@ export function AutoPayment() {
                 </CardContent>
               </Card>
 
-              <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="bank" id="auto-bank" />
@@ -95,7 +95,7 @@ export function AutoPayment() {
                 </CardContent>
               </Card>
 
-              <Card className={`cursor-pointer ${paymentMethod === "card" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "card" ? "border-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="card" id="auto-card" />
@@ -156,7 +156,7 @@ export function AutoPayment() {
       )}
 
       <Button
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="w-full bg-primary hover:bg-primary/90"
         disabled={autoPayEnabled && selectedLoans.length === 0}
       >
         {autoPayEnabled ? "Save Auto Payment Settings" : "Enable Auto Payment"}

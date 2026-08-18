@@ -98,13 +98,13 @@ export function KycAmlIntelligence() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>
+        return <Badge className="bg-success/10 text-success">Approved</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-warning/10 text-warning-foreground">Pending</Badge>
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>
       case "under_review":
-        return <Badge className="bg-blue-100 text-blue-800">Under Review</Badge>
+        return <Badge className="bg-muted text-primary">Under Review</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -113,20 +113,20 @@ export function KycAmlIntelligence() {
   const getAmlBadge = (amlStatus: string) => {
     switch (amlStatus) {
       case "clear":
-        return <Badge className="bg-green-100 text-green-800">Clear</Badge>
+        return <Badge className="bg-success/10 text-success">Clear</Badge>
       case "flagged":
-        return <Badge className="bg-red-100 text-red-800">Flagged</Badge>
+        return <Badge className="bg-destructive/10 text-destructive">Flagged</Badge>
       case "watchlist":
-        return <Badge className="bg-yellow-100 text-yellow-800">Watchlist</Badge>
+        return <Badge className="bg-warning/10 text-warning-foreground">Watchlist</Badge>
       default:
         return <Badge variant="outline">{amlStatus}</Badge>
     }
   }
 
   const getRiskLevel = (score: number) => {
-    if (score < 30) return { level: "Low", color: "bg-green-100 text-green-800" }
-    if (score < 70) return { level: "Medium", color: "bg-yellow-100 text-yellow-800" }
-    return { level: "High", color: "bg-red-100 text-red-800" }
+    if (score < 30) return { level: "Low", color: "bg-success/10 text-success" }
+    if (score < 70) return { level: "Medium", color: "bg-warning/10 text-warning-foreground" }
+    return { level: "High", color: "bg-destructive/10 text-destructive" }
   }
 
   const handleRescan = async (recordId: string) => {
@@ -154,13 +154,13 @@ export function KycAmlIntelligence() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Brain className="h-6 w-6 text-blue-600" />
+          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
             {t("ai.kycAml")}
           </h2>
-          <p className="text-gray-600">AI-powered KYC verification and AML compliance monitoring</p>
+          <p className="text-muted-foreground">AI-powered KYC verification and AML compliance monitoring</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Scan className="h-4 w-4 mr-2" />
           Bulk Rescan
         </Button>
@@ -170,66 +170,66 @@ export function KycAmlIntelligence() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
               {t("kyc.documentIntelligence")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">98.5%</div>
-            <div className="text-xs text-gray-500">OCR Accuracy</div>
+            <div className="text-2xl font-bold text-success">98.5%</div>
+            <div className="text-xs text-muted-foreground">OCR Accuracy</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Eye className="h-4 w-4" />
               {t("kyc.livenessVerification")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">94.2%</div>
-            <div className="text-xs text-gray-500">Face Match Rate</div>
+            <div className="text-2xl font-bold text-primary">94.2%</div>
+            <div className="text-xs text-muted-foreground">Face Match Rate</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Shield className="h-4 w-4" />
               {t("kyc.amlScanning")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">12</div>
-            <div className="text-xs text-gray-500">Watchlist Hits</div>
+            <div className="text-2xl font-bold text-warning">12</div>
+            <div className="text-xs text-muted-foreground">Watchlist Hits</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
               {t("kyc.behaviorScoring")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">87%</div>
-            <div className="text-xs text-gray-500">Risk Accuracy</div>
+            <div className="text-2xl font-bold text-primary">87%</div>
+            <div className="text-xs text-muted-foreground">Risk Accuracy</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4" />
               {t("kyc.continuousMonitoring")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">24/7</div>
-            <div className="text-xs text-gray-500">Active Monitoring</div>
+            <div className="text-2xl font-bold text-primary">24/7</div>
+            <div className="text-xs text-muted-foreground">Active Monitoring</div>
           </CardContent>
         </Card>
       </div>
@@ -243,7 +243,7 @@ export function KycAmlIntelligence() {
         <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name or user ID..."
                 value={searchTerm}
@@ -292,7 +292,7 @@ export function KycAmlIntelligence() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{record.userName}</div>
-                          <div className="text-sm text-gray-500">{record.userId}</div>
+                          <div className="text-sm text-muted-foreground">{record.userId}</div>
                         </div>
                       </TableCell>
                       <TableCell>{record.documentType}</TableCell>
@@ -300,7 +300,7 @@ export function KycAmlIntelligence() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Badge className={riskLevel.color}>{riskLevel.level}</Badge>
-                          <span className="text-sm text-gray-500">({record.riskScore})</span>
+                          <span className="text-sm text-muted-foreground">({record.riskScore})</span>
                         </div>
                       </TableCell>
                       <TableCell>{getAmlBadge(record.amlStatus)}</TableCell>
@@ -336,11 +336,11 @@ export function KycAmlIntelligence() {
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                       <label className="text-sm font-medium">User ID</label>
-                                      <p className="text-sm text-gray-600">{selectedRecord.userId}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRecord.userId}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Document Type</label>
-                                      <p className="text-sm text-gray-600">{selectedRecord.documentType}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedRecord.documentType}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Risk Score</label>
@@ -363,9 +363,9 @@ export function KycAmlIntelligence() {
                                       <label className="text-sm font-medium">AI Flags</label>
                                       <div className="space-y-2 mt-2">
                                         {selectedRecord.flags.map((flag, index) => (
-                                          <div key={index} className="flex items-center gap-2 p-2 bg-red-50 rounded">
-                                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                                            <span className="text-sm text-red-700">{flag}</span>
+                                          <div key={index} className="flex items-center gap-2 p-2 bg-destructive/10 rounded">
+                                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                                            <span className="text-sm text-destructive">{flag}</span>
                                           </div>
                                         ))}
                                       </div>
@@ -376,7 +376,7 @@ export function KycAmlIntelligence() {
                                     <Button
                                       onClick={() => handleRescan(selectedRecord.id)}
                                       disabled={isScanning}
-                                      className="bg-blue-600 hover:bg-blue-700"
+                                      className="bg-primary hover:bg-primary/90"
                                     >
                                       {isScanning ? "Rescanning..." : "AI Rescan"}
                                     </Button>

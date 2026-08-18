@@ -83,13 +83,13 @@ export default function NotificationsPage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "urgent":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4 text-destructive" />
       case "warning":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+        return <AlertCircle className="h-4 w-4 text-warning" />
       case "info":
-        return <Bell className="h-4 w-4 text-blue-500" />
+        return <Bell className="h-4 w-4 text-primary" />
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />
+        return <Bell className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -99,13 +99,13 @@ export default function NotificationsPage() {
         return <Badge variant="destructive">Urgent</Badge>
       case "warning":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
             Warning
           </Badge>
         )
       case "info":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800">
+          <Badge variant="outline" className="bg-muted text-primary">
             Info
           </Badge>
         )
@@ -117,13 +117,13 @@ export default function NotificationsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "sent":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-success" />
       case "scheduled":
-        return <Clock className="h-4 w-4 text-blue-500" />
+        return <Clock className="h-4 w-4 text-primary" />
       case "failed":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4 text-destructive" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -132,12 +132,12 @@ export default function NotificationsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-gray-600">Manage platform notifications and alerts</p>
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+          <p className="text-muted-foreground">Manage platform notifications and alerts</p>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Send Notification
             </Button>
@@ -207,7 +207,7 @@ export default function NotificationsPage() {
               <Button
                 onClick={handleSendNotification}
                 disabled={isLoading || !newNotification.title || !newNotification.message}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -225,45 +225,45 @@ export default function NotificationsPage() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Sent</CardTitle>
-            <Send className="h-5 w-5 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sent</CardTitle>
+            <Send className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">247</div>
-            <div className="text-xs text-gray-500">This month</div>
+            <div className="text-2xl font-bold text-foreground">247</div>
+            <div className="text-xs text-muted-foreground">This month</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending</CardTitle>
-            <Clock className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
+            <Clock className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">12</div>
-            <div className="text-xs text-gray-500">Scheduled</div>
+            <div className="text-2xl font-bold text-foreground">12</div>
+            <div className="text-xs text-muted-foreground">Scheduled</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Open Rate</CardTitle>
-            <Mail className="h-5 w-5 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Open Rate</CardTitle>
+            <Mail className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">87%</div>
-            <div className="text-xs text-gray-500">Last 30 days</div>
+            <div className="text-2xl font-bold text-foreground">87%</div>
+            <div className="text-xs text-muted-foreground">Last 30 days</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
             <Users className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">1,247</div>
-            <div className="text-xs text-gray-500">Receiving notifications</div>
+            <div className="text-2xl font-bold text-foreground">1,247</div>
+            <div className="text-xs text-muted-foreground">Receiving notifications</div>
           </CardContent>
         </Card>
       </div>
@@ -277,7 +277,7 @@ export default function NotificationsPage() {
               <CardDescription>View and manage sent notifications</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
+              <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -295,18 +295,18 @@ export default function NotificationsPage() {
         <CardContent>
           <div className="space-y-4">
             {filteredNotifications.map((notification) => (
-              <div key={notification.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50">
+              <div key={notification.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/40">
                 <div className="flex-shrink-0 mt-1">{getTypeIcon(notification.type)}</div>
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-900">{notification.title}</h4>
+                    <h4 className="font-medium text-foreground">{notification.title}</h4>
                     <div className="flex items-center gap-2">
                       {getTypeBadge(notification.type)}
                       {getStatusIcon(notification.status)}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">{notification.message}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span>To: {notification.recipient}</span>
                     <span>•</span>
                     <span>{notification.timestamp}</span>
@@ -328,28 +328,28 @@ export default function NotificationsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">KYC Reminder</h4>
-              <p className="text-sm text-gray-600 mb-3">Remind users to complete KYC verification</p>
+              <p className="text-sm text-muted-foreground mb-3">Remind users to complete KYC verification</p>
               <Button variant="outline" size="sm">
                 Use Template
               </Button>
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">Payment Due</h4>
-              <p className="text-sm text-gray-600 mb-3">Notify users about upcoming payment due dates</p>
+              <p className="text-sm text-muted-foreground mb-3">Notify users about upcoming payment due dates</p>
               <Button variant="outline" size="sm">
                 Use Template
               </Button>
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">System Maintenance</h4>
-              <p className="text-sm text-gray-600 mb-3">Inform users about scheduled maintenance</p>
+              <p className="text-sm text-muted-foreground mb-3">Inform users about scheduled maintenance</p>
               <Button variant="outline" size="sm">
                 Use Template
               </Button>
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">New Feature</h4>
-              <p className="text-sm text-gray-600 mb-3">Announce new platform features</p>
+              <p className="text-sm text-muted-foreground mb-3">Announce new platform features</p>
               <Button variant="outline" size="sm">
                 Use Template
               </Button>

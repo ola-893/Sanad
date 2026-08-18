@@ -97,13 +97,13 @@ export default function KycVerificationPage() {
       <div className="mb-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
+            <div className="w-full border-t border-border"></div>
           </div>
           <div className="relative flex justify-between">
             <div className="flex flex-col items-center">
               <div
                 className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 1 ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
+                  step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}
               >
                 {step > 1 ? <Check className="h-6 w-6" /> : "1"}
@@ -113,7 +113,7 @@ export default function KycVerificationPage() {
             <div className="flex flex-col items-center">
               <div
                 className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 2 ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
+                  step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}
               >
                 {step > 2 ? <Check className="h-6 w-6" /> : "2"}
@@ -123,7 +123,7 @@ export default function KycVerificationPage() {
             <div className="flex flex-col items-center">
               <div
                 className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  step >= 3 ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
+                  step >= 3 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}
               >
                 {verificationComplete ? <Check className="h-6 w-6" /> : "3"}
@@ -304,16 +304,16 @@ export default function KycVerificationPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <div className="flex items-center justify-center w-full h-40 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                      <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
                         {idFrontUploaded ? (
                           <div className="flex flex-col items-center">
-                            <Check className="h-10 w-10 text-green-500" />
-                            <p className="text-sm text-gray-500">Front uploaded</p>
+                            <Check className="h-10 w-10 text-success" />
+                            <p className="text-sm text-muted-foreground">Front uploaded</p>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
-                            <FileText className="h-10 w-10 text-gray-400" />
-                            <p className="text-sm text-gray-500">Front of ID</p>
+                            <FileText className="h-10 w-10 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Front of ID</p>
                           </div>
                         )}
                       </div>
@@ -328,16 +328,16 @@ export default function KycVerificationPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <div className="flex items-center justify-center w-full h-40 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                      <div className="flex items-center justify-center w-full h-40 bg-muted rounded-md border-2 border-dashed border-border">
                         {idBackUploaded ? (
                           <div className="flex flex-col items-center">
-                            <Check className="h-10 w-10 text-green-500" />
-                            <p className="text-sm text-gray-500">Back uploaded</p>
+                            <Check className="h-10 w-10 text-success" />
+                            <p className="text-sm text-muted-foreground">Back uploaded</p>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
-                            <FileText className="h-10 w-10 text-gray-400" />
-                            <p className="text-sm text-gray-500">Back of ID</p>
+                            <FileText className="h-10 w-10 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Back of ID</p>
                           </div>
                         )}
                       </div>
@@ -357,17 +357,17 @@ export default function KycVerificationPage() {
               <Card className="w-full max-w-md">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="flex items-center justify-center w-full h-64 bg-gray-100 rounded-md border-2 border-dashed border-gray-300">
+                    <div className="flex items-center justify-center w-full h-64 bg-muted rounded-md border-2 border-dashed border-border">
                       {selfieUploaded ? (
                         <div className="flex flex-col items-center">
-                          <Check className="h-16 w-16 text-green-500" />
-                          <p className="text-sm text-gray-500">Selfie uploaded</p>
+                          <Check className="h-16 w-16 text-success" />
+                          <p className="text-sm text-muted-foreground">Selfie uploaded</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center">
-                          <User className="h-16 w-16 text-gray-400" />
-                          <p className="text-sm text-gray-500">Take a selfie or upload a photo</p>
-                          <p className="text-xs text-gray-400 mt-2">Make sure your face is clearly visible</p>
+                          <User className="h-16 w-16 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Take a selfie or upload a photo</p>
+                          <p className="text-xs text-muted-foreground mt-2">Make sure your face is clearly visible</p>
                         </div>
                       )}
                     </div>
@@ -385,17 +385,17 @@ export default function KycVerificationPage() {
 
                     {selfieUploaded && !verificationComplete && (
                       <div className="text-center mt-4">
-                        <p className="text-sm text-gray-500">Our AI system is verifying your identity...</p>
+                        <p className="text-sm text-muted-foreground">Our AI system is verifying your identity...</p>
                       </div>
                     )}
 
                     {verificationComplete && (
                       <div className="text-center mt-4 space-y-2">
                         <div className="flex items-center justify-center">
-                          <Check className="h-8 w-8 text-green-500" />
+                          <Check className="h-8 w-8 text-success" />
                         </div>
-                        <p className="font-medium text-green-600">Verification Successful!</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-medium text-success">Verification Successful!</p>
+                        <p className="text-sm text-muted-foreground">
                           Your identity has been verified. You can now proceed to your dashboard.
                         </p>
                       </div>
@@ -416,13 +416,13 @@ export default function KycVerificationPage() {
           )}
 
           {verificationComplete ? (
-            <Button onClick={handleComplete} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleComplete} className="bg-primary hover:bg-primary/90">
               Go to Dashboard
             </Button>
           ) : (
             <Button
               onClick={handleNextStep}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={
                 (step === 1 &&
                   (!personalInfo.firstName || !personalInfo.lastName || !personalInfo.email || !personalInfo.phone)) ||

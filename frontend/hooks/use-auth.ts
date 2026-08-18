@@ -27,7 +27,7 @@ export function useAuth() {
         removeValue: removeAuth
     } = useLocalStorage<AuthState>('authState');
 
-    const authenticateUser = useCallback(async (credentials: { email: string; password: string }) => {
+    const authenticateUser = useCallback(async (credentials: { email: string; password: string; isAdmin?: boolean }) => {
         try {
             setError(""); // Clear any previous errors
             setIsLoading(true);
@@ -88,10 +88,15 @@ export function useAuth() {
           if (!result) {
             throw new Error('Failed to refresh token');
           }
+          // Normalize backend role names (SUPER_ADMIN → admin, etc.)
+          const normalize = (r: string) => {
+            const m: Record<string, string> = { SUPER_ADMIN: 'admin', COMPANY_ADMIN: 'admin', PAWNSHOP: 'pawnshop', INVESTOR: 'investor', BORROWER: 'investor' }
+            return m[r] || r.toLowerCase()
+          }
           setAuth({
             isAuthenticated: true,
             token: result.accessToken,
-            userType: result.roleName,
+            userType: normalize(result.roleName || ''),
             refreshToken: result.refreshToken,
           });
           return { success: true };

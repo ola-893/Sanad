@@ -50,9 +50,11 @@ export default function InvestorLayout({ children }: InvestorLayoutProps) {
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
-            <div className="flex flex-col gap-2 h-16 items-center justify-center">
-              <h1 className="text-xl font-bold">Investor Portal</h1>
+            <div className="flex h-16 flex-col items-center justify-center gap-2">
               <Logo />
+              <h1 className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                Investor Portal
+              </h1>
             </div>
           </SidebarHeader>
 

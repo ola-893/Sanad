@@ -36,7 +36,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const { login, isLoading, error, clearError } = useAuth()
+  const { authenticateUser, isLoading } = useAuth()
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -47,26 +47,20 @@ export default function LoginPage() {
   })
 
   const onSubmit = async (data: LoginFormData) => {
-    try {
-      clearError()
-      await login(data, 'investor')
-      
+    const result = await authenticateUser({ email: data.username, password: data.password })
+
+    if (result.success) {
       toast.success('Login Successful!')
       setTimeout(() => {
         router.push('/investor/dashboard')
       }, 1000)
-    } catch (err: any) {
-      console.error('Login error:', err)
-      
-      if (err.message?.includes('401') || err.message?.includes('Invalid')) {
-        form.setError('password', {
-          type: 'manual',
-          message: 'Invalid email or password. Please try again.',
-        })
-        toast.error('Invalid email or password. Please try again.')
-      } else {
-        toast.error('Error signing in. Please try again later.')
-      }
+    } else {
+      const message = result.error || 'Invalid email or password. Please try again.'
+      form.setError('password', {
+        type: 'manual',
+        message,
+      })
+      toast.error(message)
     }
   }
 
@@ -78,11 +72,11 @@ export default function LoginPage() {
           <div className="mx-auto mb-4">
             <Logo />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#171414]">Welcome back</h1>
           <p className="text-sm text-muted-foreground">Sign in to your account to continue</p>
         </div>
 
-        <Card>
+        <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <CardHeader>
@@ -151,7 +145,7 @@ export default function LoginPage() {
               />
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button disabled={isLoading || form.formState.isSubmitting} type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700">
+              <Button disabled={isLoading || form.formState.isSubmitting} type="submit" className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black">
                 {isLoading || form.formState.isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
 
@@ -168,7 +162,7 @@ export default function LoginPage() {
 
               <p className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-emerald-600 underline-offset-4 hover:underline">
+                <Link href="/register" className="text-primary underline-offset-4 hover:underline">
                   Register
                 </Link>
               </p>

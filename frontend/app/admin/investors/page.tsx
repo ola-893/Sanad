@@ -66,19 +66,19 @@ export default function InvestorsPage() {
     switch (status) {
       case "verified":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Verified
           </Badge>
         )
       case "pending":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Pending
           </Badge>
         )
       case "rejected":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Rejected
           </Badge>
         )
@@ -91,19 +91,19 @@ export default function InvestorsPage() {
     switch (status) {
       case "active":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Active
           </Badge>
         )
       case "suspended":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Suspended
           </Badge>
         )
       case "blacklisted":
         return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-700">
+          <Badge variant="outline" className="bg-muted text-muted-foreground">
             Blacklisted
           </Badge>
         )
@@ -116,19 +116,19 @@ export default function InvestorsPage() {
     switch (risk) {
       case "low":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Low
           </Badge>
         )
       case "medium":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Medium
           </Badge>
         )
       case "high":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             High
           </Badge>
         )
@@ -150,10 +150,10 @@ export default function InvestorsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Investor Management</h1>
-          <p className="text-gray-600">Manage investor accounts, KYC status, and investment tracking</p>
+          <h1 className="text-2xl font-bold text-foreground">Investor Management</h1>
+          <p className="text-muted-foreground">Manage investor accounts, KYC status, and investment tracking</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Download className="h-4 w-4 mr-2" />
           Export Reports
         </Button>
@@ -163,38 +163,38 @@ export default function InvestorsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Investors</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Investors</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">573</div>
-            <p className="text-xs text-gray-500">+47 this month</p>
+            <p className="text-xs text-muted-foreground">+47 this month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">KYC Verified</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">KYC Verified</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">521</div>
-            <p className="text-xs text-gray-500">91% completion rate</p>
+            <div className="text-2xl font-bold text-success">521</div>
+            <p className="text-xs text-muted-foreground">91% completion rate</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Invested</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Invested</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">RM 2.4M</div>
-            <p className="text-xs text-gray-500">Across all SAGs</p>
+            <p className="text-xs text-muted-foreground">Across all SAGs</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Investments</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Investments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">1,247</div>
-            <p className="text-xs text-gray-500">Current positions</p>
+            <div className="text-2xl font-bold text-primary">1,247</div>
+            <p className="text-xs text-muted-foreground">Current positions</p>
           </CardContent>
         </Card>
       </div>
@@ -209,7 +209,7 @@ export default function InvestorsPage() {
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by investor ID or wallet address..."
                   value={searchTerm}
@@ -290,11 +290,11 @@ export default function InvestorsPage() {
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                       <label className="text-sm font-medium">Investor ID</label>
-                                      <p className="text-sm text-gray-600">{selectedInvestor.id}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedInvestor.id}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Wallet Address</label>
-                                      <p className="text-sm text-gray-600 font-mono">
+                                      <p className="text-sm text-muted-foreground font-mono">
                                         {selectedInvestor.walletAddress}
                                       </p>
                                     </div>
@@ -308,11 +308,11 @@ export default function InvestorsPage() {
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Join Date</label>
-                                      <p className="text-sm text-gray-600">{selectedInvestor.joinDate}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedInvestor.joinDate}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Last Activity</label>
-                                      <p className="text-sm text-gray-600">{selectedInvestor.lastActivity}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedInvestor.lastActivity}</p>
                                     </div>
                                   </div>
                                   <div className="border-t pt-4">
@@ -325,7 +325,7 @@ export default function InvestorsPage() {
                                         </Button>
                                       )}
                                       {selectedInvestor.status === "suspended" && (
-                                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                        <Button size="sm" className="bg-primary hover:bg-primary/90">
                                           <CheckCircle className="h-4 w-4 mr-2" />
                                           Reactivate Account
                                         </Button>
@@ -344,30 +344,30 @@ export default function InvestorsPage() {
                                 <TabsContent value="investments" className="space-y-4">
                                   <div className="grid gap-4 md:grid-cols-3">
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Total Invested</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Total Invested</div>
                                       <div className="text-lg font-bold">{selectedInvestor.totalInvested}</div>
                                     </div>
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Active SAGs</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Active SAGs</div>
                                       <div className="text-lg font-bold">{selectedInvestor.activeSAGs}</div>
                                     </div>
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Average Investment</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Average Investment</div>
                                       <div className="text-lg font-bold">RM 5,625</div>
                                     </div>
                                   </div>
                                   <div className="border rounded-lg p-4">
                                     <h4 className="font-medium mb-3">Recent Investments</h4>
                                     <div className="space-y-2">
-                                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                      <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2025-001</span>
                                         <span className="text-sm font-medium">RM 5,000</span>
                                       </div>
-                                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                      <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2025-003</span>
                                         <span className="text-sm font-medium">RM 3,500</span>
                                       </div>
-                                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                      <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2024-089</span>
                                         <span className="text-sm font-medium">RM 7,200</span>
                                       </div>
@@ -377,32 +377,32 @@ export default function InvestorsPage() {
                                 <TabsContent value="returns" className="space-y-4">
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Total Returns</div>
-                                      <div className="text-lg font-bold text-green-600">
+                                      <div className="text-sm font-medium text-muted-foreground">Total Returns</div>
+                                      <div className="text-lg font-bold text-success">
                                         {selectedInvestor.totalReturns}
                                       </div>
                                     </div>
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Return Rate</div>
-                                      <div className="text-lg font-bold text-green-600">6.0%</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Return Rate</div>
+                                      <div className="text-lg font-bold text-success">6.0%</div>
                                     </div>
                                   </div>
                                   <div className="border rounded-lg p-4">
                                     <h4 className="font-medium mb-3">Payout History</h4>
                                     <div className="space-y-2">
-                                      <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                      <div className="flex justify-between items-center p-2 bg-success/10 rounded">
                                         <div>
                                           <span className="text-sm font-medium">SAG-2024-067</span>
-                                          <p className="text-xs text-gray-500">Completed 2025-01-10</p>
+                                          <p className="text-xs text-muted-foreground">Completed 2025-01-10</p>
                                         </div>
-                                        <span className="text-sm font-medium text-green-600">+RM 450</span>
+                                        <span className="text-sm font-medium text-success">+RM 450</span>
                                       </div>
-                                      <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                      <div className="flex justify-between items-center p-2 bg-success/10 rounded">
                                         <div>
                                           <span className="text-sm font-medium">SAG-2024-045</span>
-                                          <p className="text-xs text-gray-500">Completed 2024-12-15</p>
+                                          <p className="text-xs text-muted-foreground">Completed 2024-12-15</p>
                                         </div>
-                                        <span className="text-sm font-medium text-green-600">+RM 320</span>
+                                        <span className="text-sm font-medium text-success">+RM 320</span>
                                       </div>
                                     </div>
                                   </div>
@@ -411,25 +411,25 @@ export default function InvestorsPage() {
                                   <div className="border rounded-lg p-4">
                                     <h4 className="font-medium mb-3">Recent Activity</h4>
                                     <div className="space-y-3">
-                                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                      <div className="flex items-center gap-3 p-2 bg-muted/40 rounded">
+                                        <div className="w-2 h-2 bg-success/100 rounded-full"></div>
                                         <div>
                                           <p className="text-sm font-medium">Invested in SAG-2025-001</p>
-                                          <p className="text-xs text-gray-500">2025-01-15 14:30</p>
+                                          <p className="text-xs text-muted-foreground">2025-01-15 14:30</p>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <div className="flex items-center gap-3 p-2 bg-muted/40 rounded">
+                                        <div className="w-2 h-2 bg-muted0 rounded-full"></div>
                                         <div>
                                           <p className="text-sm font-medium">Received payout from SAG-2024-067</p>
-                                          <p className="text-xs text-gray-500">2025-01-10 09:15</p>
+                                          <p className="text-xs text-muted-foreground">2025-01-10 09:15</p>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                      <div className="flex items-center gap-3 p-2 bg-muted/40 rounded">
+                                        <div className="w-2 h-2 bg-warning/100 rounded-full"></div>
                                         <div>
                                           <p className="text-sm font-medium">KYC verification completed</p>
-                                          <p className="text-xs text-gray-500">2024-06-16 11:20</p>
+                                          <p className="text-xs text-muted-foreground">2024-06-16 11:20</p>
                                         </div>
                                       </div>
                                     </div>
@@ -445,7 +445,7 @@ export default function InvestorsPage() {
                           </Button>
                         )}
                         {investor.status === "suspended" && (
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Button size="sm" className="bg-primary hover:bg-primary/90">
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}

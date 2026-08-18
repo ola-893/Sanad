@@ -1,157 +1,162 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle } from "lucide-react"
-import Image from "next/image"
+import { MarketingHero } from "@/components/marketing-hero"
+import { Reveal } from "@/components/reveal"
+import { SectionHeading, SectionTag, DarkBand } from "@/components/section-heading"
+import { CheckCircle, Compass, Scale, Lightbulb } from "lucide-react"
+import Link from "next/link"
+
+const values = [
+  {
+    icon: Scale,
+    title: "Shariah Compliance",
+    description:
+      "Every transaction and partnership adheres strictly to Islamic financial principles — reviewed by our Shariah Advisory Group.",
+  },
+  {
+    icon: Compass,
+    title: "Transparency",
+    description:
+      "Complete transparency in all operations: valuation, custody, tokenization, and settlement are auditable on-chain.",
+  },
+  {
+    icon: Lightbulb,
+    title: "Innovation",
+    description:
+      "We continuously evolve the platform to serve Ar-Rahnu operators and funders in the digital age.",
+  },
+]
+
+const reasons = [
+  {
+    title: "Comprehensive Platform",
+    description:
+      "A one-stop solution connecting Ar-Rahnu operators with Shariah-compliant funders, streamlining the entire funding process.",
+  },
+  {
+    title: "Secure Transactions",
+    description:
+      "Encrypted custody records, immutable on-chain history, and enterprise-grade access controls.",
+  },
+  {
+    title: "Expanded Reach",
+    description:
+      "Connect with a wider network of operators and funders across the Islamic finance community.",
+  },
+  {
+    title: "Expert Support",
+    description:
+      "A team experienced in Islamic finance and Ar-Rahnu operations, guiding you through the platform.",
+  },
+]
 
 export default function AboutPage() {
   return (
-    <div className="container mx-auto py-16 px-4 md:px-6">
-      <div className="max-w-3xl mx-auto mb-12 text-center">
-        <h1 className="text-4xl font-bold mb-4">About Sanad</h1>
-        <p className="text-xl text-muted-foreground">The Preferred Center for Gold-Backed Liquidity on Creditcoin</p>
-      </div>
+    <div className="flex min-h-screen flex-col">
+      <main className="flex-1">
+        <MarketingHero
+          kicker="About"
+          title="The preferred center for gold-backed liquidity"
+          description="Sanad connects Ar-Rahnu operators with Shariah-compliant funders on Creditcoin 3 — expanding lending capacity and making portable, verifiable credit histories a reality."
+        />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
-          <p className="mb-6 text-muted-foreground">
-            Sanad Protocol is a platform that connects Ar-Rahnu operators with Shariah-compliant funders on Creditcoin 3, allowing them
-            to expand their capacity to serve more customers effectively.
-          </p>
-          <p className="mb-6 text-muted-foreground">
-            Our mission is to become the preferred center for liquidity needs by providing a comprehensive platform that
-            connects Ar-Rahnu operators (AROs) and funders, creating a seamless ecosystem that benefits all participants
-            in the Islamic financing space.
-          </p>
-          <p className="text-muted-foreground">
-            Whether you&apos;re an Ar-Rahnu Operator seeking to raise funds or a Short Term Funder looking to make meaningful
-            investments, Sanad welcomes you to join our community of like-minded individuals and organizations
-            committed to Islamic finance principles.
-          </p>
-        </div>
-        <div className="relative">
-          <div className="absolute -top-6 -left-6 w-24 h-24 bg-yellow-400 rounded-full opacity-50"></div>
-          <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-emerald-400 rounded-full opacity-30"></div>
-          <div className="relative bg-white rounded-xl shadow-xl overflow-hidden h-full min-h-[400px]">
-            <Image
-              src="/placeholder.svg?height=400&width=500"
-              alt="Ar-Rahnu Financing"
-              fill
-              className="object-cover"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-16">
-        <h2 className="text-2xl font-bold mb-6 text-center">Our Values</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center">
-                <CheckCircle className="h-12 w-12 text-emerald-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Shariah Compliance</h3>
-                <p className="text-muted-foreground">
-                  We ensure all transactions and partnerships adhere strictly to Islamic financial principles, providing
-                  peace of mind for both operators and funders.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center">
-                <CheckCircle className="h-12 w-12 text-emerald-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Transparency</h3>
-                <p className="text-muted-foreground">
-                  We believe in complete transparency in all operations, ensuring trust and confidence among all
-                  participants in our ecosystem.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center">
-                <CheckCircle className="h-12 w-12 text-emerald-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Innovation</h3>
-                <p className="text-muted-foreground">
-                  We continually innovate our platform and services to meet the evolving needs of Ar-Rahnu operators and
-                  funders in the digital age.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="mb-16">
-        <h2 className="text-2xl font-bold mb-6 text-center">Why Choose Sanad</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex items-start gap-4">
-            <div className="bg-emerald-100 p-3 rounded-full">
-              <CheckCircle className="h-6 w-6 text-emerald-600" />
+        {/* Mission */}
+        <section className="bg-[#F5F5F3] py-16 md:py-20">
+          <div className="container mx-auto grid grid-cols-1 gap-12 px-4 md:grid-cols-12 md:px-6">
+            <Reveal className="md:col-span-5">
+              <SectionTag label="Mission" />
+              <h2 className="mt-6 font-display text-3xl font-extrabold tracking-tight text-[#171414] md:text-4xl">
+                Why Sanad
+                <br />
+                <span className="font-semibold text-[#4A4A4A]">exists.</span>
+              </h2>
+            </Reveal>
+            <div className="md:col-span-7">
+              <Reveal delay={80}>
+                <div className="space-y-6 border-l border-[#171414]/15 pl-8">
+                  <p className="text-muted-foreground">
+                    Sanad Protocol is a platform that connects Ar-Rahnu operators with Shariah-compliant
+                    funders on Creditcoin 3, allowing them to expand their capacity to serve more
+                    customers effectively.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Our mission is to become the preferred center for liquidity needs by providing a
+                    comprehensive platform that connects Ar-Rahnu operators (AROs) and funders,
+                    creating a seamless ecosystem that benefits all participants in the Islamic
+                    financing space.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Whether you&apos;re an Ar-Rahnu Operator seeking to raise funds or a Short Term
+                    Funder looking to make meaningful investments, Sanad welcomes you to our community
+                    committed to Islamic finance principles.
+                  </p>
+                </div>
+              </Reveal>
             </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Comprehensive Platform</h3>
-              <p className="text-muted-foreground">
-                A one-stop solution connecting Ar-Rahnu operators with Shariah-compliant funders, streamlining the
-                entire funding process.
+          </div>
+        </section>
+
+        {/* Values */}
+        <section className="border-t border-[#171414]/15 bg-[#F5F5F3] py-16 md:py-20">
+          <div className="container mx-auto px-4 md:px-6">
+            <SectionHeading tag="Values" title="Our" accent="values." />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {values.map((value) => (
+                <div
+                  key={value.title}
+                  className="glass-panel-hover glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-8"
+                >
+                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+                    <value.icon className="h-6 w-6 text-[#E1BAC2]" aria-hidden />
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-[#171414]">{value.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4A4A4A]">{value.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Why choose */}
+        <section className="bg-[#F5F5F3] py-16 md:py-20">
+          <div className="container mx-auto px-4 md:px-6">
+            <SectionHeading tag="Why Sanad" title="Why choose" accent="Sanad." />
+            <div className="grid grid-cols-1 gap-x-12 gap-y-10 md:grid-cols-2">
+              {reasons.map((reason, i) => (
+                <Reveal key={reason.title} delay={i * 60}>
+                  <div className="flex items-start gap-5 border-t border-[#171414]/15 pt-6">
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#171414]">
+                      <CheckCircle className="h-4 w-4 text-[#E1BAC2]" aria-hidden />
+                    </span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-[#171414]">{reason.title}</h3>
+                      <p className="mt-2 text-sm text-[#4A4A4A]">{reason.description}</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Commitment */}
+        <DarkBand>
+          <div className="container mx-auto px-4 py-16 text-center md:px-6 md:py-20">
+            <Reveal>
+              <SectionTag label="Commitment" dark />
+              <p className="mx-auto mt-8 max-w-3xl font-display text-2xl font-extrabold leading-relaxed tracking-tight md:text-3xl">
+                &ldquo;The most reliable, transparent, and Shariah-compliant platform for Ar-Rahnu
+                operators and funders — strengthening the Islamic finance ecosystem with every
+                tokenized loan.&rdquo;
               </p>
-            </div>
+              <Link
+                href="/apply"
+                className="flux-pill mt-9 inline-flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-[0.16em]"
+              >
+                Apply for Financing
+              </Link>
+            </Reveal>
           </div>
-
-          <div className="flex items-start gap-4">
-            <div className="bg-emerald-100 p-3 rounded-full">
-              <CheckCircle className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Secure Transactions</h3>
-              <p className="text-muted-foreground">
-                Advanced security measures to protect all transactions and personal information, ensuring peace of mind
-                for all platform users.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="bg-emerald-100 p-3 rounded-full">
-              <CheckCircle className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Expanded Reach</h3>
-              <p className="text-muted-foreground">
-                Connect with a wider network of operators and funders, increasing opportunities for growth and
-                collaboration within the Islamic finance community.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="bg-emerald-100 p-3 rounded-full">
-              <CheckCircle className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Expert Support</h3>
-              <p className="text-muted-foreground">
-                Access to a team of experts in Islamic finance and Ar-Rahnu operations, providing guidance and support
-                throughout the platform experience.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-emerald-50 p-8 rounded-xl">
-        <h2 className="text-2xl font-bold mb-4 text-center">Our Commitment</h2>
-        <p className="text-center max-w-3xl mx-auto text-muted-foreground">
-          At Sanad, we are committed to providing the most reliable, transparent, and Shariah-compliant
-          platform for Ar-Rahnu operators and funders. Our goal is to strengthen the Islamic finance ecosystem by
-          facilitating meaningful connections and transactions that benefit all parties involved while adhering to the
-          principles of Islamic finance.
-        </p>
-      </div>
+        </DarkBand>
+      </main>
     </div>
   )
 }

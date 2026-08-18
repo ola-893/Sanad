@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Bell, Menu, Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,13 +9,20 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
 import { ModeToggle } from "@/components/mode-toggle"
+import { Logo } from "@/components/logo"
+import { useAtom } from "jotai"
+import { userAtom } from "@/store/atoms"
+import { useAuth } from "@/hooks/use-auth"
 
 export function PageHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [user] = useAtom(userAtom)
+  const { logout } = useAuth()
+  const role = user?.userInfo?.roleId as "admin" | "pawnshop" | "investor" | "user"
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
+    <header className="site-header sticky top-0 z-50 w-full px-3 pt-3">
+      <div className="mx-auto flex h-14 max-w-7xl items-center rounded-full border border-white/45 bg-white/55 px-3 shadow-[0_18px_50px_rgba(30,30,30,0.08)] backdrop-blur-xl">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="mr-2 md:hidden">
@@ -28,9 +34,8 @@ export function PageHeader() {
             <MobileNav />
           </SheetContent>
         </Sheet>
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <Image src="/placeholder.svg?height=32&width=32" alt="Logo" width={32} height={32} className="h-8 w-8" />
-          <span className="font-bold">Sanad</span>
+        <Link href="/" className="mr-6">
+          <Logo asLink={false} />
         </Link>
         <div className="hidden md:flex">
           <MainNav />
@@ -58,7 +63,7 @@ export function PageHeader() {
             <span className="sr-only">Notifications</span>
           </Button>
           <ModeToggle />
-          <UserNav />
+          <UserNav user={user} role={role} onLogout={logout} />
         </div>
       </div>
     </header>
@@ -68,9 +73,8 @@ export function PageHeader() {
 function MobileNav() {
   return (
     <div className="flex flex-col gap-4 py-4">
-      <Link href="/" className="flex items-center space-x-2 px-4">
-        <Image src="/placeholder.svg?height=32&width=32" alt="Logo" width={32} height={32} className="h-8 w-8" />
-        <span className="font-bold">Sanad</span>
+      <Link href="/" className="px-4">
+        <Logo asLink={false} />
       </Link>
       <div className="px-4 py-2">
         <div className="flex items-center space-x-2">

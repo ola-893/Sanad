@@ -507,7 +507,7 @@ export function LoanOffer() {
                       </div>
                       <div className="flex justify-between border-t pt-2 mt-2">
                         <span className="font-semibold">Total Repayment:</span>
-                        <span className="font-semibold text-blue-600">
+                        <span className="font-semibold text-primary">
                           RM {Math.round(loanAmount * (1 + (form.watch('pawnerInterestP') / 100) * form.watch('tenorM'))).toLocaleString()}
                         </span>
                       </div>
@@ -532,8 +532,8 @@ export function LoanOffer() {
                 </p>
 
                 <div className="space-y-4">
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
+                  <div className="p-3 bg-muted border border-blue-200 rounded-lg">
+                    <p className="text-sm text-primary">
                       <strong>Note:</strong> Each share must have a minimum value of RM 1.00.
                     </p>
                   </div>
@@ -677,23 +677,23 @@ export function LoanOffer() {
                         <>
                           <div className="flex justify-between">
                             <span>Investor RoI:</span>
-                            <span className="font-medium text-green-600">{form.watch('investorRoiPercentage')}% per month</span>
+                            <span className="font-medium text-success">{form.watch('investorRoiPercentage')}% per month</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Monthly Return per Share:</span>
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-success">
                               RM {((mintValue * form.watch('investorRoiPercentage')) / 100).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between border-t pt-2 mt-2">
                             <span>Total Return per Share ({form.watch('tenorM')} months):</span>
-                            <span className="font-medium text-blue-600">
+                            <span className="font-medium text-primary">
                               RM {(mintValue * (1 + (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM'))).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span>Profit per Share:</span>
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-success">
                               RM {(mintValue * (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM')).toFixed(2)}
                             </span>
                           </div>
@@ -703,17 +703,17 @@ export function LoanOffer() {
                         <>
                           <div className="flex justify-between">
                             <span>Total Profit Pool:</span>
-                            <span className="font-medium text-green-600">RM {form.watch('investorRoiFixedAmount')}</span>
+                            <span className="font-medium text-success">RM {form.watch('investorRoiFixedAmount')}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Profit per Share:</span>
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-success">
                               RM {(form.watch('investorRoiFixedAmount') / form.watch('mintShare')).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between border-t pt-2 mt-2">
                             <span>Total Return per Share:</span>
-                            <span className="font-medium text-blue-600">
+                            <span className="font-medium text-primary">
                               RM {(mintValue + (form.watch('investorRoiFixedAmount') / form.watch('mintShare'))).toFixed(2)}
                             </span>
                           </div>
@@ -744,7 +744,7 @@ export function LoanOffer() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Financing Amount</Label>
-                  <p className="font-medium text-emerald-600">RM {loanDetails.loanAmount.toLocaleString()}</p>
+                  <p className="font-medium text-primary">RM {loanDetails.loanAmount.toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Profit Rate</Label>
@@ -777,12 +777,12 @@ export function LoanOffer() {
                 </div>
               </div>
 
-              <Card className="bg-emerald-50">
+              <Card className="bg-muted">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-medium text-emerald-800">Payment Summary</h3>
-                      <p className="text-sm text-emerald-700">
+                      <h3 className="font-medium text-primary">Payment Summary</h3>
+                      <p className="text-sm text-primary">
                         {paymentFrequency === "monthly"
                           ? "Monthly payment"
                           : paymentFrequency === "biweekly"
@@ -791,10 +791,10 @@ export function LoanOffer() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-emerald-700">
+                      <p className="text-2xl font-bold text-primary">
                         RM {calculateMonthlyPayment().toLocaleString()}
                       </p>
-                      <p className="text-xs text-emerald-600">for {tenorM} months</p>
+                      <p className="text-xs text-primary">for {tenorM} months</p>
                     </div>
                   </div>
                 </CardContent>
@@ -826,7 +826,7 @@ export function LoanOffer() {
               <Button variant="outline" disabled={isSubmitting}>Modify Application</Button>
               <Button
                 onClick={handleAcceptOffer}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-primary hover:bg-primary/90"
                 disabled={!acceptedTerms || isSubmitting}
               >
                 {isSubmitting ? 'Submitting...' : 'Accept Offer'}
@@ -838,7 +838,7 @@ export function LoanOffer() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Check className="h-6 w-6 text-emerald-600" />
+              <Check className="h-6 w-6 text-primary" />
               <CardTitle>Offer Accepted</CardTitle>
             </div>
             <CardDescription>
@@ -846,25 +846,25 @@ export function LoanOffer() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-center p-6 bg-emerald-50 rounded-md">
+            <div className="flex items-center justify-center p-6 bg-muted rounded-md">
               <div className="text-center">
-                <h3 className="font-medium text-lg text-emerald-800 mb-2">
+                <h3 className="font-medium text-lg text-primary mb-2">
                   {nftGenerated ? "NFT Collateral Generated" : "Generating NFT Collateral..."}
                 </h3>
                 {nftGenerated ? (
                   <div className="space-y-2">
-                    <Shield className="h-16 w-16 text-emerald-600 mx-auto" />
-                    <p className="text-sm text-emerald-700">
+                    <Shield className="h-16 w-16 text-primary mx-auto" />
+                    <p className="text-sm text-primary">
                       Your jewelry has been securely represented as an NFT on the Hedera network.
                     </p>
                     {tokenId && (
-                      <div className="text-xs text-emerald-600">
+                      <div className="text-xs text-primary">
                         <p>Token ID: {tokenId}</p>
                         <a 
                           href={`${process.env.NEXT_PUBLIC_ENV_URL}/${tokenId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
+                          className="text-primary hover:text-primary underline mt-1 inline-block"
                         >
                           View on HashScan →
                         </a>
@@ -873,7 +873,7 @@ export function LoanOffer() {
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                   </div>
                 )}
               </div>
@@ -915,7 +915,7 @@ export function LoanOffer() {
           </CardContent>
           <CardFooter>
             <Button 
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-primary hover:bg-primary/90"
               onClick={() => {
                 // Clear session storage
                 sessionStorage.removeItem('jewelrySubmissionId')

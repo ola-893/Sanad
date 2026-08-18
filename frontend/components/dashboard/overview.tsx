@@ -54,7 +54,7 @@ export function Overview() {
         <YAxis />
         <Tooltip />
         <Legend />
-        <Bar dataKey="Financing" fill="#10b981" />
+        <Bar dataKey="Financing" fill="var(--chart-1)" />
         <Bar dataKey="Repayments" fill="#6366f1" />
       </BarChart>
     </ResponsiveContainer>

@@ -109,25 +109,25 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className="flex-1 bg-gradient-to-br from-emerald-50 to-gold-50 flex items-center justify-center p-4">
+      <main className="flex-1 bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
         <div className="w-full max-w-lg">
           <div className="flex flex-col items-center space-y-2 text-center mb-8">
             <div className="mx-auto mb-4">
               <Logo />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-800">Investor Login</h1>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">Investor Login</h1>
             <p className="text-sm text-muted-foreground">Sign in to your investor account to continue</p>
           </div>
 
-          <Card className="shadow-2xl border-emerald-200">
+          <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardHeader className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-t-lg">
+                <CardHeader className="rounded-t-3xl border-b border-[#171414]/10">
                   <CardTitle className="flex items-center gap-2">
                     <UserIcon className="h-5 w-5" />
                     Investor Login
                   </CardTitle>
-                  <CardDescription className="text-emerald-100">Enter your credentials to access your investor account</CardDescription>
+                  <CardDescription className="text-[#4A4A4A]">Enter your credentials to access your investor account</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 p-6">
                   <FormField
@@ -189,7 +189,7 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4 p-6">
                   <Button 
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white" 
+                    className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black" 
                     // disabled={isLoading || form.formState.isSubmitting}
                     >
                     {/* {isLoading || form.formState.isSubmitting ? (
@@ -206,19 +206,19 @@ export default function LoginPage() {
                   </Button>
 
               <div className="flex items-center gap-2 w-full">
-                <hr className="flex-1 border-t border-emerald-200" />
+                <hr className="flex-1 border-t border-border" />
                 <span className="text-xs text-muted-foreground">OR</span>
-                <hr className="flex-1 border-t border-emerald-200" />
+                <hr className="flex-1 border-t border-border" />
               </div>
 
-              <Button type="button" variant="outline" className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => router.push("/admin/login")}>
+              <Button type="button" variant="outline" className="w-full border-[#171414]/15 text-[#171414] hover:bg-white/60" onClick={() => router.push("/admin/login")}>
                 <ShieldIcon className="mr-2 h-4 w-4" />
                 Admin Login
               </Button>
 
                   <p className="text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
-                    <Link href="/register" className="text-emerald-600 underline-offset-4 hover:underline font-medium">
+                    <Link href="/register" className="text-primary underline-offset-4 hover:underline font-medium">
                       Register
                     </Link>
                   </p>
@@ -232,11 +232,11 @@ export default function LoginPage() {
               🔒 Secure customer access with encrypted authentication
             </p>
             <div className="mt-2 space-x-2">
-              <Link href="/admin/login" className="text-xs text-emerald-600 underline-offset-4 hover:underline">
+              <Link href="/admin/login" className="text-xs text-primary underline-offset-4 hover:underline">
                 Admin / Ar Rahnu Login
               </Link>
               <span className="text-xs text-muted-foreground">|</span>
-              <Link href="/" className="text-xs text-emerald-600 underline-offset-4 hover:underline">
+              <Link href="/" className="text-xs text-primary underline-offset-4 hover:underline">
                 Return to Homepage
               </Link>
             </div>

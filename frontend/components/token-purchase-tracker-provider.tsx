@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useTokenPurchaseSocket } from '@/hooks/use-token-purchase-socket'
 import { TokenPurchaseProgressTracker } from '@/components/token-purchase-progress-tracker'
-import { useAuth } from '@/hooks/use-auth'
+import { useAtom } from 'jotai'
+import { userAtom } from '@/store/atoms'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 export function TokenPurchaseTrackerProvider() {
   const [showTracker, setShowTracker] = useState(false)
-  const { user } = useAuth()
+  const [user] = useAtom(userAtom)
   const queryClient = useQueryClient()
 
   // Socket.IO integration for token purchase tracking

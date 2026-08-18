@@ -60,7 +60,7 @@ export function WalletBalance() {
           <CardDescription>Your wallet balance and transaction history</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-8 text-red-600">
+          <div className="text-center p-8 text-destructive">
             <p>Failed to load wallet data</p>
             <Button onClick={handleRefresh} variant="outline" className="mt-4">
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -114,14 +114,14 @@ export function WalletBalance() {
         {/* Balance Display */}
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
-          <div className="text-5xl font-bold text-emerald-600 mb-4">
+          <div className="text-5xl font-bold text-primary mb-4">
             {balance.toLocaleString('en-MY', { 
               style: 'currency', 
               currency: 'MYR' 
             })}
           </div>
           <div className="flex items-center justify-center gap-2">
-            {/* <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div> */}
+            {/* <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div> */}
             <span className="text-xs text-muted-foreground">
               <Link href="https://hashscan.io/hedera/account/0.0.12345" target="_blank">
                 <ExternalLink className="h-4 w-4 mr-2" />

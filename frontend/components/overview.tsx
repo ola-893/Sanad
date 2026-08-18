@@ -62,9 +62,9 @@ export function Overview() {
         <YAxis />
         <Tooltip />
         <Legend />
-        <Bar dataKey="Active Loans" fill="#8884d8" />
-        <Bar dataKey="Repayments" fill="#82ca9d" />
-        <Bar dataKey="Unclaimed" fill="#ffc658" />
+        <Bar dataKey="Active Loans" fill="var(--chart-1)" />
+        <Bar dataKey="Repayments" fill="var(--chart-3)" />
+        <Bar dataKey="Unclaimed" fill="var(--chart-2)" />
       </BarChart>
     </ResponsiveContainer>
   )

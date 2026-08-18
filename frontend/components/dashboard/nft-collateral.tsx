@@ -56,7 +56,7 @@ export function NFTCollateral({ showAll = false }: NFTCollateralProps) {
 
   if (isError) {
     return (
-      <div className="text-center p-8 text-red-600">
+      <div className="text-center p-8 text-destructive">
         <p>{error?.message || 'Failed to fetch NFTs'}</p>
       </div>
     )
@@ -89,12 +89,12 @@ export function NFTCollateral({ showAll = false }: NFTCollateralProps) {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <div className="w-16 h-16 bg-gradient-to-br from-gold to-brightGold rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                      <span className="text-white font-bold text-lg">NFT</span>
+                      <span className="text-primary-foreground font-bold text-lg">NFT</span>
                     </div>
                     <div>
                       <div className="flex items-center space-x-2 mb-1">
                         <h3 className="font-bold text-lg text-deepGreen">NFT #{nft.serial_number}</h3>
-                        <Badge className={`text-xs ${nft.deleted ? 'bg-red-100 text-red-800' : 'bg-brightGold text-deepGreen'}`}>
+                        <Badge className={`text-xs ${nft.deleted ? 'bg-destructive/10 text-destructive' : 'bg-brightGold text-deepGreen'}`}>
                           {nft.deleted ? "Deleted" : "Active"}
                         </Badge>
                       </div>
@@ -102,7 +102,7 @@ export function NFTCollateral({ showAll = false }: NFTCollateralProps) {
                     </div>
                   </div>
                 </div>
-                <Button size="sm" asChild className="bg-gold hover:bg-gold/90 text-white shadow-md">
+                <Button size="sm" asChild className="bg-gold hover:bg-gold/90 text-primary-foreground shadow-md">
                   <a href={`${process.env.NEXT_PUBLIC_ENV_URL}/${nft.token_id}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-1" />
                     View NFT
@@ -110,7 +110,7 @@ export function NFTCollateral({ showAll = false }: NFTCollateralProps) {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-gold/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-card/60 backdrop-blur-sm rounded-lg p-4 border border-gold/10">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Account ID</p>
                   <p className="text-sm font-medium text-deepGreen truncate">{nft.account_id}</p>

@@ -10,7 +10,7 @@ export function InvestorPageHeader({ title, description, children }: PageHeaderP
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
       <div>
-        <h1 className="text-3xl font-bold text-emerald-800">{title}</h1>
+        <h1 className="text-3xl font-bold text-primary">{title}</h1>
         {description && (
           <p className="text-muted-foreground mt-2">{description}</p>
         )}

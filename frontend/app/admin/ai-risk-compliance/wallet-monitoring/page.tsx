@@ -88,33 +88,33 @@ export default function WalletMonitoringPage() {
   const getRiskColor = (level: string) => {
     switch (level) {
       case "High":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       case "Medium":
         return "bg-orange-100 text-orange-800"
       case "Low":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "flagged":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       case "investigating":
         return "bg-orange-100 text-orange-800"
       case "blocked":
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
       default:
-        return "bg-blue-100 text-blue-800"
+        return "bg-muted text-primary"
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Wallet className="h-6 w-6 text-purple-600" />
+        <Wallet className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Wallet & Transaction Monitoring</h1>
       </div>
 
@@ -126,9 +126,9 @@ export default function WalletMonitoringPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Active Wallets</p>
                 <p className="text-2xl font-bold">2,847</p>
-                <p className="text-xs text-green-600">↑ 5.2% this week</p>
+                <p className="text-xs text-success">↑ 5.2% this week</p>
               </div>
-              <Wallet className="h-8 w-8 text-purple-500" />
+              <Wallet className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -138,9 +138,9 @@ export default function WalletMonitoringPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Daily Volume</p>
                 <p className="text-2xl font-bold">RM 2.1M</p>
-                <p className="text-xs text-blue-600">↑ 12% from yesterday</p>
+                <p className="text-xs text-primary">↑ 12% from yesterday</p>
               </div>
-              <DollarSign className="h-8 w-8 text-green-500" />
+              <DollarSign className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -149,10 +149,10 @@ export default function WalletMonitoringPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Suspicious Activity</p>
-                <p className="text-2xl font-bold text-red-600">23</p>
-                <p className="text-xs text-red-600">↑ 8 new alerts</p>
+                <p className="text-2xl font-bold text-destructive">23</p>
+                <p className="text-xs text-destructive">↑ 8 new alerts</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -161,10 +161,10 @@ export default function WalletMonitoringPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Detection Rate</p>
-                <p className="text-2xl font-bold text-green-600">97.3%</p>
-                <p className="text-xs text-green-600">↑ 1.1% improvement</p>
+                <p className="text-2xl font-bold text-success">97.3%</p>
+                <p className="text-xs text-success">↑ 1.1% improvement</p>
               </div>
-              <Shield className="h-8 w-8 text-green-500" />
+              <Shield className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -246,7 +246,7 @@ export default function WalletMonitoringPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-lg">{tx.amount}</p>
-                        <p className="text-sm text-red-600">Risk: {tx.riskScore}/100</p>
+                        <p className="text-sm text-destructive">Risk: {tx.riskScore}/100</p>
                       </div>
                     </div>
 
@@ -322,11 +322,11 @@ export default function WalletMonitoringPage() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Risk Flags</p>
-                        <p className="font-medium text-red-600">{wallet.flags}</p>
+                        <p className="font-medium text-destructive">{wallet.flags}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Status</p>
-                        <p className="font-medium text-green-600">Active</p>
+                        <p className="font-medium text-success">Active</p>
                       </div>
                     </div>
 

@@ -31,18 +31,18 @@ export default function Error({
       {/* Error Content */}
       <section className="py-16 flex-1 flex items-center justify-center">
         <div className="container mx-auto px-4 md:px-6">
-          <Card className="max-w-md mx-auto border-red-200 bg-red-50">
+          <Card className="max-w-md mx-auto border-destructive/30 bg-destructive/10">
             <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-red-600" />
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-8 w-8 text-destructive" />
               </div>
-              <CardTitle className="text-red-700">Failed to Load Data</CardTitle>
-              <CardDescription className="text-red-600">
+              <CardTitle className="text-destructive">Failed to Load Data</CardTitle>
+              <CardDescription className="text-destructive">
                 We couldn&apos;t fetch the latest SAG investment opportunities. This might be due to:
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ul className="text-sm text-red-600 space-y-2">
+              <ul className="text-sm text-destructive space-y-2">
                 <li>• API server is temporarily unavailable</li>
                 <li>• Network connectivity issues</li>
                 <li>• Server maintenance in progress</li>
@@ -51,7 +51,7 @@ export default function Error({
               <div className="flex flex-col gap-3 mt-6">
                 <Button 
                   onClick={reset}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   <RefreshCcw className="h-4 w-4 mr-2" />
                   Try Again
@@ -60,7 +60,7 @@ export default function Error({
                 <Button 
                   variant="outline"
                   onClick={() => window.location.href = '/'}
-                  className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
                 >
                   Reload Page
                 </Button>
@@ -68,8 +68,8 @@ export default function Error({
 
               {process.env.NODE_ENV === 'development' && (
                 <details className="mt-4">
-                  <summary className="text-xs text-red-500 cursor-pointer">Technical Details</summary>
-                  <pre className="text-xs text-red-400 mt-2 p-2 bg-red-100 rounded overflow-auto">
+                  <summary className="text-xs text-destructive cursor-pointer">Technical Details</summary>
+                  <pre className="text-xs text-red-400 mt-2 p-2 bg-destructive/10 rounded overflow-auto">
                     {error.message}
                   </pre>
                 </details>
