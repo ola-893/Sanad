@@ -11,7 +11,10 @@ export async function deployToTestnet() {
   console.log('SANAD PROTOCOL - DUAL-CHAIN TESTNET DEPLOYMENT (CC3 + SEPOLIA)');
   console.log('========================================================================\n');
 
-  const privateKey = process.env.CREDITCOIN_PRIVATE_KEY || process.env.PRIVATE_KEY || process.env.SEPOLIA_PRIVATE_KEY;
+  let privateKey = process.env.CREDITCOIN_PRIVATE_KEY;
+  if (!privateKey || privateKey === '0x0000000000000000000000000000000000000000000000000000000000000001') {
+    privateKey = process.env.PRIVATE_KEY || process.env.SEPOLIA_PRIVATE_KEY;
+  }
   if (!privateKey || privateKey === '0x0000000000000000000000000000000000000000000000000000000000000001') {
     console.error('❌ [DEPLOYMENT HALTED] Valid funded PRIVATE_KEY not found in backend/.env.');
     console.log('\nTo deploy live smart contracts to Creditcoin 3 & Ethereum Sepolia:');
