@@ -45,7 +45,7 @@ export function LoanStatus() {
                 <CardTitle>{loan.title}</CardTitle>
                 <CardDescription>Loan ID: {loan.id}</CardDescription>
               </div>
-              <Badge className={loan.status === "active" ? "bg-green-500" : "bg-amber-500"}>
+              <Badge className={loan.status === "active" ? "bg-success/100" : "bg-amber-500"}>
                 {loan.status === "active" ? "Active" : "Pending"}
               </Badge>
             </div>
@@ -103,7 +103,7 @@ export function LoanStatus() {
               <Info className="mr-2 h-4 w-4" />
               View Details
             </Button>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+            <Button size="sm" className="bg-primary hover:bg-primary/90">
               <CreditCard className="mr-2 h-4 w-4" />
               Make Payment
             </Button>

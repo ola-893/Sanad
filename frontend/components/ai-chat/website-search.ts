@@ -25,14 +25,14 @@ const websiteContent: {
     url: "/login",
     title: "Login to Your Account",
     content:
-      "Access your Silsilat account to manage your financing, make payments, and track your collateral status.",
+      "Access your Sanad account to manage your financing, make payments, and track your collateral status.",
     keywords: ["login", "account", "sign in", "access", "dashboard"],
   },
   {
     url: "/register",
     title: "Create an Account",
     content:
-      "Register for a Silsilat account to apply for Shariah-compliant jewelry financing and access our services.",
+      "Register for a Sanad account to apply for Shariah-compliant jewelry financing and access our services.",
     keywords: ["register", "account", "sign up", "create account"],
   },
   {
@@ -67,7 +67,7 @@ const websiteContent: {
     url: "/terms",
     title: "Terms of Service",
     content:
-      "Our terms of service outline the rules, guidelines, and agreements for using Silsilat's Shariah-compliant financing services.",
+      "Our terms of service outline the rules, guidelines, and agreements for using Sanad's Shariah-compliant financing services.",
     keywords: ["terms", "service", "agreement", "rules", "guidelines"],
   },
   {

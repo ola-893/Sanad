@@ -44,16 +44,16 @@ export function RepaymentProgressTracker({
   if (!isVisible) return null
 
   const getStatusIcon = () => {
-    if (errorData) return <XCircle className="h-5 w-5 text-red-500" />
-    if (completeData) return <CheckCircle className="h-5 w-5 text-green-500" />
-    if (progressData) return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-    return <Clock className="h-5 w-5 text-gray-500" />
+    if (errorData) return <XCircle className="h-5 w-5 text-destructive" />
+    if (completeData) return <CheckCircle className="h-5 w-5 text-success" />
+    if (progressData) return <Loader2 className="h-5 w-5 text-primary animate-spin" />
+    return <Clock className="h-5 w-5 text-muted-foreground" />
   }
 
   const getStatusColor = () => {
-    if (errorData) return 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700'
-    if (completeData) return 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
-    return 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700'
+    if (errorData) return 'bg-destructive/10 border-destructive/30 dark:bg-red-900/20 dark:border-red-700'
+    if (completeData) return 'bg-success/10 border-success/30 dark:bg-green-900/20 dark:border-green-700'
+    return 'bg-muted border-blue-200 dark:bg-blue-900/20 dark:border-blue-700'
   }
 
   const getStatusText = () => {
@@ -114,17 +114,17 @@ export function RepaymentProgressTracker({
 
           {/* Error Display */}
           {errorData && (
-            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-200 dark:border-red-700">
+            <div className="bg-destructive/10 dark:bg-red-900/30 p-3 rounded-lg border border-destructive/30 dark:border-red-700">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="h-4 w-4 text-destructive dark:text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                  <p className="text-sm font-medium text-destructive dark:text-red-200">
                     Repayment Failed
                   </p>
-                  <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                  <p className="text-xs text-destructive dark:text-red-300 mt-1">
                     {errorData.error}
                   </p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  <p className="text-xs text-destructive dark:text-red-400 mt-1">
                     {new Date(errorData.timestamp).toLocaleString()}
                   </p>
                 </div>
@@ -135,14 +135,14 @@ export function RepaymentProgressTracker({
           {/* Success Display */}
           {completeData && (
             <div className="space-y-3">
-              <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
+              <div className="bg-success/10 dark:bg-green-900/30 p-3 rounded-lg border border-success/30 dark:border-green-700">
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-success dark:text-success mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    <p className="text-sm font-medium text-success dark:text-green-200">
                       Repayment Successful
                     </p>
-                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                    <p className="text-xs text-success dark:text-green-300 mt-1">
                       {new Date(completeData.timestamp).toLocaleString()}
                     </p>
                   </div>
@@ -162,7 +162,7 @@ export function RepaymentProgressTracker({
                   </Button>
 
                   {showDetails && (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg space-y-2 text-xs">
+                    <div className="bg-muted/40 dark:bg-card p-3 rounded-lg space-y-2 text-xs">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Holders:</span>
                         <span className="font-medium">{completeData.data.totalHolders}</span>
@@ -175,7 +175,7 @@ export function RepaymentProgressTracker({
                         <p className="text-muted-foreground">Unfreeze Transactions:</p>
                         <div className="space-y-1">
                           {completeData.data.unfreezeTransactions.map((tx, index) => (
-                            <div key={index} className="text-xs font-mono bg-gray-100 dark:bg-gray-700 p-1 rounded">
+                            <div key={index} className="text-xs font-mono bg-muted dark:bg-gray-700 p-1 rounded">
                               {tx}
                             </div>
                           ))}
@@ -185,7 +185,7 @@ export function RepaymentProgressTracker({
                         <p className="text-muted-foreground">Transfer Transactions:</p>
                         <div className="space-y-1">
                           {completeData.data.transferTransactions.map((tx, index) => (
-                            <div key={index} className="text-xs font-mono bg-gray-100 dark:bg-gray-700 p-1 rounded">
+                            <div key={index} className="text-xs font-mono bg-muted dark:bg-gray-700 p-1 rounded">
                               {tx}
                             </div>
                           ))}
@@ -193,7 +193,7 @@ export function RepaymentProgressTracker({
                       </div>
                       <div className="space-y-1">
                         <p className="text-muted-foreground">Burn Transaction:</p>
-                        <div className="text-xs font-mono bg-gray-100 dark:bg-gray-700 p-1 rounded">
+                        <div className="text-xs font-mono bg-muted dark:bg-gray-700 p-1 rounded">
                           {completeData.data.burnTransaction}
                         </div>
                       </div>

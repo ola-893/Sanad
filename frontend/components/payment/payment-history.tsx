@@ -156,10 +156,10 @@ export function PaymentHistory() {
                     <Badge
                       className={
                         payment.status === "completed"
-                          ? "bg-green-500"
+                          ? "bg-success/100"
                           : payment.status === "upcoming"
                             ? "bg-amber-500"
-                            : "bg-red-500"
+                            : "bg-destructive/100"
                       }
                     >
                       {payment.status === "completed"
@@ -176,7 +176,7 @@ export function PaymentHistory() {
                       </Button>
                     )}
                     {payment.status === "upcoming" && (
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                      <Button size="sm" className="bg-primary hover:bg-primary/90">
                         Pay Now
                       </Button>
                     )}

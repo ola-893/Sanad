@@ -96,17 +96,17 @@ export default function SagListingsPage() {
 
   const getStatusBadge = (sag: SAG) => {
     if (!sag.tokenId) {
-      return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">Pending Approval</Badge>
+      return <Badge className="bg-warning/10 text-warning dark:bg-yellow-900/30 dark:text-yellow-300">Pending Approval</Badge>
     }
     
     const status = sag.status || "active"
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
+        return <Badge className="bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300">Active</Badge>
       case "closed":
-        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Closed</Badge>
+        return <Badge className="bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-300">Closed</Badge>
       default:
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
+        return <Badge className="bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300">Active</Badge>
     }
   }
 
@@ -132,19 +132,19 @@ export default function SagListingsPage() {
       case "VERYLOW":
       case "VERY LOW":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
+          <Badge variant="outline" className="bg-muted text-primary border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
             Very Low Risk
           </Badge>
         )
       case "LOW":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
             Low Risk
           </Badge>
         )
       case "MEDIUM":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
             Medium Risk
           </Badge>
         )
@@ -158,7 +158,7 @@ export default function SagListingsPage() {
       case "VERYHIGH":
       case "VERY HIGH":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
             Very High Risk
           </Badge>
         )
@@ -170,25 +170,25 @@ export default function SagListingsPage() {
   const getActionCardStyles = (action: string) => {
     if (action === 'approve') {
       return {
-        cardClass: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800',
-        textClass: 'text-green-600 dark:text-green-400',
-        icon: <CheckCircle className="h-4 w-4 text-green-600" />
+        cardClass: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-success/30 dark:border-green-800',
+        textClass: 'text-success dark:text-success',
+        icon: <CheckCircle className="h-4 w-4 text-success" />
       }
     }
     
     if (action === 'monitor') {
       return {
-        cardClass: 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800',
-        textClass: 'text-yellow-600 dark:text-yellow-400',
-        icon: <Eye className="h-4 w-4 text-yellow-600" />
+        cardClass: 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-warning/30 dark:border-yellow-800',
+        textClass: 'text-warning dark:text-yellow-400',
+        icon: <Eye className="h-4 w-4 text-warning" />
       }
     }
     
     // margin_call or default
     return {
-      cardClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800',
-      textClass: 'text-red-600 dark:text-red-400',
-      icon: <AlertTriangle className="h-4 w-4 text-red-600" />
+      cardClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-destructive/30 dark:border-red-800',
+      textClass: 'text-destructive dark:text-red-400',
+      icon: <AlertTriangle className="h-4 w-4 text-destructive" />
     }
   }
 
@@ -197,11 +197,11 @@ export default function SagListingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="h-6 w-6 text-emerald-600" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
             SAG Listings Management
           </h1>
-          <p className="text-gray-600">Manage Surat Akuan Gadaian listings and tokenization</p>
+          <p className="text-muted-foreground">Manage Surat Akuan Gadaian listings and tokenization</p>
         </div>
         <div>
           <Button asChild variant="outline">
@@ -217,7 +217,7 @@ export default function SagListingsPage() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Listings</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Listings</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -232,7 +232,7 @@ export default function SagListingsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -249,14 +249,14 @@ export default function SagListingsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Listings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Listings</CardTitle>
+            <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-success">
                 {sags.filter(sag => sag.status === 'active' || !sag.status).length}
               </div>
             )}
@@ -266,14 +266,14 @@ export default function SagListingsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Approval</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-2xl font-bold text-warning">
                 {sags.filter(sag => !sag.tokenId).length}
               </div>
             )}
@@ -355,13 +355,13 @@ export default function SagListingsPage() {
                   ))
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-red-600">
+                    <TableCell colSpan={10} className="text-center py-8 text-destructive">
                       Failed to load SAG listings. Please try again.
                     </TableCell>
                   </TableRow>
                 ) : filteredListings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No SAG listings found.
                     </TableCell>
                   </TableRow>
@@ -370,40 +370,40 @@ export default function SagListingsPage() {
                     <TableRow key={sag.sagId}>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagName}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagId}</div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagDescription}</div>
+                          <div className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagId}</div>
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagDescription}</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagProperties.weightG}g</div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagProperties.karat}K Gold</div>
+                          <div className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.weightG}g</div>
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.karat}K Gold</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="font-medium text-foreground dark:text-gray-100">
                             {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                             Loan: {sag.sagProperties.currency} {(sag.sagProperties.valuation * (sag.sagProperties.loanPercentage ?? 0) / 100).toLocaleString()}
                           </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                             {sag.sagProperties.loanPercentage}% of value
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="font-medium text-foreground dark:text-gray-100">
                             {sag.sagProperties.mintShare.toLocaleString()} shares
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                             {sag.sagProperties.investorRoiPercentage}% ROI
                           </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                             {sag.sagProperties.tenorM} months
                           </div>
                         </div>
@@ -412,15 +412,15 @@ export default function SagListingsPage() {
                         <div>
                           {sag.sagProperties.ltv ? (
                             <>
-                              <div className="font-medium text-gray-900 dark:text-gray-100">
+                              <div className="font-medium text-foreground dark:text-gray-100">
                                 {(sag.sagProperties.ltv * 100).toFixed(2)}%
                               </div>
-                              <div className="text-xs text-gray-400 dark:text-gray-500">
+                              <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                                 Loan-to-Value
                               </div>
                             </>
                           ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">N/A</span>
+                            <span className="text-muted-foreground dark:text-muted-foreground text-sm">N/A</span>
                           )}
                         </div>
                       </TableCell>
@@ -428,7 +428,7 @@ export default function SagListingsPage() {
                       <TableCell>
                         {sag.tokenId ? (
                           <a 
-                            className="text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-1"
+                            className="text-primary dark:text-blue-400 hover:underline hover:text-primary dark:hover:text-blue-300 text-sm font-medium flex items-center gap-1"
                             href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -437,7 +437,7 @@ export default function SagListingsPage() {
                             <ExternalLinkIcon className="h-3 w-3" />
                           </a>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">Not tokenized</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground text-sm">Not tokenized</span>
                         )}
                       </TableCell>
                       <TableCell>{getRiskBadge(sag)}</TableCell>
@@ -453,7 +453,7 @@ export default function SagListingsPage() {
                             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                                  <AlertTriangle className="h-5 w-5 text-warning" />
                                   AI Risk Analysis
                                 </DialogTitle>
                                 <DialogDescription>
@@ -464,7 +464,7 @@ export default function SagListingsPage() {
                                 {/* Key Metrics */}
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Risk Level</div>
+                                    <div className="text-xs text-primary dark:text-blue-400 font-medium mb-1">Risk Level</div>
                                     <div className="flex items-center gap-2">
                                       {getRiskBadge(sag)}
                                     </div>
@@ -489,7 +489,7 @@ export default function SagListingsPage() {
                                   
                                   {sag.sagProperties.ltv && (
                                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                      <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">LTV Ratio</div>
+                                      <div className="text-xs text-primary dark:text-purple-400 font-medium mb-1">LTV Ratio</div>
                                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                                         {(sag.sagProperties.ltv * 100).toFixed(2)}%
                                       </div>
@@ -498,41 +498,41 @@ export default function SagListingsPage() {
                                 </div>
 
                                 {/* Asset Details */}
-                                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-2">
+                                <div className="bg-muted/40 dark:bg-gray-900 p-4 rounded-lg space-y-2">
                                   <h4 className="text-sm font-semibold mb-3">Asset Details</h4>
                                   <div className="grid grid-cols-2 gap-3 text-sm">
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Asset Type:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Asset Type:</span>
                                       <span className="font-medium">{sag.sagProperties.assetType}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Weight:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Weight:</span>
                                       <span className="font-medium">{sag.sagProperties.weightG}g</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Karat:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Karat:</span>
                                       <span className="font-medium">{sag.sagProperties.karat}K</span>
                                     </div>
                                     {sag.sagProperties.purity && (
                                       <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Purity:</span>
+                                        <span className="text-muted-foreground dark:text-muted-foreground">Purity:</span>
                                         <span className="font-medium">{sag.sagProperties.purity}</span>
                                       </div>
                                     )}
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Valuation:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Valuation:</span>
                                       <span className="font-medium">{sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Loan Amount:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Loan Amount:</span>
                                       <span className="font-medium">{sag.sagProperties.currency} {(sag.sagProperties.loan || 0).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Tenor:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Tenor:</span>
                                       <span className="font-medium">{sag.sagProperties.tenorM} months</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Loan %:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Loan %:</span>
                                       <span className="font-medium">{sag.sagProperties.loanPercentage}%</span>
                                     </div>
                                   </div>
@@ -541,7 +541,7 @@ export default function SagListingsPage() {
                                 {/* AI Rationale */}
                                 <div>
                                   <h4 className="text-sm font-semibold mb-2">AI Analysis Rationale</h4>
-                                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg text-sm whitespace-pre-wrap border border-blue-200 dark:border-blue-800">
+                                  <div className="bg-muted dark:bg-blue-950 p-4 rounded-lg text-sm whitespace-pre-wrap border border-blue-200 dark:border-blue-800">
                                     {sag.sagProperties.rationale}
                                   </div>
                                 </div>
@@ -549,8 +549,8 @@ export default function SagListingsPage() {
                                 {/* Evaluation ID */}
                                 {sag.sagProperties.eval_id && (
                                   <div className="flex items-center justify-between pt-2 border-t">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                      Evaluation ID: <code className="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">{sag.sagProperties.eval_id}</code>
+                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                      Evaluation ID: <code className="bg-muted dark:bg-card px-2 py-1 rounded">{sag.sagProperties.eval_id}</code>
                                     </span>
                                   </div>
                                 )}
@@ -558,7 +558,7 @@ export default function SagListingsPage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">No analysis</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground text-sm">No analysis</span>
                         )}
                       </TableCell>
                       <TableCell>

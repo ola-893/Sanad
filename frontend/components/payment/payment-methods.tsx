@@ -64,7 +64,7 @@ export function PaymentMethods() {
               onValueChange={setPaymentMethod}
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
-              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-primary" : ""}`}>
                 <CardHeader className="p-4">
                   <CardTitle className="text-base flex items-center gap-2">
                     <RadioGroupItem value="hedera" id="hedera" />
@@ -76,7 +76,7 @@ export function PaymentMethods() {
                 </CardContent>
               </Card>
 
-              <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-primary" : ""}`}>
                 <CardHeader className="p-4">
                   <CardTitle className="text-base flex items-center gap-2">
                     <RadioGroupItem value="bank" id="bank" />
@@ -88,7 +88,7 @@ export function PaymentMethods() {
                 </CardContent>
               </Card>
 
-              <Card className={`cursor-pointer ${paymentMethod === "card" ? "border-emerald-600" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "card" ? "border-primary" : ""}`}>
                 <CardHeader className="p-4">
                   <CardTitle className="text-base flex items-center gap-2">
                     <RadioGroupItem value="card" id="card" />
@@ -174,20 +174,20 @@ export function PaymentMethods() {
             </Card>
           )}
 
-          <Button onClick={handlePayment} className="w-full bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={handlePayment} className="w-full bg-primary hover:bg-primary/90">
             Pay RM {amount.toLocaleString()}
           </Button>
         </>
       ) : (
-        <Card className="bg-emerald-50">
+        <Card className="bg-muted">
           <CardHeader>
-            <CardTitle className="text-emerald-800">Payment Successful</CardTitle>
+            <CardTitle className="text-primary">Payment Successful</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-center p-6">
-              <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center">
                 <svg
-                  className="h-8 w-8 text-emerald-600"
+                  className="h-8 w-8 text-primary"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -206,11 +206,11 @@ export function PaymentMethods() {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-emerald-700">Payment Amount:</span>
+                <span className="text-sm text-primary">Payment Amount:</span>
                 <span className="font-medium">RM {amount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-emerald-700">Payment Method:</span>
+                <span className="text-sm text-primary">Payment Method:</span>
                 <span className="font-medium">
                   {paymentMethod === "hedera"
                     ? "Hedera Wallet"
@@ -220,18 +220,18 @@ export function PaymentMethods() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-emerald-700">Transaction ID:</span>
+                <span className="text-sm text-primary">Transaction ID:</span>
                 <span className="font-medium">TXN-{Math.floor(Math.random() * 1000000)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-emerald-700">Date & Time:</span>
+                <span className="text-sm text-primary">Date & Time:</span>
                 <span className="font-medium">{new Date().toLocaleString()}</span>
               </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-center gap-2">
             <Button variant="outline">View Receipt</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">Return to Dashboard</Button>
+            <Button className="bg-primary hover:bg-primary/90">Return to Dashboard</Button>
           </CardFooter>
         </Card>
       )}

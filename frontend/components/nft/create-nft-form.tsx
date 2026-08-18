@@ -351,8 +351,8 @@ export function CreateNFTForm() {
 
                             {form.watch('enableMinting') && (
                                 <>
-                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <p className="text-sm text-blue-800">
+                                    <div className="p-3 bg-muted border border-blue-200 rounded-lg">
+                                        <p className="text-sm text-primary">
                                             <strong>Note:</strong> Each mint share must have a minimum value of RM 1.00.
                                             The system will automatically adjust shares if needed to maintain this requirement.
                                         </p>
@@ -506,11 +506,11 @@ export function CreateNFTForm() {
                                                 <>
                                                     <div className="flex justify-between">
                                                         <span>Investor RoI:</span>
-                                                        <span className="font-medium text-green-600">{form.watch('investorRoiPercentage') || 0}% per month</span>
+                                                        <span className="font-medium text-success">{form.watch('investorRoiPercentage') || 0}% per month</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Monthly Return per Share:</span>
-                                                        <span className="font-medium text-green-600">
+                                                        <span className="font-medium text-success">
                                                             MYR {((mintValue * (form.watch('investorRoiPercentage') || 0)) / 100).toFixed(2)}
                                                         </span>
                                                     </div>
@@ -518,13 +518,13 @@ export function CreateNFTForm() {
                                                         <>
                                                             <div className="flex justify-between border-t pt-1 mt-2">
                                                                 <span>Total Return per Share ({form.watch('tenorM')} months):</span>
-                                                                <span className="font-medium text-blue-600">
+                                                                <span className="font-medium text-primary">
                                                                     MYR {(mintValue * (1 + (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0))).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span>Profit per Share:</span>
-                                                                <span className="font-medium text-green-600">
+                                                                <span className="font-medium text-success">
                                                                     MYR {(mintValue * (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0)).toFixed(2)}
                                                                 </span>
                                                             </div>
@@ -536,11 +536,11 @@ export function CreateNFTForm() {
                                                 <>
                                                     <div className="flex justify-between">
                                                         <span>Total Profit Pool:</span>
-                                                        <span className="font-medium text-green-600">MYR {form.watch('investorRoiFixedAmount') || 0}</span>
+                                                        <span className="font-medium text-success">MYR {form.watch('investorRoiFixedAmount') || 0}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Profit per Share:</span>
-                                                        <span className="font-medium text-green-600">
+                                                        <span className="font-medium text-success">
                                                             MYR {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
                                                         </span>
                                                     </div>
@@ -548,13 +548,13 @@ export function CreateNFTForm() {
                                                         <>
                                                             <div className="flex justify-between border-t pt-1 mt-2">
                                                                 <span>Total Return per Share ({form.watch('tenorM')} months):</span>
-                                                                <span className="font-medium text-blue-600">
+                                                                <span className="font-medium text-primary">
                                                                     MYR {(mintValue + (form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)) : 0)).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span>Profit per Share:</span>
-                                                                <span className="font-medium text-green-600">
+                                                                <span className="font-medium text-success">
                                                                     MYR {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
                                                                 </span>
                                                             </div>

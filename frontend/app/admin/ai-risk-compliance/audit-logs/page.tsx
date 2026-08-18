@@ -101,26 +101,26 @@ const auditLogs = [
 ]
 
 const systemColors = {
-  "KYC AI Engine": "bg-blue-100 text-blue-800",
-  "AML Screening": "bg-purple-100 text-purple-800",
+  "KYC AI Engine": "bg-muted text-primary",
+  "AML Screening": "bg-muted text-purple-800",
   "Wallet Monitor": "bg-orange-100 text-orange-800",
-  "SAG Risk Evaluator": "bg-red-100 text-red-800",
-  "Default Predictor": "bg-green-100 text-green-800",
+  "SAG Risk Evaluator": "bg-destructive/10 text-destructive",
+  "Default Predictor": "bg-success/10 text-success",
   "Compliance Bot": "bg-cyan-100 text-cyan-800",
 }
 
 const severityIcons = {
-  info: <Info className="h-4 w-4 text-blue-600" />,
-  medium: <AlertTriangle className="h-4 w-4 text-yellow-600" />,
-  high: <XCircle className="h-4 w-4 text-red-600" />,
+  info: <Info className="h-4 w-4 text-primary" />,
+  medium: <AlertTriangle className="h-4 w-4 text-warning" />,
+  high: <XCircle className="h-4 w-4 text-destructive" />,
 }
 
 const outcomeIcons = {
-  success: <CheckCircle className="h-4 w-4 text-green-600" />,
-  flagged: <AlertTriangle className="h-4 w-4 text-yellow-600" />,
-  investigated: <Eye className="h-4 w-4 text-blue-600" />,
-  blocked: <XCircle className="h-4 w-4 text-red-600" />,
-  answered: <CheckCircle className="h-4 w-4 text-green-600" />,
+  success: <CheckCircle className="h-4 w-4 text-success" />,
+  flagged: <AlertTriangle className="h-4 w-4 text-warning" />,
+  investigated: <Eye className="h-4 w-4 text-primary" />,
+  blocked: <XCircle className="h-4 w-4 text-destructive" />,
+  answered: <CheckCircle className="h-4 w-4 text-success" />,
 }
 
 export default function AuditLogsPage() {
@@ -144,11 +144,11 @@ export default function AuditLogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="h-6 w-6 text-emerald-600" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
             AI Risk & Compliance Audit Logs
           </h1>
-          <p className="text-gray-600">Comprehensive audit trail for all AI system activities and compliance events</p>
+          <p className="text-muted-foreground">Comprehensive audit trail for all AI system activities and compliance events</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="bg-transparent">
@@ -166,45 +166,45 @@ export default function AuditLogsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Events (24h)</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Events (24h)</CardTitle>
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,247</div>
-            <p className="text-xs text-gray-600">+12% from yesterday</p>
+            <p className="text-xs text-muted-foreground">+12% from yesterday</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">High Severity</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">High Severity</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">23</div>
-            <p className="text-xs text-gray-600">-8% from yesterday</p>
+            <div className="text-2xl font-bold text-destructive">23</div>
+            <p className="text-xs text-muted-foreground">-8% from yesterday</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">AI Systems Active</CardTitle>
-            <Brain className="h-4 w-4 text-emerald-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">AI Systems Active</CardTitle>
+            <Brain className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">6</div>
-            <p className="text-xs text-gray-600">All operational</p>
+            <p className="text-xs text-muted-foreground">All operational</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Failed Operations</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Failed Operations</CardTitle>
+            <XCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">4</div>
-            <p className="text-xs text-gray-600">All investigated</p>
+            <p className="text-xs text-muted-foreground">All investigated</p>
           </CardContent>
         </Card>
       </div>
@@ -219,7 +219,7 @@ export default function AuditLogsPage() {
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   id="search"
                   placeholder="Search logs..."
@@ -310,17 +310,17 @@ export default function AuditLogsPage() {
               </TableHeader>
               <TableBody>
                 {filteredLogs.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-gray-50">
+                  <TableRow key={log.id} className="hover:bg-muted/40">
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
+                        <Clock className="h-4 w-4 text-muted-foreground" />
                         {log.timestamp}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={systemColors[log.system as keyof typeof systemColors] || "bg-gray-100 text-gray-800"}
+                        className={systemColors[log.system as keyof typeof systemColors] || "bg-muted text-foreground"}
                       >
                         {log.system}
                       </Badge>
@@ -328,7 +328,7 @@ export default function AuditLogsPage() {
                     <TableCell className="font-medium">{log.event}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-400" />
+                        <User className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{log.user}</span>
                       </div>
                     </TableCell>
@@ -345,7 +345,7 @@ export default function AuditLogsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-md truncate text-sm text-gray-600" title={log.details}>
+                      <div className="max-w-md truncate text-sm text-muted-foreground" title={log.details}>
                         {log.details}
                       </div>
                     </TableCell>
@@ -377,7 +377,7 @@ export default function AuditLogsPage() {
                 <div className="flex items-center gap-3">
                   <Badge
                     variant="outline"
-                    className={systemColors[item.system as keyof typeof systemColors] || "bg-gray-100 text-gray-800"}
+                    className={systemColors[item.system as keyof typeof systemColors] || "bg-muted text-foreground"}
                   >
                     {item.system}
                   </Badge>
@@ -401,17 +401,17 @@ export default function AuditLogsPage() {
               .filter((log) => log.severity === "high")
               .slice(0, 5)
               .map((log) => (
-                <div key={log.id} className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div key={log.id} className="flex items-start gap-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <div className="font-medium text-red-800">{log.event}</div>
-                      <Badge variant="outline" className="bg-red-100 text-red-800">
+                      <div className="font-medium text-destructive">{log.event}</div>
+                      <Badge variant="outline" className="bg-destructive/10 text-destructive">
                         {log.system}
                       </Badge>
                     </div>
-                    <div className="text-sm text-red-600 mt-1">{log.details}</div>
-                    <div className="text-xs text-red-500 mt-2">{log.timestamp}</div>
+                    <div className="text-sm text-destructive mt-1">{log.details}</div>
+                    <div className="text-xs text-destructive mt-2">{log.timestamp}</div>
                   </div>
                 </div>
               ))}

@@ -9,6 +9,7 @@ export interface User {
   role: UserRole
   permissions: string[]
   userInfo?: UserProfile
+  profile?: UserProfile
   hederaAccount?: HederaAccount
 }
 
@@ -272,7 +273,7 @@ export class AuthService {
       ]
     }
 
-    return ROLE_PERMISSIONS[role] || []
+    return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || []
   }
 }
 

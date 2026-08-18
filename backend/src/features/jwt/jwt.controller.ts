@@ -5,8 +5,8 @@ import { UserTokenInfo } from './jwt.model.js';
 // Load environment variables
 dotenv.config();
 
-const privateKey = process.env.JWT_PRIVATE_KEY?.replace(/\\n/g, '\n') || '';
-const publicKey = process.env.JWT_PUBLIC_KEY?.replace(/\\n/g, '\n') || '';
+const privateKey = process.env.JWT_PRIVATE_KEY?.replace(/\\n/g, '\n') || process.env.JWT_SECRET || '';
+const publicKey = process.env.JWT_PUBLIC_KEY?.replace(/\\n/g, '\n') || process.env.JWT_SECRET || '';
 
 interface TokenPayload extends JwtPayload {
   [key: string]: any;

@@ -54,3 +54,9 @@ pnpm-debug.log*
 *.db
 uploads/
 public/uploads/
+
+# Agents
+*.agents
+*.qoder
+.agents/
+.qoder/

@@ -75,28 +75,28 @@ export default function PendingSAGListingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending_review":
-        return "bg-blue-100 text-blue-800"
+        return "bg-muted text-primary"
       case "pending_verification":
         return "bg-orange-100 text-orange-800"
       case "pending_appraisal":
-        return "bg-purple-100 text-purple-800"
+        return "bg-muted text-purple-800"
       case "pending_authentication":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-warning/10 text-warning-foreground"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       case "medium":
         return "bg-orange-100 text-orange-800"
       case "low":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -151,10 +151,10 @@ export default function PendingSAGListingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">High Priority</p>
-                <p className="text-2xl font-bold text-red-600">12</p>
-                <p className="text-xs text-red-600">Urgent attention</p>
+                <p className="text-2xl font-bold text-destructive">12</p>
+                <p className="text-xs text-destructive">Urgent attention</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -164,9 +164,9 @@ export default function PendingSAGListingsPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Avg Processing</p>
                 <p className="text-2xl font-bold">2.3 days</p>
-                <p className="text-xs text-green-600">↓ 0.5 days faster</p>
+                <p className="text-xs text-success">↓ 0.5 days faster</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -176,9 +176,9 @@ export default function PendingSAGListingsPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
                 <p className="text-2xl font-bold">RM 2.1M</p>
-                <p className="text-xs text-blue-600">Pending approval</p>
+                <p className="text-xs text-primary">Pending approval</p>
               </div>
-              <Eye className="h-8 w-8 text-blue-500" />
+              <Eye className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ export default function PendingSAGListingsPage() {
         <CardContent>
           <div className="space-y-4">
             {filteredListings.map((listing) => (
-              <div key={listing.id} className="border rounded-lg p-4 hover:bg-gray-50">
+              <div key={listing.id} className="border rounded-lg p-4 hover:bg-muted/40">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -288,7 +288,7 @@ export default function PendingSAGListingsPage() {
                   <Button size="sm" variant="outline">
                     Contact Submitter
                   </Button>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90">
                     <CheckCircle className="mr-1 h-3 w-3" />
                     Approve
                   </Button>

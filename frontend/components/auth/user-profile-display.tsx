@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/hooks/use-auth"
+import { useAtom } from "jotai"
+import { userAtom } from "@/store/atoms"
 import { User, UserProfile, HederaAccount } from "@/lib/auth/auth-service"
 
 interface UserProfileDisplayProps {
@@ -14,7 +15,7 @@ export function UserProfileDisplay({
   showHederaInfo = true, 
   showPersonalInfo = true 
 }: UserProfileDisplayProps) {
-  const { user } = useAuth()
+  const [user] = useAtom(userAtom)
 
   if (!user) {
     return (

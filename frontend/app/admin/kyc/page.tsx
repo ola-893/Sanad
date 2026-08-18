@@ -64,11 +64,11 @@ export default function KycPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-green-100 text-green-700">Approved</Badge>
+        return <Badge className="bg-success/10 text-success">Approved</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-700">Pending</Badge>
+        return <Badge className="bg-warning/10 text-warning">Pending</Badge>
       case "rejected":
-        return <Badge className="bg-red-100 text-red-700">Rejected</Badge>
+        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -78,19 +78,19 @@ export default function KycPage() {
     switch (risk) {
       case "Low":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
             Low
           </Badge>
         )
       case "Medium":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
             Medium
           </Badge>
         )
       case "High":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
             High
           </Badge>
         )
@@ -104,18 +104,18 @@ export default function KycPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="h-6 w-6 text-emerald-600" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Users className="h-6 w-6 text-primary" />
             KYC Management
           </h1>
-          <p className="text-gray-600">Manage Know Your Customer verifications and compliance</p>
+          <p className="text-muted-foreground">Manage Know Your Customer verifications and compliance</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
+          <Button className="bg-primary hover:bg-primary/90">
             <UserCheck className="h-4 w-4 mr-2" />
             Bulk Approve
           </Button>
@@ -126,7 +126,7 @@ export default function KycPage() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Applications</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -137,33 +137,33 @@ export default function KycPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Approved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">2,654</div>
+            <div className="text-2xl font-bold text-success">2,654</div>
             <p className="text-xs text-muted-foreground">93.2% approval rate</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">66</div>
+            <div className="text-2xl font-bold text-warning">66</div>
             <p className="text-xs text-muted-foreground">Avg. 2.3 days processing</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Rejected</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
+            <XCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">127</div>
+            <div className="text-2xl font-bold text-destructive">127</div>
             <p className="text-xs text-muted-foreground">4.5% rejection rate</p>
           </CardContent>
         </Card>
@@ -227,8 +227,8 @@ export default function KycPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{app.name}</div>
-                        <div className="text-sm text-gray-500">{app.email}</div>
-                        <div className="text-xs text-gray-400">{app.phone}</div>
+                        <div className="text-sm text-muted-foreground">{app.email}</div>
+                        <div className="text-xs text-muted-foreground">{app.phone}</div>
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(app.status)}</TableCell>
@@ -251,7 +251,7 @@ export default function KycPage() {
                         </Button>
                         {app.status === "pending" && (
                           <>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            <Button size="sm" className="bg-primary hover:bg-primary/90">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Approve
                             </Button>

@@ -152,19 +152,19 @@ export default function RiskEvaluationPage() {
       case "VERYLOW":
       case "VERY LOW":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
+          <Badge variant="outline" className="bg-muted text-primary border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
             Very Low Risk
           </Badge>
         )
       case "LOW":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
             Low Risk
           </Badge>
         )
       case "MEDIUM":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700">
             Medium Risk
           </Badge>
         )
@@ -178,7 +178,7 @@ export default function RiskEvaluationPage() {
       case "VERYHIGH":
       case "VERY HIGH":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700">
             Very High Risk
           </Badge>
         )
@@ -190,32 +190,32 @@ export default function RiskEvaluationPage() {
   const getActionCardStyles = (action: string) => {
     if (action === 'approve') {
       return {
-        cardClass: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800',
-        textClass: 'text-green-600 dark:text-green-400',
-        icon: <CheckCircle className="h-4 w-4 text-green-600" />
+        cardClass: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-success/30 dark:border-green-800',
+        textClass: 'text-success dark:text-success',
+        icon: <CheckCircle className="h-4 w-4 text-success" />
       }
     }
     
     if (action === 'monitor') {
       return {
-        cardClass: 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800',
-        textClass: 'text-yellow-600 dark:text-yellow-400',
-        icon: <Eye className="h-4 w-4 text-yellow-600" />
+        cardClass: 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-warning/30 dark:border-yellow-800',
+        textClass: 'text-warning dark:text-yellow-400',
+        icon: <Eye className="h-4 w-4 text-warning" />
       }
     }
     
     if (action === 'modify') {
       return {
         cardClass: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800',
-        textClass: 'text-blue-600 dark:text-blue-400',
-        icon: <Activity className="h-4 w-4 text-blue-600" />
+        textClass: 'text-primary dark:text-blue-400',
+        icon: <Activity className="h-4 w-4 text-primary" />
       }
     }
     
     return {
-      cardClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800',
-      textClass: 'text-red-600 dark:text-red-400',
-      icon: <AlertTriangle className="h-4 w-4 text-red-600" />
+      cardClass: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-destructive/30 dark:border-red-800',
+      textClass: 'text-destructive dark:text-red-400',
+      icon: <AlertTriangle className="h-4 w-4 text-destructive" />
     }
   }
 
@@ -266,11 +266,11 @@ export default function RiskEvaluationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Shield className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-bold text-foreground dark:text-gray-100 flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
             AI Risk Evaluation Dashboard
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">Review and manage SAG risk assessments with LTV analysis</p>
+          <p className="text-muted-foreground dark:text-muted-foreground">Review and manage SAG risk assessments with LTV analysis</p>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ export default function RiskEvaluationPage() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Evaluated</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Total Evaluated</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -293,7 +293,7 @@ export default function RiskEvaluationPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average LTV</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Average LTV</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -310,14 +310,14 @@ export default function RiskEvaluationPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">High Risk Items</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">High Risk Items</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-destructive">
                 {highRiskCount}
               </div>
             )}
@@ -327,14 +327,14 @@ export default function RiskEvaluationPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Low Risk Items</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Low Risk Items</CardTitle>
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-success">
                 {(riskDistribution['LOW'] || 0) + (riskDistribution['VERY_LOW'] || 0) + (riskDistribution['VERYLOW'] || 0)}
               </div>
             )}
@@ -412,13 +412,13 @@ export default function RiskEvaluationPage() {
                   ))
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                    <TableCell colSpan={8} className="text-center py-8 text-destructive">
                       Failed to load risk evaluation data. Please try again.
                     </TableCell>
                   </TableRow>
                 ) : filteredListings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No SAGs found for risk evaluation.
                     </TableCell>
                   </TableRow>
@@ -427,11 +427,11 @@ export default function RiskEvaluationPage() {
                     <TableRow key={sag.sagId}>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagName}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagId}</div>
+                          <div className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagId}</div>
                           {sag.tokenId && (
                             <a 
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                              className="text-xs text-primary dark:text-blue-400 hover:underline flex items-center gap-1"
                               href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -444,20 +444,20 @@ export default function RiskEvaluationPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{sag.sagProperties.weightG}g</div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">{sag.sagProperties.karat}K Gold</div>
+                          <div className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.weightG}g</div>
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.karat}K Gold</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="font-medium text-foreground dark:text-gray-100">
                             {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                             Loan: {sag.sagProperties.currency} {(sag.sagProperties.loan || 0).toLocaleString()}
                           </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                             {sag.sagProperties.tenorM} months
                           </div>
                         </div>
@@ -467,19 +467,19 @@ export default function RiskEvaluationPage() {
                           {sag.sagProperties.ltv ? (
                             <>
                               <div className={`text-lg font-bold ${
-                                sag.sagProperties.ltv > 0.85 ? 'text-red-600' :
+                                sag.sagProperties.ltv > 0.85 ? 'text-destructive' :
                                 sag.sagProperties.ltv > 0.75 ? 'text-orange-600' :
-                                sag.sagProperties.ltv > 0.65 ? 'text-yellow-600' :
-                                'text-green-600'
+                                sag.sagProperties.ltv > 0.65 ? 'text-warning' :
+                                'text-success'
                               }`}>
                                 {(sag.sagProperties.ltv * 100).toFixed(2)}%
                               </div>
-                              <div className="text-xs text-gray-400 dark:text-gray-500">
+                              <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                                 Loan-to-Value
                               </div>
                             </>
                           ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">N/A</span>
+                            <span className="text-muted-foreground dark:text-muted-foreground text-sm">N/A</span>
                           )}
                         </div>
                       </TableCell>
@@ -498,7 +498,7 @@ export default function RiskEvaluationPage() {
                             )
                           })()
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">No recommendation</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground text-sm">No recommendation</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -513,7 +513,7 @@ export default function RiskEvaluationPage() {
                             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                  <Shield className="h-5 w-5 text-blue-600" />
+                                  <Shield className="h-5 w-5 text-primary" />
                                   AI Risk Analysis
                                 </DialogTitle>
                                 <DialogDescription>
@@ -524,7 +524,7 @@ export default function RiskEvaluationPage() {
                                 {/* Key Metrics */}
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Risk Level</div>
+                                    <div className="text-xs text-primary dark:text-blue-400 font-medium mb-1">Risk Level</div>
                                     <div className="flex items-center gap-2">
                                       {getRiskBadge(sag)}
                                     </div>
@@ -549,7 +549,7 @@ export default function RiskEvaluationPage() {
                                   
                                   {sag.sagProperties.ltv && (
                                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                      <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">LTV Ratio</div>
+                                      <div className="text-xs text-primary dark:text-purple-400 font-medium mb-1">LTV Ratio</div>
                                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                                         {(sag.sagProperties.ltv * 100).toFixed(2)}%
                                       </div>
@@ -558,33 +558,33 @@ export default function RiskEvaluationPage() {
                                 </div>
 
                                 {/* Asset Details */}
-                                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-2">
+                                <div className="bg-muted/40 dark:bg-gray-900 p-4 rounded-lg space-y-2">
                                   <h4 className="text-sm font-semibold mb-3">Asset Details</h4>
                                   <div className="grid grid-cols-2 gap-3 text-sm">
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Asset Type:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Asset Type:</span>
                                       <span className="font-medium">{sag.sagProperties.assetType}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Weight:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Weight:</span>
                                       <span className="font-medium">{sag.sagProperties.weightG}g</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Karat:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Karat:</span>
                                       <span className="font-medium">{sag.sagProperties.karat}K</span>
                                     </div>
                                     {sag.sagProperties.purity && (
                                       <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Purity:</span>
+                                        <span className="text-muted-foreground dark:text-muted-foreground">Purity:</span>
                                         <span className="font-medium">{sag.sagProperties.purity}</span>
                                       </div>
                                     )}
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Valuation:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Valuation:</span>
                                       <span className="font-medium">{sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-600 dark:text-gray-400">Loan Amount:</span>
+                                      <span className="text-muted-foreground dark:text-muted-foreground">Loan Amount:</span>
                                       <span className="font-medium">{sag.sagProperties.currency} {(sag.sagProperties.loan || 0).toLocaleString()}</span>
                                     </div>
                                   </div>
@@ -593,7 +593,7 @@ export default function RiskEvaluationPage() {
                                 {/* AI Rationale */}
                                 <div>
                                   <h4 className="text-sm font-semibold mb-2">AI Analysis Rationale</h4>
-                                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg text-sm whitespace-pre-wrap border border-blue-200 dark:border-blue-800">
+                                  <div className="bg-muted dark:bg-blue-950 p-4 rounded-lg text-sm whitespace-pre-wrap border border-blue-200 dark:border-blue-800">
                                     {sag.sagProperties.rationale}
                                   </div>
                                 </div>
@@ -601,8 +601,8 @@ export default function RiskEvaluationPage() {
                                 {/* Evaluation ID */}
                                 {sag.sagProperties.eval_id && (
                                   <div className="flex items-center justify-between pt-2 border-t">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                      Evaluation ID: <code className="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">{sag.sagProperties.eval_id}</code>
+                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                      Evaluation ID: <code className="bg-muted dark:bg-card px-2 py-1 rounded">{sag.sagProperties.eval_id}</code>
                                     </span>
                                   </div>
                                 )}
@@ -610,14 +610,14 @@ export default function RiskEvaluationPage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">No analysis</span>
+                          <span className="text-muted-foreground dark:text-muted-foreground text-sm">No analysis</span>
                         )}
                       </TableCell>
                       <TableCell>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+                          className="bg-muted hover:bg-muted text-primary border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
                           onClick={() => handleActionClick(sag)}
                         >
                           <Activity className="h-3 w-3 mr-1" />
@@ -638,16 +638,16 @@ export default function RiskEvaluationPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-blue-600" />
+              <Shield className="h-5 w-5 text-primary" />
               Take Risk Evaluation Action
             </DialogTitle>
             <DialogDescription>
               {selectedSag && (
                 <div className="space-y-2">
                   <div>SAG: <span className="font-semibold">{selectedSag.sagName}</span></div>
-                  <div className="text-xs text-gray-500">ID: {selectedSag.sagId}</div>
+                  <div className="text-xs text-muted-foreground">ID: {selectedSag.sagId}</div>
                   {selectedSag.sagProperties.ltv && (
-                    <div className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded mt-2">
+                    <div className="text-xs bg-muted dark:bg-card p-2 rounded mt-2">
                       Current LTV: <span className="font-bold">{(selectedSag.sagProperties.ltv * 100).toFixed(2)}%</span>
                     </div>
                   )}
@@ -659,7 +659,7 @@ export default function RiskEvaluationPage() {
             {/* Action Type Select */}
             <div>
               <Label htmlFor="action-type">
-                Action Type <span className="text-red-500">*</span>
+                Action Type <span className="text-destructive">*</span>
               </Label>
               <Select 
                 value={actionType || ''} 
@@ -674,7 +674,7 @@ export default function RiskEvaluationPage() {
                   <SelectItem value="margin_call">✗ Margin Call</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                 Choose the action to take for this SAG
               </p>
             </div>
@@ -682,7 +682,7 @@ export default function RiskEvaluationPage() {
             {/* LTV Input */}
             <div>
               <Label htmlFor="ltv-value">
-                LTV Value (%) <span className="text-red-500">*</span>
+                LTV Value (%) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="ltv-value"
@@ -695,7 +695,7 @@ export default function RiskEvaluationPage() {
                 onChange={(e) => setModifiedLtv(e.target.value)}
                 className="mt-1"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                 {actionType === 'margin_call' 
                   ? 'Enter the new LTV percentage value for this SAG'
                   : 'Specify the LTV value for this action'}
@@ -732,10 +732,10 @@ export default function RiskEvaluationPage() {
               onClick={submitAction}
               disabled={actionMutation.isPending || !actionType || !modifiedLtv}
               className={
-                actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' :
-                actionType === 'monitor' ? 'bg-yellow-600 hover:bg-yellow-700' :
-                actionType === 'margin_call' ? 'bg-red-600 hover:bg-red-700' :
-                'bg-blue-600 hover:bg-blue-700'
+                actionType === 'approve' ? 'bg-primary hover:bg-primary/90' :
+                actionType === 'monitor' ? 'bg-warning hover:bg-warning/90' :
+                actionType === 'margin_call' ? 'bg-destructive hover:bg-destructive/90' :
+                'bg-primary hover:bg-primary/90'
               }
             >
               {actionMutation.isPending ? 'Processing...' : 'Submit Action'}

@@ -10,10 +10,10 @@ export default function AnalyticsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics & Reports</h1>
-          <p className="text-gray-600">Platform analytics and comprehensive reporting</p>
+          <h1 className="text-2xl font-bold text-foreground">Analytics & Reports</h1>
+          <p className="text-muted-foreground">Platform analytics and comprehensive reporting</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Download className="h-4 w-4 mr-2" />
           Export Data
         </Button>
@@ -27,9 +27,9 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Analytics Coming Soon</h3>
-            <p className="text-gray-600 mb-4">
+            <BarChart3 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Advanced Analytics Coming Soon</h3>
+            <p className="text-muted-foreground mb-4">
               We&apos;re building comprehensive analytics tools including performance metrics, user behavior analysis, and
               detailed reporting capabilities.
             </p>

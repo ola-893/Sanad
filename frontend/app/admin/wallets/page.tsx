@@ -60,19 +60,19 @@ export default function WalletsPage() {
     switch (status) {
       case "active":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Active
           </Badge>
         )
       case "suspended":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Suspended
           </Badge>
         )
       case "blacklisted":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Blacklisted
           </Badge>
         )
@@ -85,19 +85,19 @@ export default function WalletsPage() {
     switch (type) {
       case "investor":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+          <Badge variant="outline" className="bg-muted text-primary">
             Investor
           </Badge>
         )
       case "ar_rahnu":
         return (
-          <Badge variant="outline" className="bg-purple-100 text-purple-700">
+          <Badge variant="outline" className="bg-muted text-purple-700">
             Ar Rahnu
           </Badge>
         )
       case "admin":
         return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-700">
+          <Badge variant="outline" className="bg-muted text-muted-foreground">
             Admin
           </Badge>
         )
@@ -110,19 +110,19 @@ export default function WalletsPage() {
     switch (risk) {
       case "low":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Low
           </Badge>
         )
       case "medium":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Medium
           </Badge>
         )
       case "high":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             High
           </Badge>
         )
@@ -138,10 +138,10 @@ export default function WalletsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Wallet & Token Control</h1>
-          <p className="text-gray-600">Manage wallet permissions and token controls</p>
+          <h1 className="text-2xl font-bold text-foreground">Wallet & Token Control</h1>
+          <p className="text-muted-foreground">Manage wallet permissions and token controls</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Wallet className="h-4 w-4 mr-2" />
           Add Wallet
         </Button>
@@ -151,38 +151,38 @@ export default function WalletsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Wallets</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Wallets</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,247</div>
-            <p className="text-xs text-gray-500">Registered wallets</p>
+            <p className="text-xs text-muted-foreground">Registered wallets</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Wallets</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Wallets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">1,189</div>
-            <p className="text-xs text-gray-500">95% active rate</p>
+            <div className="text-2xl font-bold text-success">1,189</div>
+            <p className="text-xs text-muted-foreground">95% active rate</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Blacklisted</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Blacklisted</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">12</div>
-            <p className="text-xs text-gray-500">Security measures</p>
+            <div className="text-2xl font-bold text-destructive">12</div>
+            <p className="text-xs text-muted-foreground">Security measures</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Token Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Token Transactions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">8,456</div>
-            <p className="text-xs text-gray-500">This month</p>
+            <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
       </div>
@@ -197,7 +197,7 @@ export default function WalletsPage() {
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search wallet addresses..."
                   value={searchTerm}
@@ -253,7 +253,7 @@ export default function WalletsPage() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">Wallet Address</label>
-                                    <p className="text-sm text-gray-600 font-mono">{selectedWallet.address}</p>
+                                    <p className="text-sm text-muted-foreground font-mono">{selectedWallet.address}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Type</label>
@@ -269,11 +269,11 @@ export default function WalletsPage() {
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Last Activity</label>
-                                    <p className="text-sm text-gray-600">{selectedWallet.lastActivity}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedWallet.lastActivity}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Total Transactions</label>
-                                    <p className="text-sm text-gray-600">{selectedWallet.totalTransactions}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedWallet.totalTransactions}</p>
                                   </div>
                                 </div>
 
@@ -281,11 +281,11 @@ export default function WalletsPage() {
                                   <h4 className="font-medium mb-3">Token Holdings</h4>
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">SAGS Tokens</div>
+                                      <div className="text-sm font-medium text-muted-foreground">SAGS Tokens</div>
                                       <div className="text-lg font-bold">{selectedWallet.tokenBalance}</div>
                                     </div>
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">NFTs Owned</div>
+                                      <div className="text-sm font-medium text-muted-foreground">NFTs Owned</div>
                                       <div className="text-lg font-bold">{selectedWallet.nftCount}</div>
                                     </div>
                                   </div>
@@ -303,7 +303,7 @@ export default function WalletsPage() {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                                          className="bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/10"
                                         >
                                           <AlertTriangle className="h-4 w-4 mr-2" />
                                           Blacklist Wallet
@@ -311,13 +311,13 @@ export default function WalletsPage() {
                                       </>
                                     )}
                                     {selectedWallet.status === "suspended" && (
-                                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                      <Button size="sm" className="bg-primary hover:bg-primary/90">
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Reactivate Wallet
                                       </Button>
                                     )}
                                     {selectedWallet.status === "blacklisted" && (
-                                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                      <Button size="sm" className="bg-primary hover:bg-primary/90">
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Remove from Blacklist
                                       </Button>

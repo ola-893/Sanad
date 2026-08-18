@@ -40,7 +40,7 @@ export function RecentLoans() {
           <p className="text-sm text-muted-foreground">Gold Bracelet (22K) - RM 3,200</p>
         </div>
         <div className="ml-auto">
-          <Badge className="bg-green-500">Disbursed</Badge>
+          <Badge className="bg-success/100">Disbursed</Badge>
         </div>
       </div>
       <div className="flex items-center">

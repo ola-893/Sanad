@@ -5,7 +5,7 @@ sources.py
 External data and policy access layer for the Gold Collateral Evaluation Agent.
 
 Responsibilities:
-1. Retrieve loan details from the Silsilat API endpoint (API or stubbed call).
+1. Retrieve loan details from the Sanad API endpoint (API or stubbed call).
 2. Fetch live gold price (USD per troy ounce) from https://metalpriceapi.com.
 3. Fetch live FX rate (USD→MYR) from https://www.fastforex.io.
 4. Retrieve regulatory & operational policy thresholds from policy.py.
@@ -28,22 +28,22 @@ load_dotenv(".env")
 
 
 # ------------------------------------------------------------------------------
-# 1. Retrieve loan details from Silsilat API (stub / API placeholder)
+# 1. Retrieve loan details from Sanad API (stub / API placeholder)
 # ------------------------------------------------------------------------------
 def get_loan_details(loan_id: str) -> dict:
     """
-    Fetch loan details from the Silsilat API endpoint.
-    The endpoint should return a JSON with Silsilat data that will be mapped to loan details format:
+    Fetch loan details from the Sanad API endpoint.
+    The endpoint should return a JSON with Sanad data that will be mapped to loan details format:
         loan_id, shop_id, principal_myr, gold_weight_g, purity, collateral_type, tenure_days, fees_myr
     If API is unavailable, a local stub will be used.
 
     Returns:
         dict: parsed loan details ready for LoanInput model
     """
-    base_url = os.getenv("SILSILAT_API_BASE", "https://api.silsilat.finance")
-    api_key = os.getenv("SILSILAT_API_KEY")
+    base_url = os.getenv("SANAD_API_BASE", "https://api.sanad.finance")
+    api_key = os.getenv("SANAD_API_KEY")
 
-    url = f"{base_url}/Silsilat/{loan_id}"
+    url = f"{base_url}/Sanad/{loan_id}"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     try:
@@ -51,30 +51,30 @@ def get_loan_details(loan_id: str) -> dict:
         resp.raise_for_status()
         data = resp.json()
         
-        # Map Silsilat data to loan details format
+        # Map Sanad data to loan details format
         if data.get("success") and data.get("data"):
-            Silsilat_data = data["data"]
-            Silsilat_properties = Silsilat_data.get("SilsilatProperties", {})
+            Sanad_data = data["data"]
+            Sanad_properties = Sanad_data.get("SanadProperties", {})
             
             return {
                 "loan_id": loan_id,
-                "shop_id": "Silsilat-SHOP",  # Default shop ID for Silsilat-based loans
-                "principal_myr": Silsilat_properties.get("loan", 0),
-                "gold_weight_g": Silsilat_properties.get("weightG", 0),
-                "purity": Silsilat_properties.get("karat", 916),  # Convert karat to purity (916 = 22k)
-                "collateral_type": Silsilat_properties.get("assetType", "jewellery"),
-                "tenure_days": Silsilat_properties.get("tenorM", 3) * 30,  # Convert months to days
+                "shop_id": "Sanad-SHOP",  # Default shop ID for Sanad-based loans
+                "principal_myr": Sanad_properties.get("loan", 0),
+                "gold_weight_g": Sanad_properties.get("weightG", 0),
+                "purity": Sanad_properties.get("karat", 916),  # Convert karat to purity (916 = 22k)
+                "collateral_type": Sanad_properties.get("assetType", "jewellery"),
+                "tenure_days": Sanad_properties.get("tenorM", 3) * 30,  # Convert months to days
                 "fees_myr": 0.0,  # Default fees
             }
         else:
-            raise ValueError("Invalid Silsilat API response format")
+            raise ValueError("Invalid Sanad API response format")
             
     except Exception as e:
         # Fallback stub (for local testing)
-        print(f"[WARN] Silsilat API not reachable ({e}); using stub data.")
+        print(f"[WARN] Sanad API not reachable ({e}); using stub data.")
         return {
             "loan_id": loan_id,
-            "shop_id": "Silsilat-SHOP",
+            "shop_id": "Sanad-SHOP",
             "principal_myr": 4000,
             "gold_weight_g": 25.0,
             "purity": 916,
@@ -175,14 +175,14 @@ def get_yesterday_gold_price_myr() -> Optional[float]:
     Fetch yesterday's gold price in MYR per gram from the backend API.
     
     Environment:
-        SILSILAT_API_BASE
-        SILSILAT_API_KEY (optional, for authentication)
+        SANAD_API_BASE
+        SANAD_API_KEY (optional, for authentication)
     
     Returns:
         Optional[float]: yesterday's gold price in MYR per gram, or None if unavailable
     """
-    base_url = os.getenv("SILSILAT_API_BASE", "http://localhost:9487")
-    api_key = os.getenv("SILSILAT_API_KEY")
+    base_url = os.getenv("SANAD_API_BASE", "http://localhost:9487")
+    api_key = os.getenv("SANAD_API_KEY")
     url = f"{base_url}/api/v1/gold-price/yesterday"
     
     # Prepare headers with authentication if API key is available
@@ -206,7 +206,7 @@ def get_yesterday_gold_price_myr() -> Optional[float]:
             
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
-            print(f"[WARN] Authentication required for gold price API. Set SILSILAT_API_KEY in environment.")
+            print(f"[WARN] Authentication required for gold price API. Set SANAD_API_KEY in environment.")
         elif e.response.status_code == 404:
             print(f"[WARN] No gold price data found for yesterday")
         else:
@@ -269,7 +269,7 @@ def detect_abnormal_price_change(current_price: float, yesterday_price: Optional
 def get_volatility(symbol: str = "XAU/MYR", window: int = 30) -> float:
     """
     Compute or fetch rolling volatility (% stddev of daily returns).
-    In production, integrate with time-series data provider or Silsilat data lake.
+    In production, integrate with time-series data provider or Sanad data lake.
     For now, returns a static illustrative value.
 
     Args:
@@ -284,12 +284,12 @@ def get_volatility(symbol: str = "XAU/MYR", window: int = 30) -> float:
 
 
 # ------------------------------------------------------------------------------
-# 6. Get shop rating from Silsilat or local lookup
+# 6. Get shop rating from Sanad or local lookup
 # ------------------------------------------------------------------------------
 def get_shop_rating(shop_id: str) -> str:
     """
     Placeholder: fetch pawnshop operational rating (A–E).
-    Replace with API call to Silsilat registry when available.
+    Replace with API call to Sanad registry when available.
     """
     # Stubbed simple logic
     return "A" if shop_id.endswith("4") else "B"

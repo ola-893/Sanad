@@ -77,9 +77,9 @@ export default function CompletedSAGListingsPage() {
   const getStatusColor = (sag: SAG) => {
     // For closed SAGs, we consider them "completed" - they could be approved (with tokenId) or rejected (without tokenId)
     if (sag.tokenId) {
-      return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+      return "bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300"
     } else {
-      return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+      return "bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-300"
     }
   }
 
@@ -121,7 +121,7 @@ export default function CompletedSAGListingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <CheckCircle className="h-6 w-6 text-green-600" />
+        <CheckCircle className="h-6 w-6 text-success" />
         <h1 className="text-2xl font-bold">Completed SAG Listings</h1>
       </div>
 
@@ -137,9 +137,9 @@ export default function CompletedSAGListingsPage() {
                 ) : (
                   <p className="text-2xl font-bold">{pagination?.totalCount || sags.length}</p>
                 )}
-                <p className="text-xs text-blue-600">Closed SAGs</p>
+                <p className="text-xs text-primary">Closed SAGs</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-blue-500" />
+              <CheckCircle className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -151,15 +151,15 @@ export default function CompletedSAGListingsPage() {
                 {isLoading ? (
                   <Skeleton className="h-8 w-16" />
                 ) : (
-                  <p className="text-2xl font-bold text-green-600">{approvedListings.length}</p>
+                  <p className="text-2xl font-bold text-success">{approvedListings.length}</p>
                 )}
                 {!isLoading && sags.length > 0 && (
-                  <p className="text-xs text-green-600">
+                  <p className="text-xs text-success">
                     {Math.round((approvedListings.length / sags.length) * 100)}% approval rate
                   </p>
                 )}
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -173,9 +173,9 @@ export default function CompletedSAGListingsPage() {
                 ) : (
                   <p className="text-2xl font-bold">RM {totalApprovedValue.toLocaleString()}</p>
                 )}
-                <p className="text-xs text-green-600">Approved items</p>
+                <p className="text-xs text-success">Approved items</p>
               </div>
-              <Eye className="h-8 w-8 text-green-500" />
+              <Eye className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -189,9 +189,9 @@ export default function CompletedSAGListingsPage() {
                 ) : (
                   <p className="text-2xl font-bold">RM {totalLoanAmount.toLocaleString()}</p>
                 )}
-                <p className="text-xs text-blue-600">Based on loan percentage</p>
+                <p className="text-xs text-primary">Based on loan percentage</p>
               </div>
-              <Download className="h-8 w-8 text-blue-500" />
+              <Download className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -274,11 +274,11 @@ export default function CompletedSAGListingsPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-600">
+            <div className="text-center py-8 text-destructive">
               Failed to load completed SAG listings. Please try again.
             </div>
           ) : filteredListings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No completed SAG listings found.
             </div>
           ) : (
@@ -288,25 +288,25 @@ export default function CompletedSAGListingsPage() {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{sag.sagName}</h3>
+                        <h3 className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</h3>
                         <Badge className={getStatusColor(sag)}>
                           {getStatusIcon(sag)}
                           {getStatusText(sag)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                         ID: {sag.sagId} • {sag.sagDescription}
                       </p>
-                      <p className="text-sm text-muted-foreground dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                         Certificate: {sag.certNo} • Type: {sag.sagType}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                      <p className="font-bold text-lg text-foreground dark:text-gray-100">
                         {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                       </p>
                       {sag.createdAt && (
-                        <p className="text-sm text-muted-foreground dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                           Created: {new Date(sag.createdAt).toLocaleDateString()}
                         </p>
                       )}
@@ -315,22 +315,22 @@ export default function CompletedSAGListingsPage() {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
                     <div>
-                      <p className="text-muted-foreground dark:text-gray-400">Asset Type</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.assetType}</p>
+                      <p className="text-muted-foreground dark:text-muted-foreground">Asset Type</p>
+                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground dark:text-gray-400">Weight</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.weightG}g</p>
+                      <p className="text-muted-foreground dark:text-muted-foreground">Weight</p>
+                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.weightG}g</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground dark:text-gray-400">Karat</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{sag.sagProperties.karat}K Gold</p>
+                      <p className="text-muted-foreground dark:text-muted-foreground">Karat</p>
+                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.karat}K Gold</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground dark:text-gray-400">
+                      <p className="text-muted-foreground dark:text-muted-foreground">
                         {sag.tokenId ? "Loan Amount" : "Status"}
                       </p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-foreground dark:text-gray-100">
                         {sag.tokenId 
                           ? `${sag.sagProperties.currency} ${(sag.sagProperties.valuation * (sag.sagProperties.loanPercentage ?? 0) / 100).toLocaleString()}`
                           : "Not Approved"
@@ -340,18 +340,18 @@ export default function CompletedSAGListingsPage() {
                   </div>
 
                   {sag.tokenId && (
-                    <div className="mb-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
+                    <div className="mb-3 p-4 bg-success/10 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm text-green-700 dark:text-green-300">
+                          <p className="text-sm text-success dark:text-green-300">
                             <strong>Token ID:</strong> {sag.tokenId}
                           </p>
-                          <p className="text-xs text-green-600 dark:text-green-400">
+                          <p className="text-xs text-success dark:text-success">
                             Total Available: {sag.sagProperties.mintShare.toLocaleString()} shares at {sag.sagProperties.investorRoiPercentage}% monthly ROI
                           </p>
                         </div>
                         <a 
-                          className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 text-sm font-medium"
+                          className="text-primary dark:text-blue-400 hover:underline flex items-center gap-1 text-sm font-medium"
                           href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -361,9 +361,9 @@ export default function CompletedSAGListingsPage() {
                       </div>
                       
                       {/* ROI Per Share Details */}
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-600">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                          <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-xs">
+                      <div className="bg-card p-4 rounded-lg border dark:border-gray-600">
+                        <h4 className="text-sm font-semibold text-foreground dark:text-gray-100 mb-3 flex items-center gap-2">
+                          <span className="bg-muted dark:bg-blue-900/30 text-primary dark:text-blue-300 px-2 py-1 rounded text-xs">
                             ROI Details
                           </span>
                           Per Share Breakdown
@@ -371,26 +371,26 @@ export default function CompletedSAGListingsPage() {
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* Share Price */}
-                          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
+                          <div className="bg-muted dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
                             <div className="text-center">
-                              <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Share Price</p>
-                              <p className="text-lg font-bold text-blue-800 dark:text-blue-200">
+                              <p className="text-xs font-medium text-primary dark:text-blue-300 mb-1">Share Price</p>
+                              <p className="text-lg font-bold text-primary dark:text-blue-200">
                                 {sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}
                               </p>
-                              <p className="text-xs text-blue-600 dark:text-blue-400">
+                              <p className="text-xs text-primary dark:text-blue-400">
                                 {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()} ÷ {sag.sagProperties.mintShare.toLocaleString()}
                               </p>
                             </div>
                           </div>
 
                           {/* Monthly ROI per Share */}
-                          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border dark:border-green-700">
+                          <div className="bg-success/10 dark:bg-green-900/20 p-3 rounded-lg border dark:border-green-700">
                             <div className="text-center">
-                              <p className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Monthly ROI per Share</p>
-                              <p className="text-lg font-bold text-green-800 dark:text-green-200">
+                              <p className="text-xs font-medium text-success dark:text-green-300 mb-1">Monthly ROI per Share</p>
+                              <p className="text-lg font-bold text-success dark:text-green-200">
                                 {sag.sagProperties.currency} {((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)).toFixed(2)}
                               </p>
-                              <p className="text-xs text-green-600 dark:text-green-400">
+                              <p className="text-xs text-success dark:text-success">
                                 {sag.sagProperties.investorRoiPercentage}% of share price
                               </p>
                             </div>
@@ -403,7 +403,7 @@ export default function CompletedSAGListingsPage() {
                               <p className="text-lg font-bold text-purple-800 dark:text-purple-200">
                                 {sag.sagProperties.currency} {(((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM).toFixed(2)}
                               </p>
-                              <p className="text-xs text-purple-600 dark:text-purple-400">
+                              <p className="text-xs text-primary dark:text-purple-400">
                                 Over {sag.sagProperties.tenorM} months
                               </p>
                             </div>
@@ -411,22 +411,22 @@ export default function CompletedSAGListingsPage() {
                         </div>
 
                         {/* ROI Calculation Breakdown */}
-                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                          <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Investment Returns Calculation:</h5>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                        <div className="mt-4 p-3 bg-muted/40 dark:bg-gray-700 rounded-lg">
+                          <h5 className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground mb-2">Investment Returns Calculation:</h5>
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground space-y-1">
                             <div className="flex justify-between">
                               <span>Initial Investment (per share):</span>
                               <span className="font-medium">{sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Monthly Return (per share):</span>
-                              <span className="font-medium text-green-600 dark:text-green-400">
+                              <span className="font-medium text-success dark:text-success">
                                 +{sag.sagProperties.currency} {((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)).toFixed(2)}
                               </span>
                             </div>
                             <div className="flex justify-between border-t dark:border-gray-600 pt-1">
                               <span className="font-medium">Total Return (per share):</span>
-                              <span className="font-bold text-purple-600 dark:text-purple-400">
+                              <span className="font-bold text-primary dark:text-purple-400">
                                 {sag.sagProperties.currency} {(
                                   (sag.sagProperties.valuation / sag.sagProperties.mintShare) + 
                                   (((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM)
@@ -435,7 +435,7 @@ export default function CompletedSAGListingsPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="font-medium">Profit per Share:</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">
+                              <span className="font-bold text-success dark:text-success">
                                 {sag.sagProperties.currency} {(((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM).toFixed(2)}
                               </span>
                             </div>
@@ -445,11 +445,11 @@ export default function CompletedSAGListingsPage() {
                         {/* ROI Percentage Summary */}
                         <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border dark:border-gray-600">
                           <div className="text-center">
-                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Total Return Rate</p>
-                            <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                            <p className="text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1">Total Return Rate</p>
+                            <p className="text-xl font-bold text-foreground dark:text-gray-100">
                               {(sag.sagProperties.investorRoiPercentage * sag.sagProperties.tenorM).toFixed(1)}%
                             </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                               {sag.sagProperties.investorRoiPercentage}% × {sag.sagProperties.tenorM} months
                             </p>
                           </div>
@@ -459,8 +459,8 @@ export default function CompletedSAGListingsPage() {
                   )}
 
                   {!sag.tokenId && (
-                    <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded border-l-4 border-red-400">
-                      <p className="text-sm text-red-700 dark:text-red-300">
+                    <div className="mb-3 p-2 bg-destructive/10 dark:bg-red-900/20 rounded border-l-4 border-red-400">
+                      <p className="text-sm text-destructive dark:text-red-300">
                         <strong>Status:</strong> This SAG was closed without tokenization
                       </p>
                     </div>

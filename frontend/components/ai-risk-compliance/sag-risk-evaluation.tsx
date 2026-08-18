@@ -122,11 +122,11 @@ export function SagRiskEvaluation() {
   const getRiskBadge = (riskLevel: string) => {
     switch (riskLevel) {
       case "low":
-        return <Badge className="bg-green-100 text-green-800">{t("sag.lowRisk")}</Badge>
+        return <Badge className="bg-success/10 text-success">{t("sag.lowRisk")}</Badge>
       case "moderate":
-        return <Badge className="bg-yellow-100 text-yellow-800">{t("sag.moderateRisk")}</Badge>
+        return <Badge className="bg-warning/10 text-warning-foreground">{t("sag.moderateRisk")}</Badge>
       case "high":
-        return <Badge className="bg-red-100 text-red-800">{t("sag.highRisk")}</Badge>
+        return <Badge className="bg-destructive/10 text-destructive">{t("sag.highRisk")}</Badge>
       default:
         return <Badge variant="outline">{riskLevel}</Badge>
     }
@@ -157,11 +157,11 @@ export function SagRiskEvaluation() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Target className="h-6 w-6 text-orange-600" />
             {t("ai.sagRisk")}
           </h2>
-          <p className="text-gray-600">AI-powered SAG listing risk evaluation and monitoring</p>
+          <p className="text-muted-foreground">AI-powered SAG listing risk evaluation and monitoring</p>
         </div>
         <Button className="bg-orange-600 hover:bg-orange-700">
           <BarChart3 className="h-4 w-4 mr-2" />
@@ -173,66 +173,66 @@ export function SagRiskEvaluation() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               {t("sag.raiseRatio")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">85%</div>
-            <div className="text-xs text-gray-500">Avg Raise vs Collateral</div>
+            <div className="text-xs text-muted-foreground">Avg Raise vs Collateral</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4" />
               {t("sag.patternDelay")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">23</div>
-            <div className="text-xs text-gray-500">Delayed SAGs</div>
+            <div className="text-2xl font-bold text-warning">23</div>
+            <div className="text-xs text-muted-foreground">Delayed SAGs</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               {t("sag.underSubscription")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">8</div>
-            <div className="text-xs text-gray-500">Low Interest SAGs</div>
+            <div className="text-2xl font-bold text-destructive">8</div>
+            <div className="text-xs text-muted-foreground">Low Interest SAGs</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               {t("sag.repeatedExtensions")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">5</div>
-            <div className="text-xs text-gray-500">Multiple Extensions</div>
+            <div className="text-2xl font-bold text-primary">5</div>
+            <div className="text-xs text-muted-foreground">Multiple Extensions</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Brain className="h-4 w-4" />
               {t("sag.realTimeScore")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">92%</div>
-            <div className="text-xs text-gray-500">AI Accuracy</div>
+            <div className="text-2xl font-bold text-primary">92%</div>
+            <div className="text-xs text-muted-foreground">AI Accuracy</div>
           </CardContent>
         </Card>
       </div>
@@ -246,7 +246,7 @@ export function SagRiskEvaluation() {
         <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by SAG ID or branch..."
                 value={searchTerm}
@@ -352,7 +352,7 @@ export function SagRiskEvaluation() {
                                       <CardTitle className="text-sm">Default Probability</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                      <div className="text-2xl font-bold text-red-600">
+                                      <div className="text-2xl font-bold text-destructive">
                                         {selectedSag.predictedDefault}%
                                       </div>
                                       <Progress value={selectedSag.predictedDefault} className="mt-2" />
@@ -363,7 +363,7 @@ export function SagRiskEvaluation() {
                                       <CardTitle className="text-sm">Subscription Rate</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                      <div className="text-2xl font-bold text-blue-600">
+                                      <div className="text-2xl font-bold text-primary">
                                         {selectedSag.subscriptionRate}%
                                       </div>
                                       <Progress value={selectedSag.subscriptionRate} className="mt-2" />
@@ -375,25 +375,25 @@ export function SagRiskEvaluation() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">Raise Amount</label>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                       RM {selectedSag.raiseAmount.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Collateral Value</label>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                       RM {selectedSag.collateralValue.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Gold Details</label>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                       {selectedSag.goldWeight} • {selectedSag.goldKarat}
                                     </p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Duration</label>
-                                    <p className="text-sm text-gray-600">{selectedSag.duration}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedSag.duration}</p>
                                   </div>
                                 </div>
 
@@ -403,9 +403,9 @@ export function SagRiskEvaluation() {
                                     <label className="text-sm font-medium">AI Risk Flags</label>
                                     <div className="space-y-2 mt-2">
                                       {selectedSag.aiFlags.map((flag, index) => (
-                                        <div key={index} className="flex items-center gap-2 p-2 bg-red-50 rounded">
-                                          <AlertTriangle className="h-4 w-4 text-red-500" />
-                                          <span className="text-sm text-red-700">{flag}</span>
+                                        <div key={index} className="flex items-center gap-2 p-2 bg-destructive/10 rounded">
+                                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                                          <span className="text-sm text-destructive">{flag}</span>
                                         </div>
                                       ))}
                                     </div>

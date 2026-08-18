@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 creditcoin_utils.py
-Creditcoin 3 (CC3) audit event logging utilities for Silsilat AI Agents.
+Creditcoin 3 (CC3) audit event logging utilities for Sanad AI Agents.
 """
 
 import os

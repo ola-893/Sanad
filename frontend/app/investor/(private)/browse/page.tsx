@@ -151,7 +151,7 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
               <Skeleton className="h-4 w-3/4" />
             </div>
           ) : tokenError ? (
-            <div className="text-sm text-red-600">
+            <div className="text-sm text-destructive">
               Failed to load token information
             </div>
           ) : tokenInfo ? (
@@ -162,7 +162,7 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Available:</span>
-                <span className="font-medium text-green-600">{tokenInfo.data.remainingSupply} shares</span>
+                <span className="font-medium text-success">{tokenInfo.data.remainingSupply} shares</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sold:</span>
@@ -208,7 +208,7 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
           </div>
 
           {/* Investment Summary */}
-          <div className="bg-blue-50 p-3 rounded-lg space-y-2">
+          <div className="bg-muted p-3 rounded-lg space-y-2">
             <h4 className="font-medium text-sm">Investment Summary</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
@@ -229,16 +229,16 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
               </div>
               <div className="flex justify-between">
                 <span>Monthly ROI:</span>
-                <span className="font-medium text-green-600">{sag.sagProperties.investorRoiPercentage}%</span>
+                <span className="font-medium text-success">{sag.sagProperties.investorRoiPercentage}%</span>
               </div>
               <div className="border-t pt-1 mt-2">
                 <div className="flex justify-between">
                   <span>Expected Return:</span>
-                  <span className="font-medium text-green-600">{sag.sagProperties.currency} {totalExpectedReturn.toFixed(2)}</span>
+                  <span className="font-medium text-success">{sag.sagProperties.currency} {totalExpectedReturn.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Profit:</span>
-                  <span className="font-medium text-green-600">{sag.sagProperties.currency} {totalProfit.toFixed(2)}</span>
+                  <span className="font-medium text-success">{sag.sagProperties.currency} {totalProfit.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -252,7 +252,7 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
             <Button
               onClick={handleInvest}
               disabled={isInvesting || remainingShares === 0}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-primary hover:bg-primary/90"
             >
               {isInvesting ? (
                 <>
@@ -404,7 +404,7 @@ function InvestorBrowse() {
         <>
           <div className={`${investorStyles.grid.responsive} xl:grid-cols-4 mb-8`}>
             {availableNFTs.map((sag) => (
-              <Card key={sag.sagId} className={`${investorStyles.card.interactive} border-l-4 border-l-emerald-500`}>
+              <Card key={sag.sagId} className={`${investorStyles.card.interactive} border-l-4 border-l-accent`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -430,7 +430,7 @@ function InvestorBrowse() {
 
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Share Price:</span>
-                      <span className="text-sm font-medium text-green-600">
+                      <span className="text-sm font-medium text-success">
                         {sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}
                       </span>
                     </div>
@@ -442,7 +442,7 @@ function InvestorBrowse() {
 
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Monthly ROI:</span>
-                      <span className="text-sm font-medium text-green-600">{sag.sagProperties.investorRoiPercentage}%</span>
+                      <span className="text-sm font-medium text-success">{sag.sagProperties.investorRoiPercentage}%</span>
                     </div>
 
                     <div className="flex justify-between">
@@ -459,7 +459,7 @@ function InvestorBrowse() {
                       <span className="text-sm text-muted-foreground">Token ID:</span>
                       <span className="text-sm font-medium text-xs">
                         {sag.tokenId ? (
-                          <a className="text-blue-600 flex gap-1" href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target="_blank" rel="noopener noreferrer">
+                          <a className="text-primary flex gap-1" href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target="_blank" rel="noopener noreferrer">
                             {sag.tokenId}
                             <ExternalLinkIcon size={14} />
                           </a>
@@ -473,16 +473,16 @@ function InvestorBrowse() {
                     <div className="border-t pt-3 mt-3">
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3 text-green-600" />
+                          <DollarSign className="h-3 w-3 text-success" />
                           <span className="text-muted-foreground">Monthly:</span>
-                          <span className="font-medium text-green-600">
+                          <span className="font-medium text-success">
                             {sag.sagProperties.currency} {calculateMonthlyReturn(sag).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3 text-blue-600" />
+                          <TrendingUp className="h-3 w-3 text-primary" />
                           <span className="text-muted-foreground">Total:</span>
-                          <span className="font-medium text-blue-600">
+                          <span className="font-medium text-primary">
                             {sag.sagProperties.currency} {calculateTotalReturn(sag).toFixed(2)}
                           </span>
                         </div>

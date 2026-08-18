@@ -64,19 +64,19 @@ export default function ExtensionsPage() {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Pending
           </Badge>
         )
       case "approved":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Approved
           </Badge>
         )
       case "rejected":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Rejected
           </Badge>
         )
@@ -89,19 +89,19 @@ export default function ExtensionsPage() {
     const remaining = max - current
     if (remaining === 0) {
       return (
-        <Badge variant="outline" className="bg-red-100 text-red-700">
+        <Badge variant="outline" className="bg-destructive/10 text-destructive">
           Max Reached
         </Badge>
       )
     } else if (remaining === 1) {
       return (
-        <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+        <Badge variant="outline" className="bg-warning/10 text-warning">
           1 Remaining
         </Badge>
       )
     } else {
       return (
-        <Badge variant="outline" className="bg-green-100 text-green-700">
+        <Badge variant="outline" className="bg-success/10 text-success">
           {remaining} Remaining
         </Badge>
       )
@@ -113,10 +113,10 @@ export default function ExtensionsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loan Extensions</h1>
-          <p className="text-gray-600">Manage loan extension requests and approvals</p>
+          <h1 className="text-2xl font-bold text-foreground">Loan Extensions</h1>
+          <p className="text-muted-foreground">Manage loan extension requests and approvals</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <RefreshCw className="h-4 w-4 mr-2" />
           Review Extensions
         </Button>
@@ -126,38 +126,38 @@ export default function ExtensionsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Requests</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">8</div>
-            <p className="text-xs text-gray-500">Awaiting approval</p>
+            <div className="text-2xl font-bold text-warning">8</div>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Approved This Month</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Approved This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">15</div>
-            <p className="text-xs text-gray-500">Extensions granted</p>
+            <div className="text-2xl font-bold text-success">15</div>
+            <p className="text-xs text-muted-foreground">Extensions granted</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Extension 1</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Extension 1</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-gray-500">First extensions</p>
+            <p className="text-xs text-muted-foreground">First extensions</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Extension 2</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Extension 2</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-gray-500">Final extensions</p>
+            <p className="text-xs text-muted-foreground">Final extensions</p>
           </CardContent>
         </Card>
       </div>
@@ -191,7 +191,7 @@ export default function ExtensionsPage() {
                     <TableCell className="font-medium">{extension.sagId}</TableCell>
                     <TableCell>{extension.arRahnu}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                      <Badge variant="outline" className="bg-muted text-primary">
                         {extension.extensionType}
                       </Badge>
                     </TableCell>
@@ -222,27 +222,27 @@ export default function ExtensionsPage() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">SAG ID</label>
-                                    <p className="text-sm text-gray-600">{selectedExtension.sagId}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedExtension.sagId}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Ar Rahnu Branch</label>
-                                    <p className="text-sm text-gray-600">{selectedExtension.arRahnu}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedExtension.arRahnu}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Original Amount</label>
-                                    <p className="text-sm text-gray-600">{selectedExtension.originalAmount}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedExtension.originalAmount}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Extension Type</label>
-                                    <p className="text-sm text-gray-600">{selectedExtension.extensionType}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedExtension.extensionType}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Request Date</label>
-                                    <p className="text-sm text-gray-600">{selectedExtension.requestDate}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedExtension.requestDate}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Extensions Used</label>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                       {selectedExtension.totalExtensions} of {selectedExtension.maxExtensions}
                                     </p>
                                   </div>
@@ -250,7 +250,7 @@ export default function ExtensionsPage() {
 
                                 <div>
                                   <label className="text-sm font-medium">Reason for Extension</label>
-                                  <p className="text-sm text-gray-600 mt-1 p-3 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-muted-foreground mt-1 p-3 bg-muted/40 rounded-lg">
                                     {selectedExtension.reason}
                                   </p>
                                 </div>
@@ -258,19 +258,19 @@ export default function ExtensionsPage() {
                                 <div className="border-t pt-4">
                                   <h4 className="font-medium mb-3">Extension Timeline</h4>
                                   <div className="space-y-2">
-                                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                    <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                       <span className="text-sm">Current Maturity:</span>
                                       <span className="text-sm font-medium">{selectedExtension.currentMaturity}</span>
                                     </div>
-                                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+                                    <div className="flex justify-between items-center p-2 bg-muted rounded">
                                       <span className="text-sm">New Maturity (if approved):</span>
-                                      <span className="text-sm font-medium text-blue-700">
+                                      <span className="text-sm font-medium text-primary">
                                         {selectedExtension.newMaturity}
                                       </span>
                                     </div>
-                                    <div className="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                                    <div className="flex justify-between items-center p-2 bg-warning/10 rounded">
                                       <span className="text-sm">Extension Period:</span>
-                                      <span className="text-sm font-medium text-yellow-700">6 months</span>
+                                      <span className="text-sm font-medium text-warning">6 months</span>
                                     </div>
                                   </div>
                                 </div>
@@ -279,7 +279,7 @@ export default function ExtensionsPage() {
                                   <div className="border-t pt-4">
                                     <h4 className="font-medium mb-3">Actions</h4>
                                     <div className="flex gap-2">
-                                      <Button className="bg-green-600 hover:bg-green-700">
+                                      <Button className="bg-primary hover:bg-primary/90">
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Approve Extension
                                       </Button>
@@ -299,7 +299,7 @@ export default function ExtensionsPage() {
                                   <div className="border-t pt-4">
                                     <h4 className="font-medium mb-3">Post-Approval Actions</h4>
                                     <div className="flex gap-2">
-                                      <Button className="bg-emerald-600 hover:bg-emerald-700">
+                                      <Button className="bg-primary hover:bg-primary/90">
                                         <RefreshCw className="h-4 w-4 mr-2" />
                                         Auto-mint New Listing
                                       </Button>
@@ -315,7 +315,7 @@ export default function ExtensionsPage() {
                         </Dialog>
                         {extension.status === "pending" && (
                           <>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            <Button size="sm" className="bg-primary hover:bg-primary/90">
                               <CheckCircle className="h-4 w-4" />
                             </Button>
                             <Button size="sm" variant="destructive">
@@ -343,24 +343,24 @@ export default function ExtensionsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-5 w-5 text-blue-600" />
+                <Clock className="h-5 w-5 text-primary" />
                 <h4 className="font-medium">Extension Duration</h4>
               </div>
-              <p className="text-sm text-gray-600">Each extension adds 6 months to the original term</p>
+              <p className="text-sm text-muted-foreground">Each extension adds 6 months to the original term</p>
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="h-5 w-5 text-green-600" />
+                <RefreshCw className="h-5 w-5 text-success" />
                 <h4 className="font-medium">Maximum Extensions</h4>
               </div>
-              <p className="text-sm text-gray-600">Up to 2 extensions allowed (18 months total)</p>
+              <p className="text-sm text-muted-foreground">Up to 2 extensions allowed (18 months total)</p>
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <AlertTriangle className="h-5 w-5 text-warning" />
                 <h4 className="font-medium">Requirements</h4>
               </div>
-              <p className="text-sm text-gray-600">Previous listing must be fully repaid before approval</p>
+              <p className="text-sm text-muted-foreground">Previous listing must be fully repaid before approval</p>
             </div>
           </div>
         </CardContent>

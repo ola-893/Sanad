@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ExternalLink, Eye, Loader2 } from "lucide-react"
+import { ExternalLink, Gem, Loader2 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 
@@ -47,95 +47,107 @@ export function NFTCollateral({ showAll = false }: NFTCollateralProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Loading NFTs...</span>
+      <div className="flex items-center justify-center rounded-2xl border border-[#171414]/10 bg-white/50 p-8">
+        <Loader2 className="h-6 w-6 animate-spin text-[#171414]" />
+        <span className="ml-2 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          Loading NFTs...
+        </span>
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="text-center p-8 text-red-600">
-        <p>{error?.message || 'Failed to fetch NFTs'}</p>
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center">
+        <p className="text-sm text-destructive">{error?.message || 'Failed to fetch NFTs'}</p>
       </div>
     )
   }
 
   if (nfts.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        <p>No NFTs found</p>
+      <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-8 text-center">
+        <Gem className="mx-auto mb-2 h-6 w-6 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">No NFTs found</p>
       </div>
     )
   }
 
   return (
     <div className="grid grid-cols-1 gap-3">
-      {displayNFTs.map((nft: NFT, index: number) => (
-        <Card key={`${nft.token_id}-${nft.serial_number}`} className="border-gold/20 hover:border-gold/40 transition-all overflow-hidden group">
-          <CardContent className="p-0 relative">
-            {/* Large Background Image/Pattern */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-brightGold/10 to-gold/5">
-              <div className="absolute -right-8 -top-8 w-40 h-40 bg-gradient-to-br from-gold/30 to-brightGold/20 rounded-full blur-2xl" />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gold/10 font-bold text-8xl select-none">
-                NFT
+      {displayNFTs.map((nft: NFT) => (
+        <Card
+          key={`${nft.token_id}-${nft.serial_number}`}
+          className="overflow-hidden rounded-2xl border border-[#171414]/10 bg-white/50 transition-all hover:bg-white/80"
+        >
+          <CardContent className="p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="gradient-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+                  <Gem className="h-5 w-5 text-[#171414]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-display text-base font-bold text-[#171414]">
+                      NFT #{nft.serial_number}
+                    </h3>
+                    <Badge
+                      variant="outline"
+                      className={
+                        nft.deleted
+                          ? "border-destructive/20 bg-destructive/10 text-destructive"
+                          : "border-transparent bg-accent/30 text-[#171414]"
+                      }
+                    >
+                      {nft.deleted ? "Deleted" : "Active"}
+                    </Badge>
+                  </div>
+                  <p className="truncate font-mono text-xs text-muted-foreground">
+                    Token ID: {nft.token_id}
+                  </p>
+                </div>
               </div>
+              <Button size="sm" asChild className="shrink-0 rounded-full">
+                <a href={`${process.env.NEXT_PUBLIC_ENV_URL}/${nft.token_id}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-1 h-4 w-4" />
+                  View NFT
+                </a>
+              </Button>
             </div>
-            
-            {/* Content Overlay */}
-            <div className="relative p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gold to-brightGold rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                      <span className="text-white font-bold text-lg">NFT</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-bold text-lg text-deepGreen">NFT #{nft.serial_number}</h3>
-                        <Badge className={`text-xs ${nft.deleted ? 'bg-red-100 text-red-800' : 'bg-brightGold text-deepGreen'}`}>
-                          {nft.deleted ? "Deleted" : "Active"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-darkOlive font-medium">Token ID: {nft.token_id}</p>
-                    </div>
-                  </div>
-                </div>
-                <Button size="sm" asChild className="bg-gold hover:bg-gold/90 text-white shadow-md">
-                  <a href={`${process.env.NEXT_PUBLIC_ENV_URL}/${nft.token_id}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    View NFT
-                  </a>
-                </Button>
+
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#171414]/10 bg-white/50 p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Account ID
+                </p>
+                <p className="truncate text-sm font-medium text-[#171414]">{nft.account_id}</p>
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-gold/10">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Account ID</p>
-                  <p className="text-sm font-medium text-deepGreen truncate">{nft.account_id}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
-                  <p className="text-sm font-medium text-deepGreen">
-                    {new Date(parseInt(nft.created_timestamp) * 1000).toLocaleDateString()}
+              <div>
+                <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Created
+                </p>
+                <p className="text-sm font-medium tabular-nums text-[#171414]">
+                  {new Date(parseInt(nft.created_timestamp) * 1000).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Modified
+                </p>
+                <p className="text-sm font-medium tabular-nums text-[#171414]">
+                  {new Date(parseInt(nft.modified_timestamp) * 1000).toLocaleDateString()}
+                </p>
+              </div>
+              {nft.metadata && (
+                <div className="min-w-0 sm:col-span-2">
+                  <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                    Metadata
+                  </p>
+                  <p className="truncate text-sm font-medium text-[#171414]">
+                    {nft.metadata.substring(0, 50)}...
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Modified</p>
-                  <p className="text-sm font-medium text-deepGreen">
-                    {new Date(parseInt(nft.modified_timestamp) * 1000).toLocaleDateString()}
-                  </p>
-                </div>
-                {nft.metadata && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs text-muted-foreground mb-1">Metadata</p>
-                    <p className="text-sm font-medium text-deepGreen truncate">
-                      {nft.metadata.substring(0, 50)}...
-                    </p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>

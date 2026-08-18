@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import defaultTheme from "tailwindcss/defaultTheme"
 
 const config = {
   darkMode: ["class"],
@@ -15,10 +16,15 @@ const config = {
       center: true,
       padding: "2rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1200px",
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", ...defaultTheme.fontFamily.sans],
+        display: ["var(--font-display)", ...defaultTheme.fontFamily.sans],
+        mono: ["var(--font-mono)", ...defaultTheme.fontFamily.mono],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -37,6 +43,14 @@ const config = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -53,13 +67,13 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom colors based on the specified palette
-        deepGreen: "#004225",
-        gold: "#C9A227",
-        darkOlive: "#556B2F",
-        ivory: "#F8F1E5",
-        brightGold: "#FFD700",
-        softBeige: "#EAE0C8",
+        // Brand primaries (Flux — warm editorial luxury)
+        deepGreen: "#171414",
+        gold: "#E1BAC2",
+        darkOlive: "#4A4A4A",
+        ivory: "#F5F5F3",
+        brightGold: "#F2CBD3",
+        softBeige: "#FAFAF8",
       },
       borderRadius: {
         lg: "var(--radius)",

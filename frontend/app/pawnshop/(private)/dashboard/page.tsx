@@ -63,7 +63,7 @@ function PawnshopDashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full" />
+                <div className="w-2 h-2 bg-success/100 rounded-full" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">CryptoPunk #1234 funded</p>
                   <p className="text-xs text-muted-foreground">2 hours ago</p>
@@ -71,7 +71,7 @@ function PawnshopDashboard() {
                 <div className="text-sm font-medium">RM 5,000</div>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                <div className="w-2 h-2 bg-muted0 rounded-full" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Bored Ape #5678 listed</p>
                   <p className="text-xs text-muted-foreground">1 day ago</p>

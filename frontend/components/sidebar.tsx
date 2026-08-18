@@ -1,9 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { BarChart3, Briefcase, CreditCard, FileText, Home, Settings, Users } from "lucide-react"
+import { useAtom } from "jotai"
+import { userAtom } from "@/store/atoms"
+import { useAuth } from "@/hooks/use-auth"
+import { Logo } from "@/components/logo"
 import {
   Sidebar as UISidebar,
   SidebarContent,
@@ -18,17 +21,14 @@ import { UserNav } from "@/components/user-nav"
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [user] = useAtom(userAtom)
+  const { logout } = useAuth()
+  const role = user?.userInfo?.roleId as string
 
   return (
     <UISidebar>
       <SidebarHeader className="border-b px-6 py-2">
-        <div className="flex items-center gap-2">
-          <Image src="/placeholder.svg?height=40&width=40" alt="Logo" width={40} height={40} className="h-10 w-10" />
-          <div className="flex flex-col">
-            <span className="font-bold">Sanad</span>
-            <span className="text-xs text-muted-foreground">CEO Dashboard</span>
-          </div>
-        </div>
+        <Logo />
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
@@ -91,7 +91,7 @@ export function Sidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
-        <UserNav />
+        <UserNav user={user} role={role as "admin" | "pawnshop" | "investor" | "user"} onLogout={logout} />
       </SidebarFooter>
       <SidebarTrigger />
     </UISidebar>

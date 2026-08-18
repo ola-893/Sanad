@@ -72,7 +72,7 @@ export default function InvestorDashboard() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Expected ROI:</p>
-                    <p className="font-semibold text-emerald-600">{sag.expectedROI}</p>
+                    <p className="font-semibold text-primary">{sag.expectedROI}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Min Investment:</p>
@@ -99,10 +99,10 @@ export default function InvestorDashboard() {
             <CardContent className="space-y-4">
               {isConnected && address ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center p-4 bg-emerald-50 rounded-md">
+                  <div className="flex items-center justify-center p-4 bg-muted rounded-md">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                      <span className="font-medium text-emerald-800">Connected (CC3 Testnet)</span>
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span className="font-medium text-primary">Connected (CC3 Testnet)</span>
                     </div>
                   </div>
 
@@ -112,7 +112,7 @@ export default function InvestorDashboard() {
                       href={`https://creditcoin-testnet.blockscout.com/address/${address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono text-xs bg-gray-100 p-2 rounded block text-emerald-700 hover:underline break-all"
+                      className="font-mono text-xs bg-muted p-2 rounded block text-primary hover:underline break-all"
                     >
                       {address}
                     </a>
@@ -120,13 +120,13 @@ export default function InvestorDashboard() {
 
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Available CTC Balance:</p>
-                    <p className="font-semibold text-lg text-emerald-900">{balance} tCTC</p>
+                    <p className="font-semibold text-lg text-primary">{balance} tCTC</p>
                   </div>
                 </div>
               ) : (
                 <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center">
-                    <WalletIcon className="h-8 w-8 text-emerald-600" />
+                  <div className="w-16 h-16 mx-auto bg-accent/10 rounded-full flex items-center justify-center">
+                    <WalletIcon className="h-8 w-8 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium">Connect EVM Wallet</h3>
@@ -162,9 +162,9 @@ export default function InvestorDashboard() {
 
               <TabsContent value="overview" className="space-y-4">
                 <div className={investorStyles.grid.stats}>
-                  <div className="bg-emerald-50 p-4 rounded-lg">
+                  <div className="bg-muted p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <DollarSignIcon className="h-4 w-4 text-emerald-600" />
+                      <DollarSignIcon className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">Total Invested</span>
                     </div>
                     <p className={investorStyles.text.value}>RM 0</p>
@@ -178,12 +178,12 @@ export default function InvestorDashboard() {
                     <p className={`text-2xl font-bold ${investorStyles.text.accent}`}>RM 0</p>
                   </div>
 
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="bg-muted p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <ClockIcon className="h-4 w-4 text-blue-600" />
+                      <ClockIcon className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">Active Investments</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-800">0</p>
+                    <p className="text-2xl font-bold text-primary">0</p>
                   </div>
                 </div>
               </TabsContent>

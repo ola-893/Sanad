@@ -20,7 +20,7 @@ export function ProcessFlowTimeline() {
         "NFT + fractional tokens minted",
         "Tokens listed on marketplace",
       ],
-      color: "bg-blue-500",
+      color: "bg-muted",
     },
     {
       id: 2,
@@ -33,7 +33,7 @@ export function ProcessFlowTimeline() {
         "Investor receives full amount + 6% p.a. (daily prorated)",
         "Tokens + NFTs are burned",
       ],
-      color: "bg-green-500",
+      color: "bg-success",
     },
     {
       id: 3,
@@ -44,7 +44,7 @@ export function ProcessFlowTimeline() {
         "Borrower can extend loan (up to 2x, 6 months each)",
         "Each extension = new listing with new NFT/token",
       ],
-      color: "bg-yellow-500",
+      color: "bg-warning",
     },
     {
       id: 4,
@@ -56,7 +56,7 @@ export function ProcessFlowTimeline() {
         "Ar Rahnu repays investors fully",
         "Liquid distributes proceeds to investors",
       ],
-      color: "bg-red-500",
+      color: "bg-destructive",
     },
   ]
 
@@ -87,9 +87,9 @@ export function ProcessFlowTimeline() {
       <Card className="border-gold/20 max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-full ${steps[activeStep].color} text-white`}>{steps[activeStep].icon}</div>
+            <div className={`p-3 rounded-full ${steps[activeStep].color} text-primary-foreground`}>{steps[activeStep].icon}</div>
             <div>
-              <CardTitle className="text-deepGreen text-2xl">{steps[activeStep].title}</CardTitle>
+              <CardTitle className="text-2xl">{steps[activeStep].title}</CardTitle>
               <CardDescription className="text-lg">{steps[activeStep].description}</CardDescription>
             </div>
           </div>

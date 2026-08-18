@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Hanken_Grotesk, JetBrains_Mono, Manrope } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/hooks/use-language"
@@ -12,7 +12,9 @@ import { ConditionalLayout } from "@/components/conditional-layout"
 import { QueryProvider } from "@/components/query-client-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
 
-const inter = Inter({ subsets: ["latin"] })
+const hankenGrotesk = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" })
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-display" })
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
   title: "Sanad - Shariah-Compliant Gold Financing on Creditcoin",
@@ -20,9 +22,9 @@ export const metadata: Metadata = {
     "Decentralized Ar-Rahnu gold financing network bridging microfinance operators to global liquidity on Creditcoin 3",
   generator: 'v0.app',
   icons: {
-    icon: '/images/favicon.jpg',
-    shortcut: '/images/favicon.jpg',
-    apple: '/images/favicon.jpg',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   }
 }
 
@@ -33,9 +35,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${hankenGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} font-sans`}>
         <QueryProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <LanguageProvider>
               <AuthProvider>
                 <ConditionalLayout>

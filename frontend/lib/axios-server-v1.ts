@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const apiServerInstance = axios.create({
-  baseURL: `${apiUrl}/api/v1`,
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api/v1`,
   timeout: 300000,
 });
 

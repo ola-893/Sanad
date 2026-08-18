@@ -92,11 +92,11 @@ export function UserTable() {
   const getStatusBadge = (status: User["status"]) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-success/10 text-success">Active</Badge>
       case "suspended":
-        return <Badge className="bg-yellow-100 text-yellow-800">Suspended</Badge>
+        return <Badge className="bg-warning/10 text-warning-foreground">Suspended</Badge>
       case "inactive":
-        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+        return <Badge className="bg-muted text-foreground">Inactive</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -105,11 +105,11 @@ export function UserTable() {
   const getKycBadge = (status: User["kycStatus"]) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>
+        return <Badge className="bg-success/10 text-success">Approved</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-warning/10 text-warning-foreground">Pending</Badge>
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -192,7 +192,7 @@ export function UserTable() {
                           Activate
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="text-red-600" onClick={() => deleteUser(user.id)}>
+                      <DropdownMenuItem className="text-destructive" onClick={() => deleteUser(user.id)}>
                         {t("common.delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>

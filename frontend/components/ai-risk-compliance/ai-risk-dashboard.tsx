@@ -116,26 +116,26 @@ export function AiRiskDashboard() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical":
-        return "bg-red-100 text-red-800 border-red-200"
+        return "bg-destructive/10 text-destructive border-destructive/30"
       case "high":
         return "bg-orange-100 text-orange-800 border-orange-200"
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+        return "bg-warning/10 text-warning-foreground border-warning/30"
       default:
-        return "bg-blue-100 text-blue-800 border-blue-200"
+        return "bg-muted text-primary border-blue-200"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "escalated":
-        return "bg-red-500"
+        return "bg-destructive/100"
       case "investigating":
-        return "bg-yellow-500"
+        return "bg-warning/100"
       case "resolved":
-        return "bg-green-500"
+        return "bg-success/100"
       default:
-        return "bg-gray-500"
+        return "bg-muted/400"
     }
   }
 
@@ -144,16 +144,16 @@ export function AiRiskDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Brain className="h-6 w-6 text-emerald-600" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
             AI Risk & Compliance Dashboard
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Real-time AI-powered risk monitoring and compliance management for Suyula Liquid
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             <Activity className="h-3 w-3 mr-1" />
             All Systems Operational
           </Badge>
@@ -161,37 +161,37 @@ export function AiRiskDashboard() {
       </div>
 
       {/* Critical Alerts */}
-      <Alert className="border-red-200 bg-red-50">
-        <AlertTriangle className="h-4 w-4 text-red-600" />
-        <AlertTitle className="text-red-800">Critical Risk Alerts</AlertTitle>
-        <AlertDescription className="text-red-700">
+      <Alert className="border-destructive/30 bg-destructive/10">
+        <AlertTriangle className="h-4 w-4 text-destructive" />
+        <AlertTitle className="text-destructive">Critical Risk Alerts</AlertTitle>
+        <AlertDescription className="text-destructive">
           4 high-priority items require immediate attention: 1 AML match, 2 high-risk SAGs, and 1 wallet anomaly.
         </AlertDescription>
       </Alert>
 
       {/* Key Metrics */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-accent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Overall Risk Score</CardTitle>
-            <Shield className="h-5 w-5 text-emerald-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Overall Risk Score</CardTitle>
+            <Shield className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{riskMetrics.overallRiskScore}/100</div>
+            <div className="text-2xl font-bold text-foreground">{riskMetrics.overallRiskScore}/100</div>
             <Progress value={riskMetrics.overallRiskScore} className="mt-2" />
-            <div className="text-xs text-gray-500 mt-1">Moderate Risk Level</div>
+            <div className="text-xs text-muted-foreground mt-1">Moderate Risk Level</div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">KYC Compliance Rate</CardTitle>
-            <Users className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">KYC Compliance Rate</CardTitle>
+            <Users className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{riskMetrics.kycComplianceRate}%</div>
+            <div className="text-2xl font-bold text-foreground">{riskMetrics.kycComplianceRate}%</div>
             <Progress value={riskMetrics.kycComplianceRate} className="mt-2" />
-            <div className="text-xs text-green-600 mt-1">
+            <div className="text-xs text-success mt-1">
               <TrendingUp className="h-3 w-3 inline mr-1" />
               +2.1% from last week
             </div>
@@ -200,23 +200,23 @@ export function AiRiskDashboard() {
 
         <Card className="border-l-4 border-l-orange-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Alerts</CardTitle>
             <AlertTriangle className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{riskMetrics.amlAlertsToday}</div>
+            <div className="text-2xl font-bold text-foreground">{riskMetrics.amlAlertsToday}</div>
             <div className="text-xs text-orange-600 mt-1">Requires attention</div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">AI Predictions Today</CardTitle>
-            <Brain className="h-5 w-5 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">AI Predictions Today</CardTitle>
+            <Brain className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">4,936</div>
-            <div className="text-xs text-purple-600 mt-1">
+            <div className="text-2xl font-bold text-foreground">4,936</div>
+            <div className="text-xs text-primary mt-1">
               <Zap className="h-3 w-3 inline mr-1" />
               Real-time analysis
             </div>
@@ -273,16 +273,16 @@ export function AiRiskDashboard() {
                       <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
                           <div className="font-medium">{model.name}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             Last trained: {model.lastTrained} • {model.predictions} predictions
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <div className="font-medium">{model.accuracy}%</div>
-                            <div className="text-xs text-gray-500">Accuracy</div>
+                            <div className="text-xs text-muted-foreground">Accuracy</div>
                           </div>
-                          <Badge variant="outline" className="bg-green-100 text-green-700">
+                          <Badge variant="outline" className="bg-success/10 text-success">
                             {model.status}
                           </Badge>
                         </div>
@@ -302,18 +302,18 @@ export function AiRiskDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-                  <XCircle className="h-8 w-8 text-red-600" />
+                <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-lg">
+                  <XCircle className="h-8 w-8 text-destructive" />
                   <div>
-                    <div className="font-medium text-red-800">High Risk SAGs</div>
-                    <div className="text-sm text-red-600">{riskMetrics.sagRiskFlags} active flags</div>
+                    <div className="font-medium text-destructive">High Risk SAGs</div>
+                    <div className="text-sm text-destructive">{riskMetrics.sagRiskFlags} active flags</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                  <Wallet className="h-8 w-8 text-yellow-600" />
+                <div className="flex items-center gap-3 p-3 bg-warning/10 rounded-lg">
+                  <Wallet className="h-8 w-8 text-warning" />
                   <div>
-                    <div className="font-medium text-yellow-800">Wallet Anomalies</div>
-                    <div className="text-sm text-yellow-600">{riskMetrics.walletAnomalies} detected</div>
+                    <div className="font-medium text-warning-foreground">Wallet Anomalies</div>
+                    <div className="text-sm text-warning">{riskMetrics.walletAnomalies} detected</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
@@ -343,8 +343,8 @@ export function AiRiskDashboard() {
                       <Badge className={getSeverityColor(alert.severity)}>{alert.type}</Badge>
                       <div className={`w-2 h-2 rounded-full ${getStatusColor(alert.status)}`} />
                     </div>
-                    <p className="text-sm text-gray-700 mb-2">{alert.message}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <p className="text-sm text-muted-foreground mb-2">{alert.message}</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{alert.timestamp}</span>
                       <span className="capitalize">{alert.status}</span>
                     </div>
@@ -365,7 +365,7 @@ export function AiRiskDashboard() {
               <CardDescription>Quick access to risk management tools</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start bg-emerald-600 hover:bg-emerald-700">
+              <Button className="w-full justify-start bg-primary hover:bg-primary/90">
                 <Brain className="h-4 w-4 mr-2" />
                 Run Full Risk Scan
               </Button>

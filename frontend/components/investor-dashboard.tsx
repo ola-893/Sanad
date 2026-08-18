@@ -56,21 +56,21 @@ function getRiskStars(risk_level?: string): number {
 }
 
 function getRiskColor(risk_level?: string): { bg: string; text: string; border: string } {
-  if (!risk_level) return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' }
+  if (!risk_level) return { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'border-border' }
 
   switch (risk_level.toUpperCase()) {
     case 'VERY_LOW':
-      return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
+      return { bg: 'bg-muted', text: 'text-primary', border: 'border-border' }
     case 'LOW':
-      return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
+      return { bg: 'bg-success/10', text: 'text-success', border: 'border-success/30' }
     case 'MEDIUM':
-      return { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' }
+      return { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/30' }
     case 'HIGH':
       return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' }
     case 'VERY_HIGH':
-      return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+      return { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/30' }
     default:
-      return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' }
+      return { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'border-border' }
   }
 }
 
@@ -96,8 +96,8 @@ function RiskBadge({ risk_level, ltv, compact = false }: { risk_level?: string; 
             key={i}
             className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} ${
               i < stars 
-                ? 'fill-yellow-400 text-yellow-400' 
-                : 'fill-gray-200 text-gray-200'
+                ? 'fill-accent text-accent' 
+                : 'fill-muted-foreground/30 text-muted-foreground/30'
             }`}
           />
         ))}
@@ -208,9 +208,9 @@ function ViewMoreOpportunitiesDialog() {
                             {sag.sagDescription || `${sag.sagProperties.assetType} • ${sag.sagProperties.tenorM} months`}
                           </CardDescription>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'active' ? 'bg-green-100 text-green-700' :
-                            sag.status === 'closed' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
+                        <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'active' ? 'bg-success/10 text-success' :
+                            sag.status === 'closed' ? 'bg-destructive/10 text-destructive' :
+                              'bg-warning/10 text-warning'
                           }`}>
                           {sag.status}
                         </span>
@@ -252,8 +252,8 @@ function ViewMoreOpportunitiesDialog() {
                                       key={i}
                                       className={`h-3 w-3 ${
                                         i < getRiskStars(sag.sagProperties.risk_level)
-                                          ? 'fill-yellow-400 text-yellow-400' 
-                                          : 'fill-gray-300 text-gray-300'
+                                          ? 'fill-accent text-accent' 
+                                          : 'fill-gray-300 text-muted-foreground'
                                       }`}
                                     />
                                   ))}
@@ -274,13 +274,13 @@ function ViewMoreOpportunitiesDialog() {
                           
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Share Price:</span>
-                            <span className="font-semibold text-green-600">
+                            <span className="font-semibold text-success">
                               {sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Monthly ROI:</span>
-                            <span className="font-semibold text-green-600">{sag.sagProperties.investorRoiPercentage}%</span>
+                            <span className="font-semibold text-success">{sag.sagProperties.investorRoiPercentage}%</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Available Shares:</span>
@@ -289,19 +289,19 @@ function ViewMoreOpportunitiesDialog() {
                         </div>
 
                         {/* Investment Summary */}
-                        <div className="bg-blue-50 p-2 rounded text-xs">
+                        <div className="bg-muted p-2 rounded text-xs">
                           <div className="grid grid-cols-2 gap-2">
                             <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3 text-green-600" />
+                              <DollarSign className="h-3 w-3 text-success" />
                               <span className="text-muted-foreground">Monthly:</span>
-                              <span className="font-medium text-green-600">
+                              <span className="font-medium text-success">
                                 {sag.sagProperties.currency} {calculateMonthlyReturn(sag).toFixed(2)}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3 text-blue-600" />
+                              <TrendingUp className="h-3 w-3 text-primary" />
                               <span className="text-muted-foreground">Total:</span>
-                              <span className="font-medium text-blue-600">
+                              <span className="font-medium text-primary">
                                 {sag.sagProperties.currency} {calculateTotalReturn(sag).toFixed(2)}
                               </span>
                             </div>
@@ -312,7 +312,7 @@ function ViewMoreOpportunitiesDialog() {
                           <span className="text-muted-foreground">Token:</span>
                           {sag.tokenId ? (
                             <a
-                              className="text-blue-600 flex items-center gap-1 hover:underline"
+                              className="text-primary flex items-center gap-1 hover:underline"
                               href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -521,8 +521,8 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
                       key={i}
                       className={`h-4 w-4 ${
                         i < getRiskStars(sag.sagProperties.risk_level)
-                          ? 'fill-yellow-400 text-yellow-400' 
-                          : 'fill-gray-300 text-gray-300'
+                          ? 'fill-accent text-accent' 
+                          : 'fill-gray-300 text-muted-foreground'
                       }`}
                     />
                   ))}
@@ -549,15 +549,15 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
               <Skeleton className="h-16 w-full" />
             </div>
           ) : walletBalance ? (
-            <div className={`p-3 rounded-lg space-y-2 ${hasInsufficientBalance ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+            <div className={`p-3 rounded-lg space-y-2 ${hasInsufficientBalance ? 'bg-destructive/10 border border-destructive/30' : 'bg-success/10 border border-success/30'}`}>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Your Wallet Balance:</span>
-                <span className={`font-bold text-lg ${hasInsufficientBalance ? 'text-red-600' : 'text-green-600'}`}>
+                <span className={`font-bold text-lg ${hasInsufficientBalance ? 'text-destructive' : 'text-success'}`}>
                   {sag.sagProperties.currency} {currentBalance.toFixed(2)}
                 </span>
               </div>
               {hasInsufficientBalance && (
-                <div className="text-xs text-red-600 bg-red-100 p-2 rounded">
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
                   ⚠️ Insufficient balance. You need {sag.sagProperties.currency} {balanceShortage.toFixed(2)} more to invest.
                 </div>
               )}
@@ -571,7 +571,7 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
               <Skeleton className="h-4 w-3/4" />
             </div>
           ) : tokenError ? (
-            <div className="text-sm text-red-600">
+            <div className="text-sm text-destructive">
               Failed to load token information
             </div>
           ) : tokenInfo ? (
@@ -582,7 +582,7 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Available:</span>
-                <span className="font-medium text-green-600">{tokenInfo.data.remainingSupply} shares</span>
+                <span className="font-medium text-success">{tokenInfo.data.remainingSupply} shares</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sold:</span>
@@ -628,7 +628,7 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
           </div>
 
           {/* Investment Summary */}
-          <div className="bg-blue-50 p-3 rounded-lg space-y-2">
+          <div className="bg-muted p-3 rounded-lg space-y-2">
             <h4 className="font-medium text-sm">Investment Summary</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
@@ -649,16 +649,16 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
               </div>
               <div className="flex justify-between">
                 <span>Monthly ROI:</span>
-                <span className="font-medium text-green-600">{sag.sagProperties.investorRoiPercentage}%</span>
+                <span className="font-medium text-success">{sag.sagProperties.investorRoiPercentage}%</span>
               </div>
               <div className="border-t pt-1 mt-2">
                 <div className="flex justify-between">
                   <span>Expected Return:</span>
-                  <span className="font-medium text-green-600">{sag.sagProperties.currency} {totalExpectedReturn.toFixed(2)}</span>
+                  <span className="font-medium text-success">{sag.sagProperties.currency} {totalExpectedReturn.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Profit:</span>
-                  <span className="font-medium text-green-600">{sag.sagProperties.currency} {totalProfit.toFixed(2)}</span>
+                  <span className="font-medium text-success">{sag.sagProperties.currency} {totalProfit.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -672,7 +672,7 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
             <Button
               onClick={handleInvest}
               disabled={isInvesting || remainingShares === 0 || hasInsufficientBalance}
-              className={`flex-1 ${hasInsufficientBalance ? 'bg-gray-400 hover:bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`flex-1 ${hasInsufficientBalance ? 'bg-muted hover:bg-muted' : 'bg-primary hover:bg-primary/90'}`}
             >
               {isInvesting ? (
                 <>
@@ -741,7 +741,7 @@ export function InvestorDashboard({ }: InvestorDashboardProps) {
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold text-center mb-12 text-deepGreen">Investor Dashboard</h2>
           <div className="text-center py-12">
-            <p className="text-red-600 text-lg mb-4">Failed to load investment opportunities</p>
+            <p className="text-destructive text-lg mb-4">Failed to load investment opportunities</p>
             <Button onClick={() => window.location.reload()} className="bg-brightGold hover:bg-gold text-deepGreen">
               Try Again
             </Button>
@@ -777,9 +777,9 @@ export function InvestorDashboard({ }: InvestorDashboardProps) {
               <CardHeader>
                 <CardTitle className="text-deepGreen flex items-center justify-between">
                   <span>{sag.sagName || `SAG #${sag.sagId.slice(-8)}`}</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'active' ? 'bg-green-100 text-green-700' :
-                      sag.status === 'closed' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
+                  <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'active' ? 'bg-success/10 text-success' :
+                      sag.status === 'closed' ? 'bg-destructive/10 text-destructive' :
+                        'bg-warning/10 text-warning'
                     }`}>
                     {sag.status}
                   </span>
@@ -858,8 +858,8 @@ export function InvestorDashboard({ }: InvestorDashboardProps) {
                                 key={i}
                                 className={`h-3.5 w-3.5 ${
                                   i < getRiskStars(sag.sagProperties.risk_level)
-                                    ? 'fill-yellow-400 text-yellow-400' 
-                                    : 'fill-gray-300 text-gray-300'
+                                    ? 'fill-accent text-accent' 
+                                    : 'fill-gray-300 text-muted-foreground'
                                 }`}
                               />
                             ))}
@@ -886,9 +886,9 @@ export function InvestorDashboard({ }: InvestorDashboardProps) {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-darkOlive">{sag.sagProperties.investorFinancingType}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${sag.approvalStatus === 'approved' ? 'bg-green-100 text-green-700' :
-                          sag.approvalStatus === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
+                      <span className={`text-xs px-2 py-1 rounded-full ${sag.approvalStatus === 'approved' ? 'bg-success/10 text-success' :
+                          sag.approvalStatus === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                            'bg-warning/10 text-warning'
                         }`}>
                         {sag.approvalStatus}
                       </span>

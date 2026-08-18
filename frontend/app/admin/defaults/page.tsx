@@ -64,19 +64,19 @@ export default function DefaultsPage() {
     switch (status) {
       case "in_progress":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             In Progress
           </Badge>
         )
       case "completed":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Completed
           </Badge>
         )
       case "pending":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Pending
           </Badge>
         )
@@ -89,19 +89,19 @@ export default function DefaultsPage() {
     switch (status) {
       case "sold":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Sold
           </Badge>
         )
       case "pending_sale":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Pending Sale
           </Badge>
         )
       case "valuation":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+          <Badge variant="outline" className="bg-muted text-primary">
             Under Valuation
           </Badge>
         )
@@ -115,10 +115,10 @@ export default function DefaultsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Default Cases</h1>
-          <p className="text-gray-600">Manage defaulted loans and recovery processes</p>
+          <h1 className="text-2xl font-bold text-foreground">Default Cases</h1>
+          <p className="text-muted-foreground">Manage defaulted loans and recovery processes</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <AlertTriangle className="h-4 w-4 mr-2" />
           Review Defaults
         </Button>
@@ -128,38 +128,38 @@ export default function DefaultsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Defaults</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Defaults</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">23</div>
-            <p className="text-xs text-gray-500">All time</p>
+            <div className="text-2xl font-bold text-destructive">23</div>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Recovery Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Recovery Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">94%</div>
-            <p className="text-xs text-gray-500">Average recovery</p>
+            <div className="text-2xl font-bold text-success">94%</div>
+            <p className="text-xs text-muted-foreground">Average recovery</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Outstanding Amount</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Amount</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">RM 22,660</div>
-            <p className="text-xs text-gray-500">Pending recovery</p>
+            <p className="text-xs text-muted-foreground">Pending recovery</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Completed Cases</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completed Cases</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">21</div>
-            <p className="text-xs text-gray-500">Fully resolved</p>
+            <div className="text-2xl font-bold text-primary">21</div>
+            <p className="text-xs text-muted-foreground">Fully resolved</p>
           </CardContent>
         </Card>
       </div>
@@ -218,29 +218,29 @@ export default function DefaultsPage() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">SAG ID</label>
-                                    <p className="text-sm text-gray-600">{selectedDefault.sagId}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedDefault.sagId}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Ar Rahnu Branch</label>
-                                    <p className="text-sm text-gray-600">{selectedDefault.arRahnu}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedDefault.arRahnu}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Original Amount</label>
-                                    <p className="text-sm text-gray-600">{selectedDefault.originalAmount}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedDefault.originalAmount}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Outstanding Amount</label>
-                                    <p className="text-sm text-gray-600 font-semibold text-red-600">
+                                    <p className="text-sm text-muted-foreground font-semibold text-destructive">
                                       {selectedDefault.outstandingAmount}
                                     </p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Default Date</label>
-                                    <p className="text-sm text-gray-600">{selectedDefault.defaultDate}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedDefault.defaultDate}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Collateral Value</label>
-                                    <p className="text-sm text-gray-600">{selectedDefault.collateralValue}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedDefault.collateralValue}</p>
                                   </div>
                                 </div>
 
@@ -249,7 +249,7 @@ export default function DefaultsPage() {
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                       <label className="text-sm font-medium">Sale Date</label>
-                                      <p className="text-sm text-gray-600">{selectedDefault.saleDate}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedDefault.saleDate}</p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Recovery Status</label>
@@ -257,13 +257,13 @@ export default function DefaultsPage() {
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Recovered Amount</label>
-                                      <p className="text-sm text-gray-600 font-semibold text-green-600">
+                                      <p className="text-sm text-muted-foreground font-semibold text-success">
                                         {selectedDefault.recoveredAmount}
                                       </p>
                                     </div>
                                     <div>
                                       <label className="text-sm font-medium">Investor Payout</label>
-                                      <p className="text-sm text-gray-600">{selectedDefault.investorPayout}</p>
+                                      <p className="text-sm text-muted-foreground">{selectedDefault.investorPayout}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -273,7 +273,7 @@ export default function DefaultsPage() {
                                   <div className="flex gap-2 flex-wrap">
                                     {selectedDefault.status === "in_progress" && (
                                       <>
-                                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                                        <Button size="sm" className="bg-primary hover:bg-primary/90">
                                           <CheckCircle className="h-4 w-4 mr-2" />
                                           Confirm Recovery
                                         </Button>
@@ -304,26 +304,26 @@ export default function DefaultsPage() {
                                 <div className="border-t pt-4">
                                   <h4 className="font-medium mb-3">Recovery Timeline</h4>
                                   <div className="space-y-2">
-                                    <div className="flex items-center gap-3 p-2 bg-red-50 rounded">
-                                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                    <div className="flex items-center gap-3 p-2 bg-destructive/10 rounded">
+                                      <div className="w-2 h-2 bg-destructive/100 rounded-full"></div>
                                       <div>
                                         <p className="text-sm font-medium">Default Occurred</p>
-                                        <p className="text-xs text-gray-500">{selectedDefault.defaultDate}</p>
+                                        <p className="text-xs text-muted-foreground">{selectedDefault.defaultDate}</p>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-2 bg-yellow-50 rounded">
-                                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                    <div className="flex items-center gap-3 p-2 bg-warning/10 rounded">
+                                      <div className="w-2 h-2 bg-warning/100 rounded-full"></div>
                                       <div>
                                         <p className="text-sm font-medium">Collateral Sale</p>
-                                        <p className="text-xs text-gray-500">{selectedDefault.saleDate}</p>
+                                        <p className="text-xs text-muted-foreground">{selectedDefault.saleDate}</p>
                                       </div>
                                     </div>
                                     {selectedDefault.status === "completed" && (
-                                      <div className="flex items-center gap-3 p-2 bg-green-50 rounded">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                      <div className="flex items-center gap-3 p-2 bg-success/10 rounded">
+                                        <div className="w-2 h-2 bg-success/100 rounded-full"></div>
                                         <div>
                                           <p className="text-sm font-medium">Recovery Completed</p>
-                                          <p className="text-xs text-gray-500">Investors paid out</p>
+                                          <p className="text-xs text-muted-foreground">Investors paid out</p>
                                         </div>
                                       </div>
                                     )}
@@ -354,7 +354,7 @@ export default function DefaultsPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Average Recovery Rate</span>
-                <Badge variant="outline" className="bg-green-100 text-green-700">
+                <Badge variant="outline" className="bg-success/10 text-success">
                   94%
                 </Badge>
               </div>
@@ -364,7 +364,7 @@ export default function DefaultsPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Total Recovered</span>
-                <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                <Badge variant="outline" className="bg-muted text-primary">
                   RM 1.2M
                 </Badge>
               </div>
@@ -380,19 +380,19 @@ export default function DefaultsPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">KL Central</span>
-                <Badge variant="outline" className="bg-green-100 text-green-700">
+                <Badge variant="outline" className="bg-success/10 text-success">
                   2.1%
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Johor Bahru</span>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+                <Badge variant="outline" className="bg-warning/10 text-warning">
                   3.5%
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Penang</span>
-                <Badge variant="outline" className="bg-green-100 text-green-700">
+                <Badge variant="outline" className="bg-success/10 text-success">
                   1.8%
                 </Badge>
               </div>

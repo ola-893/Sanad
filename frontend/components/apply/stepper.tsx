@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Check, CreditCard, FileCheck, Upload, User, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -9,7 +8,6 @@ interface StepperProps {
 }
 
 export function Stepper({ currentStep }: StepperProps) {
-
   const steps = [
     {
       id: 1,
@@ -47,31 +45,39 @@ export function Stepper({ currentStep }: StepperProps) {
     <div className="w-full">
       <nav aria-label="Progress">
         <ol className="space-y-4 md:flex md:space-x-8 md:space-y-0">
-          {steps.map((step, stepIdx) => (
+          {steps.map((step) => (
             <li key={step.name} className="md:flex-1">
               <div
                 className={cn(
                   "group flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4",
                   step.status === "complete"
-                    ? "border-emerald-600"
+                    ? "border-primary"
                     : step.status === "current"
-                      ? "border-emerald-600"
-                      : "border-gray-200",
+                      ? "border-accent"
+                      : "border-border",
                 )}
               >
                 <span
                   className={cn(
                     "flex items-center text-sm font-medium",
-                    step.status === "complete" ? "text-emerald-600" : "",
+                    step.status === "complete" ? "text-primary" : "",
+                    step.status === "current" ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 mr-3">
+                  <span
+                    className={cn(
+                      "mr-3 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2",
+                      step.status === "complete"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : step.status === "current"
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-border text-muted-foreground",
+                    )}
+                  >
                     {step.status === "complete" ? (
-                      <Check className="h-5 w-5 text-emerald-600" />
+                      <Check className="h-5 w-5" />
                     ) : (
-                      <step.icon
-                        className={cn("h-5 w-5", step.status === "current" ? "text-emerald-600" : "text-gray-500")}
-                      />
+                      <step.icon className="h-5 w-5" />
                     )}
                   </span>
                   <span>{step.name}</span>

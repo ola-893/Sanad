@@ -56,21 +56,21 @@ const pendingEvaluations = [
 
 export default function SAGRiskPage() {
   const getRiskColor = (score: number) => {
-    if (score >= 70) return "bg-red-100 text-red-800"
+    if (score >= 70) return "bg-destructive/10 text-destructive"
     if (score >= 40) return "bg-orange-100 text-orange-800"
-    return "bg-green-100 text-green-800"
+    return "bg-success/10 text-success"
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
-        return "bg-green-100 text-green-800"
+        return "bg-success/10 text-success"
       case "processing":
-        return "bg-blue-100 text-blue-800"
+        return "bg-muted text-primary"
       case "high_risk":
-        return "bg-red-100 text-red-800"
+        return "bg-destructive/10 text-destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -90,7 +90,7 @@ export default function SAGRiskPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Shield className="h-6 w-6 text-blue-600" />
+        <Shield className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">SAG Listing Risk Evaluation</h1>
       </div>
 
@@ -102,9 +102,9 @@ export default function SAGRiskPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Evaluations</p>
                 <p className="text-2xl font-bold">1,247</p>
-                <p className="text-xs text-green-600">↑ 12% this month</p>
+                <p className="text-xs text-success">↑ 12% this month</p>
               </div>
-              <Gem className="h-8 w-8 text-blue-500" />
+              <Gem className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -114,9 +114,9 @@ export default function SAGRiskPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Avg Processing Time</p>
                 <p className="text-2xl font-bold">2.3h</p>
-                <p className="text-xs text-green-600">↓ 0.5h improvement</p>
+                <p className="text-xs text-success">↓ 0.5h improvement</p>
               </div>
-              <Clock className="h-8 w-8 text-green-500" />
+              <Clock className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -125,10 +125,10 @@ export default function SAGRiskPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">High Risk Items</p>
-                <p className="text-2xl font-bold text-red-600">18</p>
+                <p className="text-2xl font-bold text-destructive">18</p>
                 <p className="text-xs text-muted-foreground">Requiring review</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -137,10 +137,10 @@ export default function SAGRiskPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">AI Accuracy</p>
-                <p className="text-2xl font-bold text-green-600">96.8%</p>
-                <p className="text-xs text-green-600">↑ 2.1% this quarter</p>
+                <p className="text-2xl font-bold text-success">96.8%</p>
+                <p className="text-xs text-success">↑ 2.1% this quarter</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>

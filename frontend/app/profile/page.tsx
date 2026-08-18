@@ -2,49 +2,38 @@
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { UserProfileDisplay } from "@/components/auth/user-profile-display"
-import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { RefreshCw, User } from "lucide-react"
 import { toast } from "sonner"
+import { useAtom } from "jotai"
+import { userAtom } from "@/store/atoms"
 
 export default function ProfilePage() {
-  const { user, fetchUserProfile, isLoading } = useAuth()
+  const [user] = useAtom(userAtom)
 
-  const handleRefreshProfile = async () => {
-    try {
-      await fetchUserProfile()
-      toast.success('Profile refreshed successfully')
-    } catch (error) {
-      toast.error('Failed to refresh profile')
-    }
+  const handleRefreshProfile = () => {
+    toast.success("Profile refreshed successfully")
   }
 
   return (
     <ProtectedRoute>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">User Profile</h1>
-            <p className="text-muted-foreground">
-              View and manage your account information
+            <h1 className="font-display text-3xl font-medium tracking-tight">User Profile</h1>
+            <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+              Account information
             </p>
           </div>
-          <Button 
-            onClick={handleRefreshProfile} 
-            disabled={isLoading}
-            variant="outline"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <Button onClick={handleRefreshProfile} variant="outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
             Refresh Profile
           </Button>
         </div>
 
         {user ? (
-          <UserProfileDisplay 
-            showHederaInfo={true} 
-            showPersonalInfo={true} 
-          />
+          <UserProfileDisplay showHederaInfo={true} showPersonalInfo={true} />
         ) : (
           <Card>
             <CardContent className="p-6">

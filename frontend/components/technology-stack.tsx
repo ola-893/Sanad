@@ -6,19 +6,19 @@ export function TechnologyStack() {
     {
       name: "Hedera Hashgraph",
       description: "NFT, HTS Token Service",
-      icon: <Zap className="h-8 w-8 text-blue-600" />,
+      icon: <Zap className="h-8 w-8 text-primary" />,
       category: "Blockchain",
     },
     {
       name: "React / Next.js",
       description: "UI Frontend",
-      icon: <Code className="h-8 w-8 text-blue-500" />,
+      icon: <Code className="h-8 w-8 text-primary" />,
       category: "Frontend",
     },
     {
       name: "Node.js / Python",
       description: "API & backend",
-      icon: <Database className="h-8 w-8 text-green-600" />,
+      icon: <Database className="h-8 w-8 text-success" />,
       category: "Backend",
     },
     {
@@ -30,13 +30,13 @@ export function TechnologyStack() {
     {
       name: "IPFS / HFS",
       description: "SAG document storage",
-      icon: <Globe className="h-8 w-8 text-purple-600" />,
+      icon: <Globe className="h-8 w-8 text-primary" />,
       category: "Storage",
     },
     {
       name: "OAuth2 / WalletConnect",
       description: "Secure login",
-      icon: <Lock className="h-8 w-8 text-red-600" />,
+      icon: <Lock className="h-8 w-8 text-destructive" />,
       category: "Security",
     },
   ]

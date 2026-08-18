@@ -38,16 +38,16 @@ export function AdminOverview() {
     <div className="space-y-6">
       {/* Token Activity Chart */}
       <div>
-        <h4 className="text-sm font-medium mb-3 text-gray-700">Token Mints/Burns Over Time</h4>
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground">Token Mints/Burns Over Time</h4>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={tokenData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="name" stroke="#666" />
-            <YAxis stroke="#666" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+            <YAxis stroke="hsl(var(--muted-foreground))" />
             <Tooltip
               contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
               }}
@@ -57,8 +57,8 @@ export function AdminOverview() {
               type="monotone"
               dataKey="minted"
               stackId="1"
-              stroke="#10b981"
-              fill="#10b981"
+              stroke="var(--chart-1)"
+              fill="var(--chart-1)"
               fillOpacity={0.6}
               name="Tokens Minted"
             />
@@ -66,8 +66,8 @@ export function AdminOverview() {
               type="monotone"
               dataKey="listed"
               stackId="1"
-              stroke="#3b82f6"
-              fill="#3b82f6"
+              stroke="var(--chart-2)"
+              fill="var(--chart-2)"
               fillOpacity={0.6}
               name="SAGs Listed"
             />
@@ -75,8 +75,8 @@ export function AdminOverview() {
               type="monotone"
               dataKey="burned"
               stackId="1"
-              stroke="#ef4444"
-              fill="#ef4444"
+              stroke="var(--chart-5)"
+              fill="var(--chart-5)"
               fillOpacity={0.6}
               name="Tokens Burned"
             />
@@ -86,25 +86,28 @@ export function AdminOverview() {
 
       {/* Branch Performance Chart */}
       <div>
-        <h4 className="text-sm font-medium mb-3 text-gray-700">Branch Listing Volume</h4>
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground">Branch Listing Volume</h4>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={branchData} layout="horizontal">
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis type="number" stroke="#666" />
-            <YAxis dataKey="name" type="category" stroke="#666" width={80} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
+            <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={80} />
             <Tooltip
               contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
               }}
-              formatter={(value, name) => [
-                name === "volume" ? `RM ${value.toLocaleString()}` : value,
-                name === "volume" ? "Total Volume" : "SAG Count",
-              ]}
+              formatter={(value, name) => {
+                const v = Number(value ?? 0)
+                return [
+                  name === "volume" ? `RM ${v.toLocaleString()}` : v,
+                  name === "volume" ? "Total Volume" : "SAG Count",
+                ]
+              }}
             />
-            <Bar dataKey="volume" fill="#f59e0b" name="Volume (RM)" />
+            <Bar dataKey="volume" fill="var(--chart-4)" name="Volume (RM)" />
           </BarChart>
         </ResponsiveContainer>
       </div>

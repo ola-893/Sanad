@@ -5,6 +5,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
+import { MarketingHero } from "@/components/marketing-hero"
+import { Reveal } from "@/components/reveal"
 
 export default function FAQPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -15,17 +17,17 @@ export default function FAQPage() {
       title: "General Questions",
       faqs: [
         {
-          question: "What is Silsilat Platform?",
+          question: "What is Sanad Protocol?",
           answer:
-            "Silsilat is a platform that connects Ar-Rahnu operators with Shariah-compliant funders, allowing them to expand their capacity to serve more customers effectively. Our platform serves as a bridge between those seeking ethical financing solutions and those looking to invest in Shariah-compliant opportunities.",
+            "Sanad is a platform that connects Ar-Rahnu operators with Shariah-compliant funders, allowing them to expand their capacity to serve more customers effectively. Our platform serves as a bridge between those seeking ethical financing solutions and those looking to invest in Shariah-compliant opportunities.",
         },
         {
-          question: "How does Silsilat ensure Shariah compliance?",
+          question: "How does Sanad ensure Shariah compliance?",
           answer:
             "We have a dedicated Shariah advisory board that oversees all of our operations and financing models. Every aspect of our platform, from the type of contracts used to the profits distributed, is carefully reviewed to ensure strict adherence to Islamic financial principles, including the prohibition of riba (interest).",
         },
         {
-          question: "Who can use the Silsilat Platform?",
+          question: "Who can use the Sanad Platform?",
           answer:
             "Our platform serves two main user groups: Ar-Rahnu Operators (AROs) who are seeking to raise funds to expand their operations, and Short Term Funders who are looking to make Shariah-compliant investments. We welcome both individuals and organizations that share our commitment to Islamic finance principles.",
         },
@@ -85,12 +87,12 @@ export default function FAQPage() {
         {
           question: "What should I do if I encounter technical issues on the platform?",
           answer:
-            "If you experience any technical issues, please try refreshing the page or clearing your browser cache. If the problem persists, contact our technical support team through the 'Help' section in your account dashboard or email support@silsilat.finance with details of the issue you're experiencing, including screenshots if possible.",
+            "If you experience any technical issues, please try refreshing the page or clearing your browser cache. If the problem persists, contact our technical support team through the 'Help' section in your account dashboard or email support@sanadprotocol.com with details of the issue you're experiencing, including screenshots if possible.",
         },
         {
           question: "Is the platform accessible on mobile devices?",
           answer:
-            "Yes, Silsilat platform is fully responsive and optimized for mobile devices. You can access all features and functionalities through your smartphone or tablet browser without any loss of functionality. For the best experience, ensure your device's operating system and browser are updated to the latest version.",
+            "Yes, the Sanad platform is fully responsive and optimized for mobile devices. You can access all features and functionalities through your smartphone or tablet browser without any loss of functionality. For the best experience, ensure your device's operating system and browser are updated to the latest version.",
         },
       ],
     },
@@ -111,63 +113,66 @@ export default function FAQPage() {
     : faqCategories
 
   return (
-    <div className="container mx-auto py-16 px-4 md:px-6">
-      <div className="max-w-3xl mx-auto mb-12 text-center">
-        <h1 className="text-4xl font-bold mb-4">Frequently Asked Questions</h1>
-        <p className="text-xl text-muted-foreground">
-          Find answers to common questions about Silsilat and our services
-        </p>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <MarketingHero
+        kicker="Support"
+        title="Frequently asked questions"
+        description="Find answers about Sanad, Ar-Rahnu financing, and how the platform works."
+      />
 
-      <div className="max-w-xl mx-auto mb-12">
+      <div className="container mx-auto px-4 py-14 md:px-6">
+      <div className="mx-auto mb-12 max-w-xl">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#4A4A4A]" />
           <Input
             type="search"
             placeholder="Search for questions..."
-            className="pl-10"
+            className="h-12 rounded-full border-[#171414]/15 bg-white/60 pl-10 backdrop-blur"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto space-y-8">
+      <div className="mx-auto max-w-3xl space-y-8">
         {filteredFAQs.length > 0 ? (
           filteredFAQs.map((category) => (
             <div key={category.id} className={category.faqs.length > 0 ? "mb-8" : "hidden"}>
-              <h2 className="text-2xl font-bold mb-4">{category.title}</h2>
-              <Accordion type="single" collapsible className="space-y-4">
+              <h2 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#171414]">
+                {category.title}
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
                 {category.faqs.map((faq, index) => (
-                  <AccordionItem key={index} value={`${category.id}-${index}`} className="border rounded-lg px-6">
-                    <AccordionTrigger className="text-left font-medium py-4">{faq.question}</AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground pb-4">{faq.answer}</AccordionContent>
+                  <AccordionItem key={index} value={`${category.id}-${index}`} className="glass-panel rounded-2xl border border-[#171414]/15 bg-white/60 px-6 data-[state=open]:bg-white/80">
+                    <AccordionTrigger className="py-4 text-left font-display text-sm font-bold text-[#171414]">{faq.question}</AccordionTrigger>
+                    <AccordionContent className="pb-4 text-sm text-[#4A4A4A]">{faq.answer}</AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>
             </div>
           ))
         ) : (
-          <div className="text-center py-12">
-            <h3 className="text-xl font-medium mb-2">No results found</h3>
-            <p className="text-muted-foreground mb-6">
+          <div className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 py-12 text-center">
+            <h3 className="mb-2 font-display text-xl font-bold text-[#171414]">No results found</h3>
+            <p className="mb-6 text-muted-foreground">
               We couldn&apos;t find any FAQs matching your search. Please try different keywords or browse our categories.
             </p>
-            <Button onClick={() => setSearchQuery("")} className="bg-emerald-600 hover:bg-emerald-700">
-              Clear Search
-            </Button>
+            <Button onClick={() => setSearchQuery("")}>Clear Search</Button>
           </div>
         )}
 
-        <div className="bg-emerald-50 p-8 rounded-xl text-center mt-12">
-          <h3 className="text-xl font-bold mb-2">Still have questions?</h3>
-          <p className="mb-4 text-muted-foreground">
-            If you couldn&apos;t find the answer you were looking for, please contact our support team.
-          </p>
-          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-            <a href="/contact">Contact Us</a>
-          </Button>
-        </div>
+        <Reveal>
+          <div className="glass-panel mt-12 rounded-3xl border border-[#171414]/15 bg-white/60 p-10 text-center">
+            <h3 className="font-display text-xl font-bold text-[#171414]">Still have questions?</h3>
+            <p className="mb-5 mt-2 text-muted-foreground">
+              If you couldn&apos;t find the answer you were looking for, please contact our support team.
+            </p>
+            <Button asChild className="rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black">
+              <a href="/contact">Contact Us</a>
+            </Button>
+          </div>
+        </Reveal>
+      </div>
       </div>
     </div>
   )

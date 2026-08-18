@@ -153,7 +153,16 @@ export function AdminSidebar() {
   const { t } = useLanguage()
   const [openItems, setOpenItems] = useState<string[]>([])
   const [user] = useAtom(userAtom)
-  const role = user?.userInfo?.roleId as string
+  const rawRole = user?.userInfo?.roleId as string
+  // Normalize backend role names (SUPER_ADMIN, COMPANY_ADMIN → admin, etc.)
+  const roleMap: Record<string, string> = {
+    SUPER_ADMIN: 'admin',
+    COMPANY_ADMIN: 'admin',
+    PAWNSHOP: 'pawnshop',
+    INVESTOR: 'investor',
+    BORROWER: 'investor',
+  }
+  const role = roleMap[rawRole] || (rawRole || '').toLowerCase()
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated")
@@ -166,16 +175,16 @@ export function AdminSidebar() {
   }
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r">
+    <div className="flex h-full w-64 flex-col border-r border-border bg-card">
       {/* Header */}
-      <div className="flex h-16 items-center border-b px-6">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">S</span>
-          </div>
-          <div>
-            <div className="font-semibold text-sm">Sanad</div>
-            <div className="text-xs text-muted-foreground">Admin Panel</div>
+      <div className="flex h-16 items-center gap-2.5 border-b border-border px-6">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-accent/70">
+          <span className="h-2 w-2 rotate-45 bg-accent" aria-hidden />
+        </span>
+        <div>
+          <div className="font-display text-base font-medium leading-none">Sanad</div>
+          <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-accent">
+            Admin Panel
           </div>
         </div>
       </div>
@@ -203,7 +212,7 @@ export function AdminSidebar() {
                 <CollapsibleTrigger asChild>
                   <Button
                     variant={isActive ? "secondary" : "ghost"}
-                    className={cn("w-full justify-between", isActive && "bg-emerald-100 text-emerald-700")}
+                    className={cn("w-full justify-between", isActive && "bg-accent/10 font-medium text-accent-foreground")}
                   >
                     <div className="flex items-center">
                       <Icon className="mr-2 h-4 w-4" />
@@ -220,7 +229,7 @@ export function AdminSidebar() {
                       size="sm"
                       className={cn(
                         "w-full justify-start",
-                        pathname === child.href && "bg-emerald-100 text-emerald-700",
+                        pathname === child.href && "bg-accent/10 font-medium text-accent-foreground",
                       )}
                       asChild
                     >
@@ -236,7 +245,7 @@ export function AdminSidebar() {
             <Button
               key={item.href}
               variant={isActive ? "secondary" : "ghost"}
-              className={cn("w-full justify-start", isActive && "bg-emerald-100 text-emerald-700")}
+              className={cn("w-full justify-start", isActive && "bg-accent/10 font-medium text-accent-foreground")}
               asChild
             >
               <Link href={item.href}>
@@ -252,14 +261,14 @@ export function AdminSidebar() {
       <div className="border-t p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Role:</span>
-          <Badge variant="outline" className="bg-emerald-100 text-emerald-700">
+          <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent-foreground">
             {role === 'pawnshop' ? 'Ar Rahnu' : role}
           </Badge>
         </div>
         <Button
           variant="outline"
           size="sm"
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent"
+          className="w-full justify-start bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

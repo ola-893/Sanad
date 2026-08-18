@@ -66,19 +66,19 @@ export default function BranchesPage() {
     switch (status) {
       case "active":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700">
+          <Badge variant="outline" className="bg-success/10 text-success">
             Active
           </Badge>
         )
       case "pending":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+          <Badge variant="outline" className="bg-warning/10 text-warning">
             Pending
           </Badge>
         )
       case "suspended":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
             Suspended
           </Badge>
         )
@@ -98,10 +98,10 @@ export default function BranchesPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ar Rahnu Branches</h1>
-          <p className="text-gray-600">Manage Ar Rahnu branch partnerships and configurations</p>
+          <h1 className="text-2xl font-bold text-foreground">Ar Rahnu Branches</h1>
+          <p className="text-muted-foreground">Manage Ar Rahnu branch partnerships and configurations</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Building2 className="h-4 w-4 mr-2" />
           Add New Branch
         </Button>
@@ -111,38 +111,38 @@ export default function BranchesPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Branches</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Branches</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">25</div>
-            <p className="text-xs text-gray-500">Active partnerships</p>
+            <p className="text-xs text-muted-foreground">Active partnerships</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Applications</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Applications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">3</div>
-            <p className="text-xs text-gray-500">Awaiting approval</p>
+            <div className="text-2xl font-bold text-warning">3</div>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total SAGs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total SAGs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">127</div>
-            <p className="text-xs text-gray-500">Across all branches</p>
+            <p className="text-xs text-muted-foreground">Across all branches</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">RM 2.4M</div>
-            <p className="text-xs text-gray-500">Combined portfolio</p>
+            <p className="text-xs text-muted-foreground">Combined portfolio</p>
           </CardContent>
         </Card>
       </div>
@@ -157,7 +157,7 @@ export default function BranchesPage() {
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search branches..."
                   value={searchTerm}
@@ -187,7 +187,7 @@ export default function BranchesPage() {
                     <TableCell className="font-medium">{branch.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
                         {branch.location}
                       </div>
                     </TableCell>
@@ -218,7 +218,7 @@ export default function BranchesPage() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">Branch ID</label>
-                                    <p className="text-sm text-gray-600">{selectedBranch.id}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedBranch.id}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Status</label>
@@ -226,32 +226,32 @@ export default function BranchesPage() {
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Manager</label>
-                                    <p className="text-sm text-gray-600">{selectedBranch.manager}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedBranch.manager}</p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Join Date</label>
-                                    <p className="text-sm text-gray-600">{selectedBranch.joinDate}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedBranch.joinDate}</p>
                                   </div>
                                 </div>
 
                                 <div>
                                   <label className="text-sm font-medium">Address</label>
-                                  <p className="text-sm text-gray-600 mt-1">{selectedBranch.address}</p>
+                                  <p className="text-sm text-muted-foreground mt-1">{selectedBranch.address}</p>
                                 </div>
 
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <label className="text-sm font-medium">Phone</label>
                                     <div className="flex items-center gap-2 mt-1">
-                                      <Phone className="h-4 w-4 text-gray-400" />
-                                      <p className="text-sm text-gray-600">{selectedBranch.phone}</p>
+                                      <Phone className="h-4 w-4 text-muted-foreground" />
+                                      <p className="text-sm text-muted-foreground">{selectedBranch.phone}</p>
                                     </div>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Email</label>
                                     <div className="flex items-center gap-2 mt-1">
-                                      <Mail className="h-4 w-4 text-gray-400" />
-                                      <p className="text-sm text-gray-600">{selectedBranch.email}</p>
+                                      <Mail className="h-4 w-4 text-muted-foreground" />
+                                      <p className="text-sm text-muted-foreground">{selectedBranch.email}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -260,11 +260,11 @@ export default function BranchesPage() {
                                   <h4 className="font-medium mb-3">Performance Metrics</h4>
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Total SAGs</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Total SAGs</div>
                                       <div className="text-lg font-bold">{selectedBranch.totalSAGs}</div>
                                     </div>
                                     <div className="p-3 border rounded-lg">
-                                      <div className="text-sm font-medium text-gray-600">Total Value</div>
+                                      <div className="text-sm font-medium text-muted-foreground">Total Value</div>
                                       <div className="text-lg font-bold">{selectedBranch.totalValue}</div>
                                     </div>
                                   </div>
@@ -273,7 +273,7 @@ export default function BranchesPage() {
                                 <div className="border-t pt-4">
                                   <h4 className="font-medium mb-3">Actions</h4>
                                   <div className="flex gap-2 flex-wrap">
-                                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                                    <Button size="sm" className="bg-primary hover:bg-primary/90">
                                       <Settings className="h-4 w-4 mr-2" />
                                       Configure Branch
                                     </Button>
@@ -282,7 +282,7 @@ export default function BranchesPage() {
                                       Manage Staff
                                     </Button>
                                     {selectedBranch.status === "pending" && (
-                                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                      <Button size="sm" className="bg-primary hover:bg-primary/90">
                                         Approve Branch
                                       </Button>
                                     )}

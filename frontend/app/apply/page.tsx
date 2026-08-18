@@ -37,12 +37,20 @@ export default function ApplyPage() {
   }, [currentStep, nextStep])
 
   return (
-    <div className="container mx-auto py-10 px-4 md:px-6">
-      <div className="flex flex-col items-center justify-center mb-10">
-        <h1 className="text-3xl font-bold mb-2">Apply for Financing</h1>
-        <p className="text-muted-foreground text-center max-w-2xl">
-          Complete the following steps to apply for Shariah-compliant jewelry financing. Our AI-powered system will
-          evaluate your jewelry and provide you with an instant offer.
+    <div className="container mx-auto px-4 py-10 md:px-6">
+      <div className="mb-10 border-b border-[#171414]/15 pb-8">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#171414]/20 bg-white/35 px-4 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]">
+          <span className="h-1.5 w-1.5 rotate-45 bg-[#E1BAC2]" aria-hidden />
+          Application
+        </span>
+        <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-[#171414]">
+          Apply for
+          <br />
+          <span className="font-semibold text-[#4A4A4A]">financing.</span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-muted-foreground">
+          Complete the following steps to apply for Shariah-compliant gold financing. Our AI-assisted
+          system will evaluate your gold and provide you with an offer.
         </p>
       </div>
 
@@ -57,7 +65,7 @@ export default function ApplyPage() {
         </TabsList> */}
 
         <TabsContent value={`apply-step-1`} >
-          <Card>
+          <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <CardHeader>
               <CardTitle>KYC Verification</CardTitle>
               <CardDescription>Verify your identity to proceed with your financing application.</CardDescription>
@@ -71,7 +79,7 @@ export default function ApplyPage() {
         </TabsContent>
 
         <TabsContent value={`apply-step-2`} >
-          <Card>
+          <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <CardHeader>
               <CardTitle>Jewelry Submission</CardTitle>
               <CardDescription>Upload images and details of your jewelry for AI-powered assessment.</CardDescription>
@@ -83,10 +91,10 @@ export default function ApplyPage() {
         </TabsContent>
 
         <TabsContent value={`apply-step-3`} >
-          <Card>
+          <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <CardHeader>
               <CardTitle>Wallet Connection</CardTitle>
-              <CardDescription>Connect your Hedera wallet to receive financing and make repayments.</CardDescription>
+              <CardDescription>Connect your wallet to receive financing and make repayments.</CardDescription>
             </CardHeader>
             <CardContent>
               <WalletConnection />
@@ -95,7 +103,7 @@ export default function ApplyPage() {
         </TabsContent>
 
         <TabsContent value={`apply-step-4`} >
-          <Card>
+          <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <CardHeader>
               <CardTitle>Loan Offer</CardTitle>
               <CardDescription>Review and accept your financing offer.</CardDescription>

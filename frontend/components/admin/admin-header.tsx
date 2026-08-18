@@ -37,11 +37,11 @@ export function AdminHeader() {
   }
 
   return (
-    <header className="h-16 px-6 flex items-center justify-between bg-white">
+    <header className="h-16 px-6 flex items-center justify-between border-b border-border bg-card">
       {/* Left side - Title and Role */}
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-900">Admin Dashboard</h2>
-        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300">
+        <h2 className="font-display text-lg font-medium">Admin Dashboard</h2>
+        <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent-foreground">
           {role?.toUpperCase() || "ADMIN"}
         </Badge>
       </div>
@@ -50,14 +50,14 @@ export function AdminHeader() {
       <div className="flex items-center gap-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="Search SAGs, investors, branches..." className="w-80 pl-10 bg-gray-50 border-gray-200" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search SAGs, investors, branches..." className="w-80 pl-10 bg-muted/40" />
         </div>
 
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0">
+          <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center p-0">
             3
           </Badge>
         </Button>
@@ -76,7 +76,7 @@ export function AdminHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">Admin User</p>
-                <p className="text-xs leading-none text-muted-foreground">admin@silsilat.finance</p>
+                <p className="text-xs leading-none text-muted-foreground">admin@sanad.finance</p>
                 <p className="text-xs leading-none text-muted-foreground">Role: {role === 'pawnshop' ? 'Ar Rahnu' : role}</p>
               </div>
             </DropdownMenuLabel>
@@ -89,7 +89,7 @@ export function AdminHeader() {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

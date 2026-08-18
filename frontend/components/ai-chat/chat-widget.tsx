@@ -79,7 +79,7 @@ export function ChatWidget() {
       {/* Chat button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg bg-emerald-600 hover:bg-emerald-700"
+        className="fixed bottom-4 right-4 rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90"
         size="icon"
       >
         <MessageSquare className="h-6 w-6" />
@@ -93,7 +93,7 @@ export function ChatWidget() {
         )}
       >
         <Card className="border shadow-xl">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between bg-emerald-600 text-white rounded-t-lg">
+          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between bg-primary text-primary-foreground rounded-t-lg">
             <CardTitle className="text-base font-medium flex items-center">
               <Bot className="mr-2 h-5 w-5" />
               Sanad AI Assistant
@@ -102,7 +102,7 @@ export function ChatWidget() {
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
-              className="h-8 w-8 text-white hover:bg-emerald-700 rounded-full"
+              className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/10 rounded-full"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -115,7 +115,7 @@ export function ChatWidget() {
                     <div
                       className={cn(
                         "max-w-[80%] rounded-lg px-3 py-2 text-sm",
-                        message.role === "user" ? "bg-emerald-600 text-white" : "bg-gray-100 dark:bg-gray-800",
+                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted dark:bg-card",
                       )}
                     >
                       {message.content}
@@ -124,7 +124,7 @@ export function ChatWidget() {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 flex items-center">
+                    <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-muted dark:bg-card flex items-center">
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Typing...
                     </div>
@@ -148,7 +148,7 @@ export function ChatWidget() {
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 <Send className="h-4 w-4" />
               </Button>

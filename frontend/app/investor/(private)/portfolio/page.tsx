@@ -55,7 +55,7 @@ function PortfolioSummary({ nfts }: { nfts: NFTHolding[] }) {
       <Card className={investorStyles.card.base}>
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-emerald-600" />
+            <Wallet className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Holdings</p>
               <p className={investorStyles.text.value}>{totalInvestments}</p>
@@ -67,7 +67,7 @@ function PortfolioSummary({ nfts }: { nfts: NFTHolding[] }) {
       <Card className={investorStyles.card.base}>
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-600" />
+            <TrendingUp className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Unique NFTs</p>
               <p className={investorStyles.text.value}>{uniqueTokens}</p>
@@ -116,7 +116,7 @@ function NFTHoldingCard({ nft }: { nft: NFTHolding }) {
   }
 
   return (
-    <Card className={`${investorStyles.card.interactive} border-l-4 border-l-emerald-500`}>
+    <Card className={`${investorStyles.card.interactive} border-l-4 border-l-accent`}>
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
@@ -159,7 +159,7 @@ function NFTHoldingCard({ nft }: { nft: NFTHolding }) {
             <span className="text-sm text-muted-foreground">Token Link:</span>
             <span className="text-sm font-medium">
               <a 
-                className="text-blue-600 flex gap-1 items-center" 
+                className="text-primary flex gap-1 items-center" 
                 href={`${process.env.NEXT_PUBLIC_ENV_URL}/${nft.token_id}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
@@ -186,11 +186,11 @@ function NFTHoldingCard({ nft }: { nft: NFTHolding }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Remaining:</span>
-                  <span className="font-medium text-green-600">{tokenInfo.data.remainSupply}</span>
+                  <span className="font-medium text-success">{tokenInfo.data.remainSupply}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Your Share:</span>
-                  <span className="font-medium text-blue-600">1 of {tokenInfo.data.totalSupply}</span>
+                  <span className="font-medium text-primary">1 of {tokenInfo.data.totalSupply}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Ownership:</span>
@@ -213,9 +213,9 @@ function NFTHoldingCard({ nft }: { nft: NFTHolding }) {
 
           {/* Metadata */}
           {decodedMetadata && decodedMetadata !== 'Unable to decode' && (
-            <div className="bg-blue-50 p-2 rounded text-xs">
+            <div className="bg-muted p-2 rounded text-xs">
               <span className="text-muted-foreground">Metadata:</span>
-              <p className="font-mono text-blue-800 break-all">{decodedMetadata}</p>
+              <p className="font-mono text-primary break-all">{decodedMetadata}</p>
             </div>
           )}
         </div>

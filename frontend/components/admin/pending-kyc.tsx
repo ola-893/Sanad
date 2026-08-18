@@ -81,7 +81,7 @@ export function PendingKyc() {
                   <Button size="sm" variant="outline">
                     <Eye className="h-4 w-4 mr-1" /> View Documents
                   </Button>
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90">
                     <Check className="h-4 w-4 mr-1" /> Approve
                   </Button>
                   <Button size="sm" variant="destructive">
