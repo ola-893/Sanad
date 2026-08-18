@@ -90,6 +90,11 @@ contract SanadLiquidityPool is Ownable {
     ) external returns (bool) {
         require(!processedSourceTransactions[sourceTxHash], "Repayment transaction already settled");
 
+        // Explicit compliance checks to block settlement on frozen loans/accounts
+        require(!sagToken.frozenToken(tokenId), "Compliance: Token is frozen");
+        address owner = sagToken.ownerOf(tokenId);
+        require(!sagToken.frozenAddress(owner), "Compliance: Owner address is frozen");
+
         // Execute verification against Creditcoin's native BlockProver (0xFD2)
         IBlockProver blockProver = IBlockProver(BLOCK_PROVER_PRECOMPILE);
         bool isValid = blockProver.verify(chainKey, headerNumber, encodedTransaction, merkleProof, continuityProof);
@@ -102,7 +107,7 @@ contract SanadLiquidityPool is Ownable {
             tokenLoanBalance[tokenId] = 0;
             sagToken.settleLoan(tokenId);
 
-            emit CollateralUnlocked(tokenId, sagToken.ownerOf(tokenId), block.timestamp);
+            emit CollateralUnlocked(tokenId, owner, block.timestamp);
         } else {
             tokenLoanBalance[tokenId] -= repaidAmountUSD;
         }
@@ -117,7 +122,12 @@ contract SanadLiquidityPool is Ownable {
      */
     function fundLoan(uint256 tokenId, uint256 amount) external onlyOwner {
         require(tokenLoanBalance[tokenId] == 0, "Loan already funded");
+        
+        // Explicit compliance checks to prevent funding frozen collateral or frozen pawnshops
+        require(!sagToken.frozenToken(tokenId), "Compliance: Token is frozen");
         address pawnshop = sagToken.ownerOf(tokenId);
+        require(!sagToken.frozenAddress(pawnshop), "Compliance: Pawnshop address is frozen");
+
         tokenLoanBalance[tokenId] = amount;
 
         emit LoanFunded(tokenId, pawnshop, amount);
