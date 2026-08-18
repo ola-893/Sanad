@@ -115,7 +115,7 @@ export default function RegisterPage() {
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px] md:w-[450px]">
         <div className="flex flex-col space-y-2 text-center">
           <div className="mx-auto mb-4">
-            <Image src="/placeholder.svg?height=60&width=60" alt="Silsilat Logo" width={64} height={64} className="h-16 w-auto" />
+            <Image src="/placeholder.svg?height=60&width=60" alt="Sanad Logo" width={64} height={64} className="h-16 w-auto" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
           <p className="text-sm text-muted-foreground">Register to start your Shariah-compliant financing journey</p>

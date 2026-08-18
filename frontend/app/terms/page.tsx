@@ -167,7 +167,7 @@ export default function TermsPage() {
           </p>
 
           <h2 className="mt-12 mb-4 font-display text-2xl font-extrabold tracking-tight text-[#171414]">14. Contact Information</h2>
-          <p>If you have any questions about these Terms, please contact us at: @silsilatfinance on X</p>
+          <p>If you have any questions about these Terms, please contact us at: @sanadfinance on X</p>
           
 
           <div className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 p-8">

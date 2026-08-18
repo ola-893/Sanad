@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -10,7 +10,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ShieldIcon, UserIcon, WalletIcon } from "lucide-react"
@@ -18,7 +18,6 @@ import { Logo } from "@/components/logo"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 
-// Form validation schema
 const loginFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(3, "Password must be at least 6 characters"),
@@ -29,31 +28,19 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [selectedRole, setSelectedRole] = useState("admin")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { authenticateUser } = useAuth()
 
-  // Initialize form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   })
 
-  // Redirect if already authenticated as admin
-  // useEffect(() => {
-  //   if (!isLoading && isAuthenticated && role === 'admin') {
-  //     console.log('🔐 Already authenticated as admin, redirecting to dashboard')
-  //     router.replace('/admin/dashboard')
-  //   }
-  // }, [isAuthenticated, isLoading, role, router])
-
-  // Admin role configurations with comprehensive access
   const adminRoles = {
     admin: {
       title: "Super Admin",
       description: "Full platform control & access",
-      email: "admin@silsilat.finance",
+      email: "admin@sanad.finance",
       password: "admin123",
       features: [
         "🔐 Full Access & Security Control",
@@ -73,7 +60,7 @@ export default function AdminLoginPage() {
     compliance: {
       title: "Compliance Officer",
       description: "KYC, AML & Risk Management",
-      email: "compliance@silsilat.finance",
+      email: "compliance@sanad.finance",
       password: "compliance123",
       features: [
         "⚠️ Full Compliance & Risk Access",
@@ -86,7 +73,7 @@ export default function AdminLoginPage() {
     branch_ops: {
       title: "Branch Operations",
       description: "Ar Rahnu branch management",
-      email: "branchops@silsilat.finance",
+      email: "branchops@sanad.finance",
       password: "branch123",
       features: [
         "🧑‍💼 Ar Rahnu Partner Management",
@@ -98,7 +85,7 @@ export default function AdminLoginPage() {
     support: {
       title: "Customer Support",
       description: "User support & helpdesk",
-      email: "support@silsilat.finance",
+      email: "support@sanad.finance",
       password: "support123",
       features: [
         "💬 Full Support & Helpdesk Tools",
@@ -110,7 +97,7 @@ export default function AdminLoginPage() {
     ceo: {
       title: "CEO Dashboard",
       description: "Executive overview & reports",
-      email: "ceo@silsilat.finance",
+      email: "ceo@sanad.finance",
       password: "ceo123",
       features: [
         "📈 Executive Reporting & Analytics",
@@ -124,40 +111,30 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (values: z.infer<typeof loginFormSchema>) => {
     setError("")
+    setIsSubmitting(true)
 
     try {
-      const roleConfig = adminRoles[selectedRole as keyof typeof adminRoles]
-
-      console.log('🔐 Admin login: Starting login process...')
-      
-      // Set loginType before login
-      sessionStorage.setItem('loginType', 'admin')
-      
-      // Use the auth store for login
-      const promise = authenticateUser(
-        {
-          email: values.email,
-          password: values.password,
-          isAdmin: true,
-        },
-      )
-
-      toast.promise(promise, {
-        loading: 'Signing in...',
-        success: (response: any) => {
-          if (!response.success) {
-            throw new Error('Invalid email or password. Please try again.')
-          }
-          router.replace("/admin/dashboard")
-          return 'Login Successful!';
-        },
-        error: (error: any) => {
-          return error.message || 'Unexpected error, Please try again later.';
-        },
+      const result = await authenticateUser({
+        email: values.email,
+        password: values.password,
+        isAdmin: true,
       })
+
+      if (result.success) {
+        toast.success("Login Successful!")
+        router.replace("/admin/dashboard")
+      } else {
+        const message = result.error || "Invalid email or password. Please try again."
+        setError(message)
+        toast.error(message)
+      }
     } catch (err: any) {
-      console.error('Admin login error:', err)
-      setError(err.message || "Login failed. Please try again.")
+      console.error("Admin login error:", err)
+      const message = err.message || "Login failed. Please try again."
+      setError(message)
+      toast.error(message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -188,21 +165,11 @@ export default function AdminLoginPage() {
           <CardContent className="p-6">
             <Tabs value={selectedRole} onValueChange={setSelectedRole} className="w-full">
               <TabsList className="grid w-full grid-cols-5 mb-6">
-                <TabsTrigger value="admin" className="text-xs">
-                  Super Admin
-                </TabsTrigger>
-                <TabsTrigger value="compliance" className="text-xs">
-                  Compliance
-                </TabsTrigger>
-                <TabsTrigger value="branch_ops" className="text-xs">
-                  Branch Ops
-                </TabsTrigger>
-                <TabsTrigger value="support" className="text-xs">
-                  Support
-                </TabsTrigger>
-                <TabsTrigger value="ceo" className="text-xs">
-                  CEO
-                </TabsTrigger>
+                <TabsTrigger value="admin" className="text-xs">Super Admin</TabsTrigger>
+                <TabsTrigger value="compliance" className="text-xs">Compliance</TabsTrigger>
+                <TabsTrigger value="branch_ops" className="text-xs">Branch Ops</TabsTrigger>
+                <TabsTrigger value="support" className="text-xs">Support</TabsTrigger>
+                <TabsTrigger value="ceo" className="text-xs">CEO</TabsTrigger>
               </TabsList>
 
               {Object.entries(adminRoles).map(([key, role]) => (
@@ -220,7 +187,6 @@ export default function AdminLoginPage() {
                         {role.features.length} Features
                       </Badge>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                       {role.features.map((feature, index) => (
                         <div key={index} className="flex items-center gap-1 text-primary">
@@ -254,7 +220,7 @@ export default function AdminLoginPage() {
                             type="email"
                             placeholder={currentRole.email}
                             className="pl-10"
-                            // disabled={isLoading}
+                            disabled={isSubmitting}
                           />
                         </div>
                       </FormControl>
@@ -281,12 +247,13 @@ export default function AdminLoginPage() {
                             {...field}
                             type={showPassword ? "text" : "password"}
                             className="pl-10 pr-10"
-                            // disabled={isLoading}
+                            disabled={isSubmitting}
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
+                            disabled={isSubmitting}
                           >
                             {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                           </button>
@@ -299,20 +266,20 @@ export default function AdminLoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black"
-                  // disabled={isLoading}
+                  disabled={isSubmitting}
+                  className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-60"
                 >
-                  {/* {isLoading ? (
+                  {isSubmitting ? (
                     <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#E1BAC2] border-t-transparent"></div>
                       Authenticating...
                     </div>
-                  ) : ( */}
+                  ) : (
                     <div className="flex items-center gap-2">
                       <ShieldIcon className="h-4 w-4" />
                       Access {currentRole.title} Panel
                     </div>
-                  {/* )} */}
+                  )}
                 </Button>
               </form>
             </Form>

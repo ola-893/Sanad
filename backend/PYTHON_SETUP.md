@@ -68,10 +68,10 @@ DEFAULT_LLM_MODEL=llama3.1:8b
 
 # Phoenix Configuration (optional for observability)
 PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006/v1/traces
-PHOENIX_SERVICE_NAME=silsilat-gold-evaluator
+PHOENIX_SERVICE_NAME=sanad-gold-evaluator
 
-# Silsilat API Configuration
-SILSILAT_API_BASE=http://localhost:3000
+# Sanad API Configuration
+SANAD_API_BASE=http://localhost:3000
 INPUT_TOPIC_ID=0.0.YOUR_INPUT_TOPIC_ID
 OUTPUT_TOPIC_ID=0.0.YOUR_OUTPUT_TOPIC_ID
 

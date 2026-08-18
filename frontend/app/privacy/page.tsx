@@ -147,7 +147,7 @@ export default function PrivacyPage() {
           <h2 className="mt-12 mb-4 font-display text-2xl font-extrabold tracking-tight text-[#171414]">12. Contact Us</h2>
           <p>
             If you have any questions or concerns about this Privacy Policy or our privacy practices, please contact us
-            at: @silsilatfinance on X
+            at: @sanadfinance on X
           </p>
 
           <div className="border border-border bg-muted/40 p-8">

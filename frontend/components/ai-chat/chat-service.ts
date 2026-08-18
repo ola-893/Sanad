@@ -44,7 +44,7 @@ export async function generateChatResponse(query: string, history: Message[]): P
   }
 
   // Check if query is about the company
-  if (lowerQuery.includes("about") || lowerQuery.includes("company") || lowerQuery.includes("sanad") || lowerQuery.includes("silsilat")) {
+  if (lowerQuery.includes("about") || lowerQuery.includes("company") || lowerQuery.includes("sanad") || lowerQuery.includes("sanad")) {
     return "Sanad Protocol is a platform that connects Ar-Rahnu operators with Shariah-compliant funders on Creditcoin 3, allowing them to expand their capacity to serve more customers effectively. Our mission is to become the preferred center for liquidity needs by providing a comprehensive platform that connects Ar-Rahnu operators and funders, creating a seamless ecosystem that benefits all participants in the Islamic financing space."
   }
 
@@ -77,5 +77,5 @@ You can contact us at:
 Email: frank@unitedalliedbusiness.com
 Phone: 
 
-Or visit our FAQ page for more information: https://silsilat.finance/faq`
+Or visit our FAQ page for more information: https://sanad.finance/faq`
 }

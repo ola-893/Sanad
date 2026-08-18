@@ -15,8 +15,8 @@ import { Save, Database, Shield, Mail, Globe, CreditCard, CheckCircle } from "lu
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [settings, setSettings] = useState({
-    platformName: "Silsilat",
-    platformEmail: "admin@silsilat.finance",
+    platformName: "Sanad",
+    platformEmail: "admin@sanad.finance",
     maxLoanAmount: "50000",
     minLoanAmount: "1000",
     defaultInterestRate: "6.2",

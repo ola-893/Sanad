@@ -4,37 +4,70 @@ import { usePathname } from 'next/navigation'
 import { ExternalHeader } from "@/components/external-header"
 import { InternalHeader } from "@/components/internal-header"
 import { Footer } from "@/components/footer"
-import { useAuth } from "@/hooks/use-auth"
-import { useAtom } from "jotai"
-import { userAtom } from "@/store/atoms"
+import { useState, useEffect } from 'react'
+import { BrandedLoader } from "@/components/branded-loader"
 
 interface ConditionalLayoutProps {
   children: React.ReactNode
 }
 
+/**
+ * Routes that have their own layout with header/sidebar — no global header/footer.
+ */
+const fullLayoutRoutes = ['/investor', '/pawnshop', '/admin']
+
+/**
+ * Public pages that always show the external (marketing) header + footer,
+ * regardless of auth state.
+ */
+const publicPages = ['/', '/about', '/how-it-works', '/ar-rahnu-industry', '/faq', '/contact', '/login', '/register', '/apply', '/forgot-password']
+
+function isPublicPage(pathname: string) {
+  return publicPages.some(p => pathname === p || pathname === p + '/')
+}
+
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname()
-  const { isAuthenticated } = useAuth()
-  const [user] = useAtom(userAtom)
-  const loggedIn = isAuthenticated || !!user
-  
-  // Routes that have their own layout with header/sidebar
-  const fullLayoutRoutes = [
-    '/investor',
-    '/pawnshop',
-    '/admin',
-  ]
-  
-  const isFullLayout = fullLayoutRoutes.some(route => pathname.startsWith(route))
-  
+  const [authed, setAuthed] = useState<boolean | null>(null)
+
+  // Synchronous check on mount — read localStorage directly, no React state lag
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('authState')
+      const auth = raw ? JSON.parse(raw) : null
+      const hasToken = !!auth?.token
+      const userRaw = localStorage.getItem('authStorage')
+      const userStore = userRaw ? JSON.parse(userRaw) : null
+      const hasUser = !!userStore?.user?.userInfo
+      setAuthed(hasToken && hasUser)
+    } catch {
+      setAuthed(false)
+    }
+  }, [])
+
   // Full layout pages — no global header/footer
+  const isFullLayout = fullLayoutRoutes.some(route => pathname.startsWith(route))
   if (isFullLayout) {
     return <div className="min-h-screen">{children}</div>
   }
-  
-  // Landing page — always show external header + footer
-  const isLanding = pathname === "/"
-  if (isLanding) {
+
+  // Still loading auth state — show branded loader briefly
+  if (authed === null) {
+    // On public pages, don't flash the loader — just render without header decisions
+    if (isPublicPage(pathname)) {
+      return (
+        <div className="flex flex-col min-h-screen">
+          <ExternalHeader />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+      )
+    }
+    return <BrandedLoader message="Loading..." />
+  }
+
+  // Public pages — always external header + footer, even if logged in
+  if (isPublicPage(pathname)) {
     return (
       <div className="flex flex-col min-h-screen">
         <ExternalHeader />
@@ -43,9 +76,9 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
       </div>
     )
   }
-  
+
   // Authenticated users on other pages — internal header, no footer
-  if (loggedIn) {
+  if (authed) {
     return (
       <div className="flex flex-col min-h-screen">
         <InternalHeader />
@@ -53,8 +86,8 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
       </div>
     )
   }
-  
-  // Visitors on other public pages — external header + footer
+
+  // Unauthenticated users on other pages — external header + footer
   return (
     <div className="flex flex-col min-h-screen">
       <ExternalHeader />

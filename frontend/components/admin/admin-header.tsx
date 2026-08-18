@@ -76,7 +76,7 @@ export function AdminHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">Admin User</p>
-                <p className="text-xs leading-none text-muted-foreground">admin@silsilat.finance</p>
+                <p className="text-xs leading-none text-muted-foreground">admin@sanad.finance</p>
                 <p className="text-xs leading-none text-muted-foreground">Role: {role === 'pawnshop' ? 'Ar Rahnu' : role}</p>
               </div>
             </DropdownMenuLabel>

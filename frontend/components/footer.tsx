@@ -43,14 +43,14 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="https://x.com/silsilatfinance"
+                href="https://x.com/sanadfinance"
                 className="text-ivory/60 transition-colors hover:text-[#E1BAC2]"
                 aria-label="X (Twitter)"
               >
                 <X className="h-4 w-4" />
               </a>
               <a
-                href="https://www.linkedin.com/company/silsilat-finance"
+                href="https://www.linkedin.com/company/sanad-finance"
                 className="text-ivory/60 transition-colors hover:text-[#E1BAC2]"
                 aria-label="LinkedIn"
               >

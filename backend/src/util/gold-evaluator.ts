@@ -121,7 +121,7 @@ export async function callGoldEvaluator(input: GoldEvaluatorInput): Promise<Gold
       PYTHONIOENCODING: 'utf-8',  // Fix Windows Unicode encoding issue
       PYTHONUNBUFFERED: '1',       // Disable Python output buffering
       // Override SILSILAT_API_BASE to always use localhost:9487 when both services are in the same container
-      SILSILAT_API_BASE: 'http://localhost:9487'
+      SANAD_API_BASE: 'http://localhost:9487'
     };
     
     const pythonProcess = spawn(pythonCmd, [pythonScript, '-'], {

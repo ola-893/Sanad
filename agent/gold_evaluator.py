@@ -60,7 +60,7 @@ def base_env_config() -> Dict[str, Any]:
         "DEFAULT_LLM_MODEL": os.getenv("DEFAULT_LLM_MODEL", "llama3.1:8b"),
         "PHOENIX_COLLECTOR_ENDPOINT": os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006/v1/traces"),
         "PHOENIX_SERVICE_NAME": os.getenv("PHOENIX_SERVICE_NAME", "sanad-gold-evaluator"),
-        "SANAD_API_BASE": os.getenv("SANAD_API_BASE", os.getenv("SILSILAT_API_BASE", "http://localhost:8000")).rstrip("/"),
+        "SANAD_API_BASE": os.getenv("SANAD_API_BASE", os.getenv("SANAD_API_BASE", "http://localhost:8000")).rstrip("/"),
         "IPFS_ENCRYPTION_KEY": os.getenv("IPFS_ENCRYPTION_KEY", ""),
         # Defaults (will be overridden by policy if present)
         "JEWELLERY_HAIRCUT_BPS": int(os.getenv("JEWELLERY_HAIRCUT_BPS", "500")),

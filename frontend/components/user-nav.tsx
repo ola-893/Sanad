@@ -57,7 +57,7 @@ export function UserNav({ user, role, onLogout }: UserNavProps) {
             <p className="text-sm font-medium leading-none">
               {user?.userInfo?.userFirstName + ' ' + user?.userInfo?.userLastName || role || 'User'}
             </p>
-            <p className="text-xs leading-none text-muted-foreground">{user?.userInfo?.userEmail || 'user@silsilat.finance'}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user?.userInfo?.userEmail || 'user@sanad.finance'}</p>
             <p className="text-xs leading-none text-muted-foreground">{role === 'pawnshop' ? 'Ar Rahnu' : role}</p>
           </div>
         </DropdownMenuLabel>
