@@ -9,9 +9,9 @@ import { Menu, X, LayoutDashboard, Wallet, CreditCard, Briefcase, LogOut } from 
 
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
-  { href: "/payments", label: "Payments", icon: CreditCard },
-  { href: "/nft-collateral", label: "NFT Collateral", icon: Briefcase },
+  { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
+  { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
+  { href: "/dashboard/nfts", label: "NFT Collateral", icon: Briefcase },
 ]
 
 export function InternalHeader() {
@@ -47,14 +47,17 @@ export function InternalHeader() {
         {/* Pill nav — portal links */}
         <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
           {portalNav.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+            const isActive =
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname === item.href || pathname.startsWith(item.href + "/")
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
                   isActive
-                    ? "bg-white/80 text-[#171414] shadow-sm"
+                    ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
                     : "hover:bg-white/50 hover:text-[#171414]"
                 }`}
               >
@@ -85,7 +88,9 @@ export function InternalHeader() {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
-                pathname === item.href || pathname.startsWith(item.href + "/")
+                (item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname === item.href || pathname.startsWith(item.href + "/"))
                   ? "bg-[#171414] text-[#E1BAC2]"
                   : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
               }`}

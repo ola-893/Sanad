@@ -30,7 +30,8 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname()
   const [authed, setAuthed] = useState<boolean | null>(null)
 
-  // Synchronous check on mount — read localStorage directly, no React state lag
+  // Synchronous check on mount and on route change — read localStorage directly,
+  // so the header flips to internal right after a client-side login navigation
   useEffect(() => {
     try {
       const raw = localStorage.getItem('authState')
@@ -43,7 +44,7 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
     } catch {
       setAuthed(false)
     }
-  }, [])
+  }, [pathname])
 
   // Full layout pages — no global header/footer
   const isFullLayout = fullLayoutRoutes.some(route => pathname.startsWith(route))
