@@ -268,6 +268,32 @@ contract SanadLiquidityPool is Ownable {
     }
 
     /**
+     * @notice Resets an expired, unsold Dutch auction with a discounted clearance floor
+     * @dev If a Dutch auction completes its 24-hour duration without finding any buyer at the
+     *      initial principal reserve floor (0 bids), this function permits restarting price discovery
+     *      with a lower clearance floor (distressed liquidation) so that the pool can recover
+     *      whatever liquidity the market will bear. Any resulting capital shortfall is absorbed
+     *      by the LP pool waterfall.
+     * @param tokenId SAG Token ID
+     * @param discountedReservePriceUSD New lower clearance floor in USD (must be < current reserve)
+     */
+    function resetExpiredAuction(uint256 tokenId, uint256 discountedReservePriceUSD) external onlyOwner {
+        LiquidationAuction storage auction = auctions[tokenId];
+        require(auction.active, "No active auction to reset");
+        require(block.timestamp > auction.endTime, "Primary auction has not yet expired");
+        require(discountedReservePriceUSD < auction.reservePriceUSD, "Discounted reserve must be below previous floor");
+
+        uint256 newStartPrice = auction.reservePriceUSD;
+
+        auction.startPriceUSD = newStartPrice;
+        auction.reservePriceUSD = discountedReservePriceUSD;
+        auction.startTime = block.timestamp;
+        auction.endTime = block.timestamp + auctionDuration;
+
+        emit LiquidationAuctionStarted(tokenId, newStartPrice, discountedReservePriceUSD, auction.endTime);
+    }
+
+    /**
      * @notice Computes exact accrued Ujrah safekeeping fee based on elapsed physical vault custody time
      * @dev Under AAOIFI Standard 39, Ujrah accrues on a linear pro-rata basis for vault custody.
      *      accruedUjrah = (monthlyUjrahUSD * elapsedSeconds) / (30 days)

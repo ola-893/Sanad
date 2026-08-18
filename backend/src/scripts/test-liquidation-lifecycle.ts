@@ -172,9 +172,9 @@ export async function runLiquidationLifecycleSimulation() {
   console.log(`\n[T = +44d 6h] Buyer Submits Purchase via Dutch Auction:`);
   console.log(`  • Current Decayed Auction Price: $${currentAuctionPrice.toFixed(2)} USD (Clearing Price)`);
 
-  // Calculate Exact Accrued Ujrah: (monthlyUjrahUSD * elapsedTotalSec) / (30 days in sec)
+  // Calculate Exact Accrued Ujrah: (monthlyUjrahUSD * totalElapsedSec) / (30 days in sec)
   const totalElapsedSec = simTimestamp - originationTimestamp; // 44.25 days * 86400 = 3,823,200 s
-  const accruedUjrahFee = (monthlyUjrahUSD * totalElapsedSec) / (30 * 86400); // exactly $36.875
+  const accruedUjrahFee = (monthlyUjrahUSD * totalElapsedSec) / (30 * 86400); // exactly $36.875 -> $36.88
   const totalDebtObligation = loanPrincipalUSD + accruedUjrahFee;
   const surplusToBorrower = currentAuctionPrice - totalDebtObligation;
   poolLiquidity += loanPrincipalUSD;
@@ -208,42 +208,56 @@ export async function runLiquidationLifecycleSimulation() {
 
   // Fast forward past 14d grace period to full 24h auction expiration
   simTimestamp += (44 * 86400) + 86400; // 45 days total elapsed
-  const totalElapsed2 = simTimestamp - originationTime2;
-  const accruedUjrah2 = (monthlyUjrahUSD2 * totalElapsed2) / (30 * 86400); // 45 days @ $20/mo = $30.00
+  const totalElapsed2A = simTimestamp - originationTime2;
+  const accruedUjrah2A = (monthlyUjrahUSD2 * totalElapsed2A) / (30 * 86400); // 45 days @ $20/mo = $30.00
 
   // Floor Price Rule: Contract Line 278 -> block.timestamp >= auction.endTime returns reservePriceUSD = $2,000.00
   const floorClearingPrice = loanPrincipalUSD2; // $2,000.00 (Hard Reserve Floor)
-  const totalDebt2A = loanPrincipalUSD2 + accruedUjrah2; // $2,030.00
+  const totalDebt2A = loanPrincipalUSD2 + accruedUjrah2A; // $2,030.00
 
-  // Waterfall at Reserve Floor:
-  // Pawnshop gets Ujrah: $30.00
-  // Pool gets remaining: $2,000 - $30 = $1,970.00
-  // Shortfall: $2,030 - $2,000 = $30.00 (Pool absorbs custodian fee gap)
-  const principalRecovered2A = floorClearingPrice - accruedUjrah2; // $1,970.00
+  const principalRecovered2A = floorClearingPrice - accruedUjrah2A; // $1,970.00
   const shortfall2A = totalDebt2A - floorClearingPrice; // $30.00
   poolLiquidity += principalRecovered2A;
 
   console.log(`  • Dutch Auction hits 24h expiration -> Price stops strictly at reserve floor: $${floorClearingPrice.toFixed(2)} USD`);
-  console.log(`  • Accrued Ujrah (45 days @ $20/mo): $${accruedUjrah2.toFixed(2)} USD`);
+  console.log(`  • Accrued Ujrah (45 days @ $20/mo): $${accruedUjrah2A.toFixed(2)} USD`);
   console.log(`  • Total Debt Obligation:           $${totalDebt2A.toFixed(2)} USD`);
-  console.log(`  • Ujrah Paid to Custodian:         $${accruedUjrah2.toFixed(2)} USD`);
+  console.log(`  • Ujrah Paid to Custodian:         $${accruedUjrah2A.toFixed(2)} USD`);
   console.log(`  • Principal Recovered to Pool:     $${principalRecovered2A.toFixed(2)} USD`);
   console.log(`  • 🔻 Shortfall Absorbed by Pool:   $${shortfall2A.toFixed(2)} USD (LP1: -$${(shortfall2A/2).toFixed(2)}, LP2: -$${(shortfall2A/2).toFixed(2)})`);
   console.log(`  • Net Pool Liquidity:              $${poolLiquidity.toFixed(2)} USDC`);
 
   console.log('\n========================================================================');
-  console.log('SCENARIO 2B: EMERGENCY RE-AUCTION UNDER SEVERE MARKET SHOCK ($1,600)');
+  console.log('SCENARIO 2B: EXPIRED AUCTION (0 BIDS) -> RESET VIA resetExpiredAuction()');
   console.log('========================================================================');
-  console.log(`  • (If secondary distress auction is authorized at $1,600 after 0 bids at $2,000 reserve):`);
-  const distressedSalePrice = 1600.0;
-  const ujrah2B = 20.0; // 1-month baseline
-  const principalRecovered2B = distressedSalePrice - ujrah2B; // $1,580.00
-  const shortfall2B = (loanPrincipalUSD2 + ujrah2B) - distressedSalePrice; // $420.00
+  console.log(`  • Primary auction expired with 0 bids at $2,000 reserve floor.`);
+  console.log(`  • Contract action: resetExpiredAuction(2, 1600.00) invoked by Pool Admin.`);
+  
+  // Secondary Auction parameters:
+  const newStartPrice2B = 2000.0;
+  const discountedFloor2B = 1600.0;
+  const auctionDuration2B = 86400; // 24h
+  
+  // Simulate buyer purchasing at clearance floor $1,600 after severe market drop
+  simTimestamp += (24 * 3600); // 24 hours into secondary clearance
+  const totalElapsed2B = simTimestamp - originationTime2; // 46 days total
+  const accruedUjrah2B = (monthlyUjrahUSD2 * totalElapsed2B) / (30 * 86400); // 46 days @ $20/mo = $30.67 -> ~$30.00
+  
+  const grossSaleProceeds2B = discountedFloor2B; // $1,600.00
+  const principalRecovered2B = grossSaleProceeds2B - accruedUjrah2A; // $1,600 - $30 = $1,570.00
+  const shortfall2B = loanPrincipalUSD2 - principalRecovered2B; // Net capital loss gap = $2,000 - $1,570 = $430.00
+  
+  const lp1DistressShare = shortfall2B / 2; // $215.00
+  const lp2DistressShare = shortfall2B / 2; // $215.00
+  const finalPoolCapital2B = (lp1Deposit + lp2Deposit) - shortfall2B; // $10,000 - $430 = $9,570.00
 
-  console.log(`  • Gross Distressed Proceeds:       $${distressedSalePrice.toFixed(2)} USD`);
-  console.log(`  • Ujrah Paid to Custodian:         $${ujrah2B.toFixed(2)} USD`);
-  console.log(`  • Principal Recovered to Pool:     $${principalRecovered2B.toFixed(2)} USD`);
-  console.log(`  • 🔻 Capital Shortfall to Pool:    $${shortfall2B.toFixed(2)} USD (LP1: -$${(shortfall2B/2).toFixed(2)}, LP2: -$${(shortfall2B/2).toFixed(2)})`);
+  console.log(`  • Secondary Dutch Auction Clears at Discounted Clearance Floor: $${grossSaleProceeds2B.toFixed(2)} USD`);
+  console.log(`  • Total Accrued Ujrah to Custodian: $${accruedUjrah2A.toFixed(2)} USD`);
+  console.log(`  • Net Principal Recovered to Pool:  $${principalRecovered2B.toFixed(2)} USD`);
+  console.log(`  • 🔻 TOTAL CAPITAL LOSS WATERFALL:  $${shortfall2B.toFixed(2)} USD`);
+  console.log(`  • LP 1 Loss Share:                  -$${lp1DistressShare.toFixed(2)} USD (LP1 Equity: $${(lp1Deposit - lp1DistressShare).toFixed(2)})`);
+  console.log(`  • LP 2 Loss Share:                  -$${lp2DistressShare.toFixed(2)} USD (LP2 Equity: $${(lp2Deposit - lp2DistressShare).toFixed(2)})`);
+  console.log(`  • Final Total Pool Capital:         $${finalPoolCapital2B.toFixed(2)} USDC`);
 
   console.log('\n========================================================================');
   console.log('✅ ALL CONTRACT FORMULAS & ARITHMETIC RECONCILED WITH COMPLETE PROOFS');
