@@ -268,6 +268,20 @@ contract SanadLiquidityPool is Ownable {
     }
 
     /**
+     * @notice Computes exact accrued Ujrah safekeeping fee based on elapsed physical vault custody time
+     * @dev Under AAOIFI Standard 39, Ujrah accrues on a linear pro-rata basis for vault custody.
+     *      accruedUjrah = (monthlyUjrahUSD * elapsedSeconds) / (30 days)
+     */
+    function calculateAccruedUjrah(uint256 tokenId) public view returns (uint256) {
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        if (collateral.monthlyUjrahUSD == 0) return 0;
+        if (block.timestamp <= collateral.originationTimestamp) return 0;
+
+        uint256 elapsed = block.timestamp - collateral.originationTimestamp;
+        return (collateral.monthlyUjrahUSD * elapsed) / (30 days);
+    }
+
+    /**
      * @notice Calculates current decaying fair-value price for a Dutch auction
      */
     function getCurrentAuctionPrice(uint256 tokenId) public view returns (uint256) {
@@ -308,7 +322,7 @@ contract SanadLiquidityPool is Ownable {
         );
 
         uint256 principalOwed = tokenLoanBalance[tokenId];
-        uint256 ujrahFee = collateral.monthlyUjrahUSD;
+        uint256 ujrahFee = calculateAccruedUjrah(tokenId);
         uint256 totalObligation = principalOwed + ujrahFee;
 
         uint256 surplus = 0;

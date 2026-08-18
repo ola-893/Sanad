@@ -33,7 +33,8 @@ contract SAGToken is ERC721, AccessControl {
         address pawnshop;          // Originating pawnshop address
         address borrower;          // Pledging borrower address
         CollateralStatus status;   // Current collateral status
-        uint256 maturityTimestamp; // Loan due date timestamp (block.timestamp + tenure)
+        uint256 originationTimestamp; // Timestamp when loan was minted/originated
+        uint256 maturityTimestamp; // Loan due date timestamp (originationTimestamp + tenure)
         uint256 monthlyUjrahUSD;   // Fixed monthly safekeeping/custody fee (scaled 6 decimals)
         string ipfsMetadataUri;    // Physical vault custody receipt & certification URI
     }
@@ -185,6 +186,7 @@ contract SAGToken is ERC721, AccessControl {
             pawnshop: p.pawnshop,
             borrower: p.borrower,
             status: CollateralStatus.ActivePledged,
+            originationTimestamp: block.timestamp,
             maturityTimestamp: maturity,
             monthlyUjrahUSD: p.monthlyUjrahUSD,
             ipfsMetadataUri: p.ipfsUri
