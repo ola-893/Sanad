@@ -58,6 +58,7 @@ contract SanadLiquidityPool is Ownable {
     // Liquidation & Grace Period Parameters
     uint256 public gracePeriod = 14 days;        // Grace period post-maturity before auction eligibility
     uint256 public auctionDuration = 24 hours;   // Dutch auction decay duration
+    uint256 public constant MIN_DISTRESSED_RECOVERY_BPS = 5000; // Hard safety floor: 50% minimum of appraised fair market value
 
     // LP Capital Accounting
     mapping(address => uint256) public lpBalances;
@@ -283,6 +284,14 @@ contract SanadLiquidityPool is Ownable {
         require(block.timestamp > auction.endTime, "Primary auction has not yet expired");
         require(discountedReservePriceUSD < auction.reservePriceUSD, "Discounted reserve must be below previous floor");
 
+        // Mathematical safety floor: Prevent insider or arbitrary distress dumps below 50% of appraised value
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        uint256 minAllowedFloor = (collateral.appraisedValueUSD * MIN_DISTRESSED_RECOVERY_BPS) / 10000;
+        require(
+            discountedReservePriceUSD >= minAllowedFloor,
+            "Discounted reserve below minimum allowable recovery floor (50% of appraisal)"
+        );
+
         uint256 newStartPrice = auction.reservePriceUSD;
 
         auction.startPriceUSD = newStartPrice;
@@ -295,7 +304,9 @@ contract SanadLiquidityPool is Ownable {
 
     /**
      * @notice Computes exact accrued Ujrah safekeeping fee based on elapsed physical vault custody time
-     * @dev Under AAOIFI Standard 39, Ujrah accrues on a linear pro-rata basis for vault custody.
+     * @dev Under AAOIFI Standard 39 and Bank Negara Malaysia Rahn Policy, Ujrah accrues on a linear
+     *      pro-rata basis for vault custody. Safekeeping fees freeze when collateral enters liquidation
+     *      auction (auction.startTime) so borrowers are not penalized during price discovery.
      *      accruedUjrah = (monthlyUjrahUSD * elapsedSeconds) / (30 days)
      */
     function calculateAccruedUjrah(uint256 tokenId) public view returns (uint256) {
@@ -303,7 +314,13 @@ contract SanadLiquidityPool is Ownable {
         if (collateral.monthlyUjrahUSD == 0) return 0;
         if (block.timestamp <= collateral.originationTimestamp) return 0;
 
-        uint256 elapsed = block.timestamp - collateral.originationTimestamp;
+        // Freeze custody accrual at the moment liquidation auction began
+        uint256 custodyEnd = (auctions[tokenId].active && auctions[tokenId].startTime > 0)
+            ? auctions[tokenId].startTime
+            : block.timestamp;
+
+        if (custodyEnd <= collateral.originationTimestamp) return 0;
+        uint256 elapsed = custodyEnd - collateral.originationTimestamp;
         return (collateral.monthlyUjrahUSD * elapsed) / (30 days);
     }
 
