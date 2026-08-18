@@ -21,6 +21,15 @@ export enum CollateralStatus {
   Liquidated = 4
 }
 
+export interface ComplianceActionResult {
+  success: boolean;
+  action: 'FREEZE_TOKEN' | 'UNFREEZE_TOKEN' | 'FREEZE_ADDRESS' | 'UNFREEZE_ADDRESS' | 'ADMIN_WIPE';
+  target: string;
+  transactionHash?: string;
+  blockNumber?: number;
+  error?: string;
+}
+
 export class SagTokenService {
   private client: CreditcoinClient;
   private contractAddress: string;
@@ -129,5 +138,129 @@ export class SagTokenService {
     const tx = await contract.setStatus(tokenId, status);
     const receipt = await tx.wait();
     return receipt.hash;
+  }
+
+  // =========================================================================
+  // COMPLIANCE ACTIONS (FREEZE, UNFREEZE, WIPE)
+  // =========================================================================
+
+  public async freezeToken(tokenId: number | string, reason: string): Promise<ComplianceActionResult> {
+    try {
+      const contract = this.getContract();
+      const tx = await contract.freezeToken(tokenId, reason);
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        action: 'FREEZE_TOKEN',
+        target: tokenId.toString(),
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        action: 'FREEZE_TOKEN',
+        target: tokenId.toString(),
+        error: error.message || 'Failed to freeze token',
+      };
+    }
+  }
+
+  public async unfreezeToken(tokenId: number | string, reason: string): Promise<ComplianceActionResult> {
+    try {
+      const contract = this.getContract();
+      const tx = await contract.unfreezeToken(tokenId, reason);
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        action: 'UNFREEZE_TOKEN',
+        target: tokenId.toString(),
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        action: 'UNFREEZE_TOKEN',
+        target: tokenId.toString(),
+        error: error.message || 'Failed to unfreeze token',
+      };
+    }
+  }
+
+  public async freezeAddress(account: string, reason: string): Promise<ComplianceActionResult> {
+    try {
+      const contract = this.getContract();
+      const tx = await contract.freezeAddress(account, reason);
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        action: 'FREEZE_ADDRESS',
+        target: account,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        action: 'FREEZE_ADDRESS',
+        target: account,
+        error: error.message || 'Failed to freeze address',
+      };
+    }
+  }
+
+  public async unfreezeAddress(account: string, reason: string): Promise<ComplianceActionResult> {
+    try {
+      const contract = this.getContract();
+      const tx = await contract.unfreezeAddress(account, reason);
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        action: 'UNFREEZE_ADDRESS',
+        target: account,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        action: 'UNFREEZE_ADDRESS',
+        target: account,
+        error: error.message || 'Failed to unfreeze address',
+      };
+    }
+  }
+
+  public async adminWipe(tokenId: number | string, reason: string): Promise<ComplianceActionResult> {
+    try {
+      const contract = this.getContract();
+      const tx = await contract.adminWipe(tokenId, reason);
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        action: 'ADMIN_WIPE',
+        target: tokenId.toString(),
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        action: 'ADMIN_WIPE',
+        target: tokenId.toString(),
+        error: error.message || 'Failed to wipe token',
+      };
+    }
+  }
+
+  public async isTokenFrozen(tokenId: number | string): Promise<boolean> {
+    const contract = this.getContract(this.client.getCreditcoinProvider());
+    return await contract.frozenToken(tokenId);
+  }
+
+  public async isAddressFrozen(account: string): Promise<boolean> {
+    const contract = this.getContract(this.client.getCreditcoinProvider());
+    return await contract.frozenAddress(account);
   }
 }

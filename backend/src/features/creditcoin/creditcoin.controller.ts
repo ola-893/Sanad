@@ -59,7 +59,7 @@ export class CreditcoinController {
         karat: Number(karat),
         appraisedValueUSD: Number(appraisedValueUSD),
         loanAmount: Number(loanAmount),
-        ipfsMetadataUri: ipfsMetadataUri || '',
+        ipfsMetadataUri: ipfsMetadataUri || `ipfs://sanad-gold-cert-${Date.now()}`,
       };
 
       const result = await sagService.mintCollateral(params);
@@ -78,42 +78,38 @@ export class CreditcoinController {
    */
   public async getCollateral(req: Request, res: Response): Promise<void> {
     try {
-      const tokenId = String(req.params.tokenId);
-      const data = await sagService.getCollateral(tokenId);
-      res.status(200).json({ success: true, tokenId, data });
+      const tokenId = Array.isArray(req.params.tokenId) ? req.params.tokenId[0] : req.params.tokenId;
+      const data = await sagService.getCollateral(String(tokenId));
+      res.status(200).json({ success: true, data });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      res.status(404).json({ success: false, error: error.message });
     }
   }
 
   /**
-   * POST /api/v1/creditcoin/repayment/submit (NON-BLOCKING / RECOMMENDED)
-   * Queues an asynchronous background job to wait for attestation, generate proof, and settle on CC3.
-   * Returns immediately with 202 Accepted.
+   * POST /api/v1/creditcoin/repayment/relay
    */
-  public async submitAsyncRepayment(req: Request, res: Response): Promise<void> {
+  public async queueRepaymentRelay(req: Request, res: Response): Promise<void> {
     try {
-      const { tokenId, sourceTxHash, repaidAmountUSD, sourceEvmChainId, userId } = req.body;
+      const { tokenId, sourceTxHash, repaidAmountUSD, userId, sourceEvmChainId } = req.body;
 
       if (!tokenId || !sourceTxHash || !repaidAmountUSD) {
         res.status(400).json({ success: false, error: 'Missing tokenId, sourceTxHash, or repaidAmountUSD' });
         return;
       }
 
-      const job = queueAsyncAttestcoinRepayment({
+      const job = await queueAsyncAttestcoinRepayment({
         tokenId: tokenId.toString(),
         sourceTxHash,
         repaidAmountUSD: Number(repaidAmountUSD),
-        userId: userId || (req as any).user?.id,
-        sourceEvmChainId: sourceEvmChainId ? Number(sourceEvmChainId) : undefined,
+        userId: userId || 'default-user',
+        sourceEvmChainId: sourceEvmChainId ? Number(sourceEvmChainId) : 11155111,
       });
 
       res.status(202).json({
         success: true,
-        message: 'Repayment submitted for background Attestcoin proof generation & settlement',
+        message: 'Cross-chain repayment attestation job queued on Creditcoin CC3',
         jobId: job.jobId,
-        status: job.status,
-        statusEndpoint: `/api/v1/creditcoin/repayment/status/${job.jobId}`,
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -122,28 +118,25 @@ export class CreditcoinController {
 
   /**
    * GET /api/v1/creditcoin/repayment/status/:jobId
-   * Checks the progress and status of an asynchronous repayment job
    */
   public async getRepaymentStatus(req: Request, res: Response): Promise<void> {
     try {
-      const jobId = String(req.params.jobId);
-      const status = getRepaymentJobStatus(jobId);
-
+      const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+      const status = await getRepaymentJobStatus(String(jobId));
       if (!status) {
-        res.status(404).json({ success: false, error: `Job ${jobId} not found` });
+        res.status(404).json({ success: false, error: 'Job not found' });
         return;
       }
-
-      res.status(200).json({ success: true, job: status });
+      res.status(200).json({ success: true, data: status });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
   }
 
   /**
-   * POST /api/v1/creditcoin/repayment/verify-and-settle (Synchronous Fallback)
+   * POST /api/v1/creditcoin/repayment/relay-sync
    */
-  public async verifyAndSettleRepayment(req: Request, res: Response): Promise<void> {
+  public async relayAndSettleSync(req: Request, res: Response): Promise<void> {
     try {
       const { tokenId, sourceTxHash, repaidAmountUSD, sourceEvmChainId } = req.body;
 
@@ -164,6 +157,119 @@ export class CreditcoinController {
       } else {
         res.status(500).json(result);
       }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  // =========================================================================
+  // COMPLIANCE ACTIONS (FREEZE, UNFREEZE, WIPE)
+  // =========================================================================
+
+  /**
+   * POST /api/v1/creditcoin/compliance/freeze
+   * Body: { type: 'token' | 'address', target: string | number, reason: string }
+   */
+  public async complianceFreeze(req: Request, res: Response): Promise<void> {
+    try {
+      const { type, target, reason } = req.body;
+      if (!type || !target || !reason) {
+        res.status(400).json({ success: false, error: 'Missing type, target, or reason' });
+        return;
+      }
+
+      let result;
+      if (type === 'token') {
+        result = await sagService.freezeToken(target, reason);
+      } else if (type === 'address') {
+        result = await sagService.freezeAddress(target.toString(), reason);
+      } else {
+        res.status(400).json({ success: false, error: 'Invalid freeze type. Must be token or address' });
+        return;
+      }
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/creditcoin/compliance/unfreeze
+   * Body: { type: 'token' | 'address', target: string | number, reason: string }
+   */
+  public async complianceUnfreeze(req: Request, res: Response): Promise<void> {
+    try {
+      const { type, target, reason } = req.body;
+      if (!type || !target || !reason) {
+        res.status(400).json({ success: false, error: 'Missing type, target, or reason' });
+        return;
+      }
+
+      let result;
+      if (type === 'token') {
+        result = await sagService.unfreezeToken(target, reason);
+      } else if (type === 'address') {
+        result = await sagService.unfreezeAddress(target.toString(), reason);
+      } else {
+        res.status(400).json({ success: false, error: 'Invalid unfreeze type. Must be token or address' });
+        return;
+      }
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/creditcoin/compliance/wipe
+   * Body: { tokenId: string | number, reason: string }
+   */
+  public async complianceWipe(req: Request, res: Response): Promise<void> {
+    try {
+      const { tokenId, reason } = req.body;
+      if (!tokenId || !reason) {
+        res.status(400).json({ success: false, error: 'Missing tokenId or reason' });
+        return;
+      }
+
+      const result = await sagService.adminWipe(tokenId, reason);
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/creditcoin/compliance/status
+   * Query: { tokenId?: string, address?: string }
+   */
+  public async getComplianceStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { tokenId, address } = req.query;
+      const status: { isTokenFrozen?: boolean; isAddressFrozen?: boolean } = {};
+
+      if (tokenId) {
+        status.isTokenFrozen = await sagService.isTokenFrozen(String(tokenId));
+      }
+      if (address) {
+        status.isAddressFrozen = await sagService.isAddressFrozen(String(address));
+      }
+
+      res.status(200).json({ success: true, data: status });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }

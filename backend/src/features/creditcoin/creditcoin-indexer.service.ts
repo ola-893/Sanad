@@ -10,7 +10,16 @@ import { desc, eq } from 'drizzle-orm';
 
 export interface AuditLogEntry {
   id: string;
-  eventType: 'COLLATERAL_MINTED' | 'REPAYMENT_VERIFIED' | 'LOAN_FUNDED' | 'COLLATERAL_UNLOCKED';
+  eventType: 
+    | 'COLLATERAL_MINTED' 
+    | 'REPAYMENT_VERIFIED' 
+    | 'LOAN_FUNDED' 
+    | 'COLLATERAL_UNLOCKED'
+    | 'TOKEN_FROZEN'
+    | 'TOKEN_UNFROZEN'
+    | 'ADDRESS_FROZEN'
+    | 'ADDRESS_UNFROZEN'
+    | 'TOKEN_WIPED';
   tokenId: string;
   blockNumber: number;
   transactionHash: string;
@@ -40,6 +49,7 @@ export class CreditcoinIndexerService {
       if (sagAddress && sagAddress !== ethers.ZeroAddress) {
         const sagContract = new ethers.Contract(sagAddress, SAG_TOKEN_ABI, provider);
         
+        // 1. Collateral Minted
         sagContract.on('GoldCollateralMinted', async (tokenId, pawnshop, borrower, weightGrams, karat, appraisedValueUSD, loanAmount, ipfsUri, event) => {
           const logEntry: AuditLogEntry = {
             id: `audit-${Date.now()}-${tokenId}`,
@@ -59,15 +69,99 @@ export class CreditcoinIndexerService {
             },
           };
 
-          // 1. In-memory cache
           this.memoryAuditLogs.unshift(logEntry);
-
-          // 2. Persist to Postgres database
           await this.persistToDb(logEntry, sagAddress);
-
           console.log(`[Indexer] Indexed & Persisted GoldCollateralMinted: Token #${tokenId} in tx ${event.log.transactionHash}`);
+          this.emitSocketEvent(logEntry);
+        });
 
-          // 3. Broadcast real-time update via Socket.IO
+        // 2. Token Frozen
+        sagContract.on('TokenFrozen', async (tokenId, by, reason, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-freeze-token-${Date.now()}-${tokenId}`,
+            eventType: 'TOKEN_FROZEN',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: { by, reason, action: 'FREEZE_TOKEN' },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, sagAddress);
+          console.log(`[Indexer] Indexed & Persisted TokenFrozen: Token #${tokenId} by ${by} (Reason: ${reason})`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 3. Token Unfrozen
+        sagContract.on('TokenUnfrozen', async (tokenId, by, reason, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-unfreeze-token-${Date.now()}-${tokenId}`,
+            eventType: 'TOKEN_UNFROZEN',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: { by, reason, action: 'UNFREEZE_TOKEN' },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, sagAddress);
+          console.log(`[Indexer] Indexed & Persisted TokenUnfrozen: Token #${tokenId} by ${by}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 4. Address Frozen
+        sagContract.on('AddressFrozen', async (account, by, reason, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-freeze-addr-${Date.now()}-${account}`,
+            eventType: 'ADDRESS_FROZEN',
+            tokenId: '',
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: { account, by, reason, action: 'FREEZE_ADDRESS' },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, sagAddress);
+          console.log(`[Indexer] Indexed & Persisted AddressFrozen: Address ${account} by ${by}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 5. Address Unfrozen
+        sagContract.on('AddressUnfrozen', async (account, by, reason, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-unfreeze-addr-${Date.now()}-${account}`,
+            eventType: 'ADDRESS_UNFROZEN',
+            tokenId: '',
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: { account, by, reason, action: 'UNFREEZE_ADDRESS' },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, sagAddress);
+          console.log(`[Indexer] Indexed & Persisted AddressUnfrozen: Address ${account} by ${by}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 6. Token Wiped
+        sagContract.on('TokenWiped', async (tokenId, from, by, reason, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-wipe-${Date.now()}-${tokenId}`,
+            eventType: 'TOKEN_WIPED',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: { from, by, reason, action: 'ADMIN_WIPE' },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, sagAddress);
+          console.log(`[Indexer] Indexed & Persisted TokenWiped: Token #${tokenId} seized from ${from} by ${by}`);
           this.emitSocketEvent(logEntry);
         });
       }
@@ -119,7 +213,7 @@ export class CreditcoinIndexerService {
       }
 
       this.isListening = true;
-      console.log('[Indexer] Creditcoin CC3 Event Indexer active and listening.');
+      console.log('[Indexer] Creditcoin CC3 Event Indexer active and listening for compliance & settlement events.');
     } catch (error) {
       console.error('[Indexer] Failed to initialize event listeners:', error);
     }
@@ -132,7 +226,7 @@ export class CreditcoinIndexerService {
         contractAddress: contractAddress,
         transactionHash: entry.transactionHash,
         blockNumber: entry.blockNumber,
-        tokenId: entry.tokenId,
+        tokenId: entry.tokenId || null,
         details: entry.details,
         timestamp: new Date(entry.timestamp),
       });
@@ -154,8 +248,7 @@ export class CreditcoinIndexerService {
 
   public async getAuditLogs(tokenId?: string): Promise<AuditLogEntry[]> {
     try {
-      // Query persistent database logs first
-      const query = db.select().from(CreditcoinAuditLogModel).orderBy(desc(CreditcoinAuditLogModel.timestamp)).limit(50);
+      const query = db.select().from(CreditcoinAuditLogModel).orderBy(desc(CreditcoinAuditLogModel.timestamp)).limit(100);
       const rows = tokenId 
         ? await query.where(eq(CreditcoinAuditLogModel.tokenId, tokenId)) 
         : await query;
