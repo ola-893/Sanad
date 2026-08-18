@@ -8,6 +8,8 @@
     "start": "node dist/main.js",
     "build": "esbuild src/main.ts --bundle --platform=node --target=node18 --minify --format=esm --outfile=dist/main.js --packages=external",
     "migrate": "drizzle-kit generate && drizzle-kit migrate",
+    "seed": "tsx src/scripts/seed-database.ts",
+    "setup:db": "tsx src/scripts/seed-database.ts",
     "initialize": "node init.js"
   },
   "devDependencies": {

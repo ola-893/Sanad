@@ -7,23 +7,15 @@ dotenv.config();
 
 const { Pool } = pg;
 
-type PoolConfig = {
-  user: string | undefined;
-  password: string | undefined;
-  host: string | undefined;
-  port: number | undefined;
-  database: string | undefined;
-}
-
-const poolConfig: PoolConfig = {
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  host: process.env.POSTGRES_HOST,
-  port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : undefined,
-  database: process.env.POSTGRES_DB,
-};
-
-const pool = new Pool(poolConfig);
+export const pool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL })
+  : new Pool({
+      user: process.env.POSTGRES_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || 'password',
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : 5432,
+      database: process.env.POSTGRES_DB || 'sanad_db',
+    });
 
 // Create a drizzle instance
 export const db = drizzle(pool);
