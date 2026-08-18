@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la && cat README.md 2>/dev/null | head -50)",
+      "Bash(ls backend frontend agent | head -60 && echo \"---\" && head -40 backend/package.json frontend/package.json 2>/dev/null)"
+    ]
+  }
+}

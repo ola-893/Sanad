@@ -4,15 +4,16 @@ import Link from "next/link"
 
 export function DashboardHeader() {
   return (
-    <div className="flex flex-col items-start justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
+    <div className="flex flex-col items-start justify-between space-y-4 md:flex-row md:items-end md:space-y-0">
       <div>
-        <h2 className="font-display text-3xl font-medium tracking-tight">Dashboard</h2>
-        <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-          Welcome back, Ahmad · Financing overview
-        </p>
+        <p className="kicker-gold mb-2">Investor Portal</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+          Welcome back, Ahmad
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">Your financing overview at a glance</p>
       </div>
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-full border border-[#171414]/10 bg-white/60 px-4 py-2 text-muted-foreground backdrop-blur">
           <Calendar className="h-4 w-4" />
           <span className="font-mono text-xs uppercase tracking-[0.1em]">
             {new Date().toLocaleDateString("en-US", {
@@ -23,7 +24,7 @@ export function DashboardHeader() {
             })}
           </span>
         </div>
-        <Button asChild>
+        <Button asChild className="rounded-full">
           <Link href="/apply">Apply for Financing</Link>
         </Button>
       </div>

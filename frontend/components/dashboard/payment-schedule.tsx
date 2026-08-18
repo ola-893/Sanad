@@ -55,29 +55,34 @@ export function PaymentSchedule({ showAll = false }: PaymentScheduleProps) {
   const displayPayments = showAll ? payments : payments.slice(0, 4)
 
   return (
-    <div className="space-y-4">
+    <div className="divide-y divide-border">
       {displayPayments.map((payment) => (
-        <div key={payment.id} className="flex items-center justify-between p-2 border rounded-md">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Payment #{payment.id}</p>
-            <p className="text-xs text-muted-foreground">Loan #{payment.loanId}</p>
-            <p className="text-xs text-muted-foreground">Due: {payment.dueDate}</p>
+        <div key={payment.id} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
+          <div className="min-w-0 space-y-1">
+            <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+              {payment.id}
+            </p>
+            <p className="text-sm font-medium text-[#171414]">Loan {payment.loanId}</p>
+            <p className="text-xs text-muted-foreground">Due {payment.dueDate}</p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <span className="font-bold">RM {payment.amount.toLocaleString()}</span>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <span className="font-mono text-sm font-bold tabular-nums text-[#171414]">
+              RM {payment.amount.toLocaleString()}
+            </span>
             <Badge
+              variant="outline"
               className={
                 payment.status === "paid"
-                  ? "bg-success/100"
+                  ? "border-success/20 bg-success/10 text-success"
                   : payment.status === "upcoming"
-                    ? "bg-amber-500"
-                    : "bg-destructive/100"
+                    ? "border-warning/30 bg-warning/10 text-warning-foreground"
+                    : "border-destructive/20 bg-destructive/10 text-destructive"
               }
             >
               {payment.status === "paid" ? "Paid" : payment.status === "upcoming" ? "Upcoming" : "Overdue"}
             </Badge>
             {payment.status === "upcoming" && (
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
+              <Button size="sm" variant="outline" className="rounded-full">
                 <CreditCard className="mr-2 h-3 w-3" />
                 Pay Now
               </Button>

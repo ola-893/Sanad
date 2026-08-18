@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ShieldIcon, UserIcon } from "lucide-react"
+import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ShieldIcon, UserIcon, Loader2 } from "lucide-react"
 import { Logo } from "@/components/logo"
 
 import {
@@ -55,49 +55,19 @@ export default function LoginPage() {
   //   }
   // }, [router])
 
+  const isSubmitting = form.formState.isSubmitting
+
   const onSubmit = async (data: LoginFormData) => {
-    // try {
-      
+    const promise = authenticateUser({
+      email: data.email,
+      password: data.password,
+    })
 
-    //   // sessionStorage.setItem('loginType', 'investor')
-      
-    //   toast.success('Login Successful!')
-    //   // setTimeout(() => {
-    //   //   router.push('/dashboard')
-    //   // }, 1000)
-    // } catch (err: any) {
-    //   console.error('Login error:', err)
-      
-    //   if (err.message?.includes('401') || err.message?.includes('Invalid')) {
-    //     form.setError('password', {
-    //       type: 'manual',
-    //       message: 'Invalid email or password. Please try again.',
-    //     })
-    //     toast.error('Invalid email or password. Please try again.')
-    //   } else {
-    //     toast.error('Error signing in. Please try again later.')
-    //   }
-    // }
-
-    const response = authenticateUser(
-        {
-          email: data.email,
-          password: data.password,
-        }
-      )
-    
-
-    toast.promise(response, {
+    toast.promise(promise, {
       loading: 'Signing in...',
       success: (response: any) => {
-
-        console.log("data", response);
-
         if (!response.success) {
-          console.log("response failed??", response);
-          // router.push('/dashboard');
           throw new Error('Invalid email or password. Please try again.')
-          // toast.error();
         }
 
         router.push('/dashboard');
@@ -105,6 +75,8 @@ export default function LoginPage() {
       },
       error: 'Invalid email or password. Please try again.',
     })
+
+    await promise
   }
 
   return (
@@ -142,6 +114,7 @@ export default function LoginPage() {
                             <Input
                               placeholder="name@example.com"
                               className="pl-10"
+                              disabled={isSubmitting}
                               {...field}
                             />
                           </div>
@@ -171,12 +144,14 @@ export default function LoginPage() {
                               type={showPassword ? "text" : "password"}
                               placeholder="Enter your password"
                               className="pl-10 pr-10"
+                              disabled={isSubmitting}
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
+                              className="absolute right-3 top-3 h-4 w-4 text-muted-foreground disabled:opacity-50"
+                              disabled={isSubmitting}
                             >
                               {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                             </button>
@@ -189,20 +164,21 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4 p-6">
                   <Button 
-                    className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black" 
-                    // disabled={isLoading || form.formState.isSubmitting}
+                    type="submit"
+                    className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-50" 
+                    disabled={isSubmitting}
                     >
-                    {/* {isLoading || form.formState.isSubmitting ? (
+                    {isSubmitting ? (
                       <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Signing in...
                       </div>
-                    ) : ( */}
+                    ) : (
                       <div className="flex items-center gap-2">
                         <UserIcon className="h-4 w-4" />
                         Sign In
                       </div>
-                    {/* )} */}
+                    )}
                   </Button>
 
               <div className="flex items-center gap-2 w-full">

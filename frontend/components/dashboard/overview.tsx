@@ -1,6 +1,18 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "@/components/ui/chart"
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "@/components/ui/chart"
 
 const data = [
   {
@@ -45,18 +57,59 @@ const data = [
   },
 ]
 
+const formatRM = (value: number) =>
+  `RM ${value.toLocaleString("en-MY", { maximumFractionDigits: 0 })}`
+
 export function Overview() {
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="Financing" fill="var(--chart-1)" />
-        <Bar dataKey="Repayments" fill="#6366f1" />
-      </BarChart>
-    </ResponsiveContainer>
+    <ChartContainer className="h-[350px] w-full aspect-auto">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} barGap={4}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <XAxis
+            dataKey="name"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            className="font-mono"
+          />
+          <YAxis
+            width={80}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => (v >= 1000 ? `RM ${v / 1000}k` : `RM ${v}`)}
+          />
+          <ChartTooltip
+            cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+            content={
+              <ChartTooltipContent
+                indicator="dot"
+                formatter={(value: number, name: string) => (
+                  <div className="flex w-full items-center gap-2">
+                    <span>{name}</span>
+                    <span className="ml-auto font-mono font-medium tabular-nums">{formatRM(value)}</span>
+                  </div>
+                )}
+              />
+            }
+          />
+          <ChartLegend content={<ChartLegendContent className="font-mono text-xs pt-2" />} />
+          <Bar
+            dataKey="Financing"
+            name="Financing"
+            fill="hsl(var(--chart-1))"
+            radius={[6, 6, 0, 0]}
+            maxBarSize={28}
+          />
+          <Bar
+            dataKey="Repayments"
+            name="Repayments"
+            fill="hsl(var(--chart-3))"
+            radius={[6, 6, 0, 0]}
+            maxBarSize={28}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
   )
 }
