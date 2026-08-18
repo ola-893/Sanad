@@ -1,27 +1,37 @@
 export const SANAD_LIQUIDITY_POOL_ABI = [
-  "constructor(address _sagToken, address _liquidityToken)",
+  "constructor(address _sagToken, address _liquidityCurrency)",
+
+  // Events
+  "event LiquidityDeposited(address indexed provider, uint256 amount, uint256 newTotalLiquidity)",
+  "event LiquidityWithdrawn(address indexed provider, uint256 amount, uint256 newTotalLiquidity)",
   "event LoanFunded(uint256 indexed tokenId, address indexed pawnshop, uint256 amount)",
-  "event CrossChainRepaymentVerified(uint256 indexed tokenId, uint64 chainKey, bytes32 indexed sourceTxHash, uint256 amount)",
+  "event CrossChainRepaymentVerified(uint256 indexed tokenId, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amountUSD, uint256 timestamp)",
   "event CollateralUnlocked(uint256 indexed tokenId, address indexed pawnshop, uint256 timestamp)",
-  "event LiquidityDeposited(address indexed investor, uint256 amount)",
+  "event DefaultGracePeriodEntered(uint256 indexed tokenId, uint256 maturityTimestamp, uint256 gracePeriodEnd)",
+  "event LiquidationAuctionStarted(uint256 indexed tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 auctionEndTime)",
+  "event CollateralLiquidated(uint256 indexed tokenId, address indexed buyer, uint256 salePriceUSD, uint256 principalRepaid, uint256 ujrahFeePaid, uint256 surplusToBorrower, uint256 shortfallToPool)",
+  "event SurplusReturnedToBorrower(uint256 indexed tokenId, address indexed borrower, uint256 amountUSD)",
+  "event ShortfallDistributedToPool(uint256 indexed tokenId, uint256 shortfallUSD, uint256 newTotalLiquidity)",
 
-  "function BLOCK_PROVER_PRECOMPILE() external view returns (address)",
-  "function sagToken() external view returns (address)",
-  "function liquidityCurrency() external view returns (address)",
-  "function verifyAndSettleRepayment(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) calldata merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) calldata continuityProof, bytes32 sourceTxHash, uint256 repaidAmountUSD) external returns (bool)",
-  "function processedSourceTransactions(bytes32 sourceTxHash) external view returns (bool)",
+  // LP Capital Accounting
+  "function depositLiquidity(uint256 amount) external",
+  "function withdrawLiquidity(uint256 amount) external",
+  "function lpBalances(address provider) external view returns (uint256)",
+  "function totalPoolLiquidity() external view returns (uint256)",
+
+  // Loan Funding & Cross-Chain Settlement
+  "function fundLoan(uint256 tokenId, uint256 amount) external",
+  "function verifyAndSettleRepayment(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 repaidAmountUSD) external returns (bool)",
   "function tokenLoanBalance(uint256 tokenId) external view returns (uint256)",
-  "function fundLoan(uint256 tokenId, uint256 amount) external"
-] as const;
+  "function processedSourceTransactions(bytes32 sourceTxHash) external view returns (bool)",
 
-// Backward compatibility alias
-export const SILSILAT_LIQUIDITY_POOL_ABI = SANAD_LIQUIDITY_POOL_ABI;
-
-export const REPAYMENT_GATEWAY_ABI = [
-  "constructor(address _acceptedPaymentToken, address _treasury)",
-  "event InvoiceRepaymentReceived(uint256 indexed tokenId, address indexed payer, uint256 amount, uint256 timestamp)",
-  "function repayInvoice(uint256 tokenId, uint256 amount) external",
-  "function acceptedPaymentToken() external view returns (address)",
-  "function treasury() external view returns (address)",
-  "function setTreasury(address _treasury) external"
+  // Default & Liquidation
+  "function checkDefaultStatus(uint256 tokenId) external view returns (bool isDefaulted, bool isLiquidationEligible)",
+  "function triggerLiquidation(uint256 tokenId) external",
+  "function getCurrentAuctionPrice(uint256 tokenId) external view returns (uint256)",
+  "function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external returns (uint256)",
+  "function auctions(uint256 tokenId) external view returns (tuple(uint256 tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 startTime, uint256 endTime, bool active))",
+  "function gracePeriod() external view returns (uint256)",
+  "function auctionDuration() external view returns (uint256)",
+  "function setGracePeriod(uint256 _gracePeriod) external"
 ] as const;

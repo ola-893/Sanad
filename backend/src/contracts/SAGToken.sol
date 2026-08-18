@@ -33,7 +33,21 @@ contract SAGToken is ERC721, AccessControl {
         address pawnshop;          // Originating pawnshop address
         address borrower;          // Pledging borrower address
         CollateralStatus status;   // Current collateral status
+        uint256 maturityTimestamp; // Loan due date timestamp (block.timestamp + tenure)
+        uint256 monthlyUjrahUSD;   // Fixed monthly safekeeping/custody fee (scaled 6 decimals)
         string ipfsMetadataUri;    // Physical vault custody receipt & certification URI
+    }
+
+    struct MintParams {
+        address pawnshop;
+        address borrower;
+        uint256 weightGrams;
+        uint8 karat;
+        uint256 appraisedValueUSD;
+        uint256 loanAmount;
+        uint256 tenureDays;
+        uint256 monthlyUjrahUSD;
+        string ipfsUri;
     }
 
     uint256 private _nextTokenId;
@@ -145,49 +159,46 @@ contract SAGToken is ERC721, AccessControl {
     /**
      * @notice Mints a new SAG NFT representing physical gold collateral
      */
-    function mintCollateral(
-        address pawnshop,
-        address borrower,
-        uint256 weightGrams,
-        uint8 karat,
-        uint256 appraisedValueUSD,
-        uint256 loanAmount,
-        string calldata ipfsUri
-    ) external onlyRole(MINTER_ROLE) returns (uint256) {
-        require(pawnshop != address(0), "Invalid pawnshop address");
-        require(borrower != address(0), "Invalid borrower address");
-        require(!frozenAddress[pawnshop], "Compliance: Pawnshop address is frozen");
-        require(!frozenAddress[borrower], "Compliance: Borrower address is frozen");
-        require(weightGrams > 0, "Weight must be greater than 0");
-        require(appraisedValueUSD > 0, "Valuation must be greater than 0");
+    function mintCollateral(MintParams calldata p) external onlyRole(MINTER_ROLE) returns (uint256) {
+        require(p.pawnshop != address(0), "Invalid pawnshop address");
+        require(p.borrower != address(0), "Invalid borrower address");
+        require(!frozenAddress[p.pawnshop], "Compliance: Pawnshop address is frozen");
+        require(!frozenAddress[p.borrower], "Compliance: Borrower address is frozen");
+        require(p.weightGrams > 0, "Weight must be greater than 0");
+        require(p.appraisedValueUSD > 0, "Valuation must be greater than 0");
+
+        uint256 effectiveTenure = p.tenureDays > 0 ? p.tenureDays : 30;
+        uint256 maturity = block.timestamp + (effectiveTenure * 1 days);
 
         uint256 tokenId = ++_nextTokenId;
-        _safeMint(pawnshop, tokenId);
-        _tokenURIs[tokenId] = ipfsUri;
+        _safeMint(p.pawnshop, tokenId);
+        _tokenURIs[tokenId] = p.ipfsUri;
 
-        uint256 ltv = (loanAmount * 10000) / appraisedValueUSD;
+        uint256 ltv = (p.loanAmount * 10000) / p.appraisedValueUSD;
 
         collaterals[tokenId] = GoldCollateral({
-            weightGrams: weightGrams,
-            karat: karat,
-            appraisedValueUSD: appraisedValueUSD,
-            loanAmount: loanAmount,
+            weightGrams: p.weightGrams,
+            karat: p.karat,
+            appraisedValueUSD: p.appraisedValueUSD,
+            loanAmount: p.loanAmount,
             ltvBps: ltv,
-            pawnshop: pawnshop,
-            borrower: borrower,
+            pawnshop: p.pawnshop,
+            borrower: p.borrower,
             status: CollateralStatus.ActivePledged,
-            ipfsMetadataUri: ipfsUri
+            maturityTimestamp: maturity,
+            monthlyUjrahUSD: p.monthlyUjrahUSD,
+            ipfsMetadataUri: p.ipfsUri
         });
 
         emit GoldCollateralMinted(
             tokenId,
-            pawnshop,
-            borrower,
-            weightGrams,
-            karat,
-            appraisedValueUSD,
-            loanAmount,
-            ipfsUri
+            p.pawnshop,
+            p.borrower,
+            p.weightGrams,
+            p.karat,
+            p.appraisedValueUSD,
+            p.loanAmount,
+            p.ipfsUri
         );
 
         return tokenId;

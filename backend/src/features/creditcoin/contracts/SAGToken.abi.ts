@@ -25,10 +25,10 @@ export const SAG_TOKEN_ABI = [
   "function frozenAddress(address account) external view returns (bool)",
 
   // Core Minting & Loan Actions
-  "function mintCollateral(address pawnshop, address borrower, uint256 weightGrams, uint8 karat, uint256 appraisedValueUSD, uint256 loanAmount, string calldata ipfsUri) external returns (uint256)",
+  "function mintCollateral(tuple(address pawnshop, address borrower, uint256 weightGrams, uint8 karat, uint256 appraisedValueUSD, uint256 loanAmount, uint256 tenureDays, uint256 monthlyUjrahUSD, string ipfsUri) p) external returns (uint256)",
   "function setStatus(uint256 tokenId, uint8 status) external",
   "function settleLoan(uint256 tokenId) external",
-  "function getCollateral(uint256 tokenId) external view returns (tuple(uint256 weightGrams, uint8 karat, uint256 appraisedValueUSD, uint256 loanAmount, uint256 ltvBps, address pawnshop, address borrower, uint8 status, string ipfsMetadataUri))",
+  "function getCollateral(uint256 tokenId) external view returns (tuple(uint256 weightGrams, uint8 karat, uint256 appraisedValueUSD, uint256 loanAmount, uint256 ltvBps, address pawnshop, address borrower, uint8 status, uint256 maturityTimestamp, uint256 monthlyUjrahUSD, string ipfsMetadataUri))",
   
   // AccessControl Functions
   "function COMPLIANCE_ROLE() external view returns (bytes32)",

@@ -19,7 +19,12 @@ export interface AuditLogEntry {
     | 'TOKEN_UNFROZEN'
     | 'ADDRESS_FROZEN'
     | 'ADDRESS_UNFROZEN'
-    | 'TOKEN_WIPED';
+    | 'TOKEN_WIPED'
+    | 'DEFAULT_GRACE_ENTERED'
+    | 'LIQUIDATION_AUCTION_STARTED'
+    | 'COLLATERAL_LIQUIDATED'
+    | 'SURPLUS_RETURNED_TO_BORROWER'
+    | 'SHORTFALL_DISTRIBUTED_TO_POOL';
   tokenId: string;
   blockNumber: number;
   transactionHash: string;
@@ -210,10 +215,99 @@ export class CreditcoinIndexerService {
           console.log(`[Indexer] Indexed & Persisted CollateralUnlocked: Token #${tokenId}`);
           this.emitSocketEvent(logEntry);
         });
+
+        // 7. Liquidation Auction Started
+        poolContract.on('LiquidationAuctionStarted', async (tokenId, startPriceUSD, reservePriceUSD, auctionEndTime, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-liq-start-${Date.now()}-${tokenId}`,
+            eventType: 'LIQUIDATION_AUCTION_STARTED',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: {
+              startPriceUSD: ethers.formatUnits(startPriceUSD, 6),
+              reservePriceUSD: ethers.formatUnits(reservePriceUSD, 6),
+              auctionEndTime: Number(auctionEndTime),
+            },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, poolAddress);
+          console.log(`[Indexer] Indexed LiquidationAuctionStarted: Token #${tokenId}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 8. Collateral Liquidated
+        poolContract.on('CollateralLiquidated', async (tokenId, buyer, salePriceUSD, principalRepaid, ujrahFeePaid, surplusToBorrower, shortfallToPool, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-liq-sold-${Date.now()}-${tokenId}`,
+            eventType: 'COLLATERAL_LIQUIDATED',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: {
+              buyer,
+              salePriceUSD: ethers.formatUnits(salePriceUSD, 6),
+              principalRepaid: ethers.formatUnits(principalRepaid, 6),
+              ujrahFeePaid: ethers.formatUnits(ujrahFeePaid, 6),
+              surplusToBorrower: ethers.formatUnits(surplusToBorrower, 6),
+              shortfallToPool: ethers.formatUnits(shortfallToPool, 6),
+            },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, poolAddress);
+          console.log(`[Indexer] Indexed CollateralLiquidated: Token #${tokenId} sold for $${ethers.formatUnits(salePriceUSD, 6)}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 9. Surplus Returned to Borrower
+        poolContract.on('SurplusReturnedToBorrower', async (tokenId, borrower, amountUSD, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-surplus-${Date.now()}-${tokenId}`,
+            eventType: 'SURPLUS_RETURNED_TO_BORROWER',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: {
+              borrower,
+              amountUSD: ethers.formatUnits(amountUSD, 6),
+            },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, poolAddress);
+          console.log(`[Indexer] Indexed SurplusReturnedToBorrower: $${ethers.formatUnits(amountUSD, 6)} returned to ${borrower}`);
+          this.emitSocketEvent(logEntry);
+        });
+
+        // 10. Shortfall Distributed to Pool
+        poolContract.on('ShortfallDistributedToPool', async (tokenId, shortfallUSD, newTotalLiquidity, event) => {
+          const logEntry: AuditLogEntry = {
+            id: `audit-shortfall-${Date.now()}-${tokenId}`,
+            eventType: 'SHORTFALL_DISTRIBUTED_TO_POOL',
+            tokenId: tokenId.toString(),
+            blockNumber: event.log.blockNumber,
+            transactionHash: event.log.transactionHash,
+            timestamp: new Date().toISOString(),
+            details: {
+              shortfallUSD: ethers.formatUnits(shortfallUSD, 6),
+              newTotalLiquidity: ethers.formatUnits(newTotalLiquidity, 6),
+            },
+          };
+
+          this.memoryAuditLogs.unshift(logEntry);
+          await this.persistToDb(logEntry, poolAddress);
+          console.log(`[Indexer] Indexed ShortfallDistributedToPool: $${ethers.formatUnits(shortfallUSD, 6)} absorbed by pool`);
+          this.emitSocketEvent(logEntry);
+        });
       }
 
       this.isListening = true;
-      console.log('[Indexer] Creditcoin CC3 Event Indexer active and listening for compliance & settlement events.');
+      console.log('[Indexer] Creditcoin CC3 Event Indexer active and listening for compliance, default & liquidation events.');
     } catch (error) {
       console.error('[Indexer] Failed to initialize event listeners:', error);
     }

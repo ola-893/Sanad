@@ -10,6 +10,8 @@ export interface MintSagParams {
   karat: number;       // 18, 22, 24
   appraisedValueUSD: number; // USD amount
   loanAmount: number;        // Borrowed USD amount
+  tenureDays?: number;       // Loan tenure in days (default 30)
+  monthlyUjrahUSD?: number;  // Fixed monthly safekeeping/ujrah fee
   ipfsMetadataUri: string;   // Physical vault custody receipt
 }
 
@@ -63,16 +65,20 @@ export class SagTokenService {
       const weightScaled = Math.round(params.weightGrams * 100); // 2 decimals for grams (e.g. 50.50g -> 5050)
       const valueUsdScaled = ethers.parseUnits(params.appraisedValueUSD.toString(), 6); // 6 decimals for USD/USDC
       const loanAmountScaled = ethers.parseUnits(params.loanAmount.toString(), 6);
+      const tenure = params.tenureDays || 30;
+      const ujrahScaled = ethers.parseUnits((params.monthlyUjrahUSD || 0).toString(), 6);
 
-      const tx = await contract.mintCollateral(
-        params.pawnshopAddress,
-        params.borrowerAddress,
-        weightScaled,
-        params.karat,
-        valueUsdScaled,
-        loanAmountScaled,
-        params.ipfsMetadataUri
-      );
+      const tx = await contract.mintCollateral({
+        pawnshop: params.pawnshopAddress,
+        borrower: params.borrowerAddress,
+        weightGrams: weightScaled,
+        karat: params.karat,
+        appraisedValueUSD: valueUsdScaled,
+        loanAmount: loanAmountScaled,
+        tenureDays: tenure,
+        monthlyUjrahUSD: ujrahScaled,
+        ipfsUri: params.ipfsMetadataUri
+      });
 
       console.log(`[Creditcoin] Mint transaction broadcast: ${tx.hash}. Awaiting confirmation...`);
       const receipt = await tx.wait();
@@ -122,6 +128,8 @@ export class SagTokenService {
         pawnshop: raw.pawnshop,
         borrower: raw.borrower,
         status: CollateralStatus[Number(raw.status)] || 'Unknown',
+        maturityTimestamp: Number(raw.maturityTimestamp),
+        monthlyUjrahUSD: ethers.formatUnits(raw.monthlyUjrahUSD, 6),
         ipfsMetadataUri: raw.ipfsMetadataUri,
       };
     } catch (error) {
