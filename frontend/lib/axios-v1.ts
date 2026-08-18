@@ -2,17 +2,12 @@
 
 import axios, { AxiosError } from 'axios'
 
-if (!process.env.NEXT_PUBLIC_API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL is not set');
-}
-
-console.log("ℹ️ Running API URL on: ", process.env.NEXT_PUBLIC_API_URL );
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const apiInstance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/v1`,
+  baseURL: `${apiUrl}/api/v1`,
   timeout: 300000,
-}
-);
+});
 
 // Request interceptor
 apiInstance.interceptors.request.use(
