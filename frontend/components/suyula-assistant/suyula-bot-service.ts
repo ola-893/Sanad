@@ -438,8 +438,8 @@ export class SuyulaBotService {
       return {
         text:
           language === "my"
-            ? `Token untuk SAG #${sagId} telah dicetak berjaya. NFT telah dibuat di Hedera network.`
-            : `Token for SAG #${sagId} has been minted successfully. NFT created on Hedera network.`,
+            ? `Token untuk SAG #${sagId} telah dicetak berjaya. NFT telah dibuat di Creditcoin network.`
+            : `Token for SAG #${sagId} has been minted successfully. NFT created on Creditcoin network.`,
         actions: [
           {
             label: language === "my" ? "Lihat NFT" : "View NFT",

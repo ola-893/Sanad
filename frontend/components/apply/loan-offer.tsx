@@ -816,7 +816,7 @@ export function LoanOffer() {
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       I agree to the terms of service and privacy policy. I understand that my jewelry will be
-                      represented as an NFT collateral on the Hedera network.
+                      represented as an NFT collateral on the Creditcoin network.
                     </p>
                   </div>
                 </div>
@@ -855,7 +855,7 @@ export function LoanOffer() {
                   <div className="space-y-2">
                     <Shield className="h-16 w-16 text-primary mx-auto" />
                     <p className="text-sm text-primary">
-                      Your jewelry has been securely represented as an NFT on the Hedera network.
+                      Your jewelry has been securely represented as an NFT on the Creditcoin network.
                     </p>
                     {tokenId && (
                       <div className="text-xs text-primary">

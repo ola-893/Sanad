@@ -39,7 +39,7 @@ const websiteContent: {
     url: "/payment",
     title: "Payment Center",
     content:
-      "Make payments, view payment history, and set up automatic payments for your financing. We offer multiple payment methods including Hedera wallet, bank transfer, and credit/debit card.",
+      "Make payments, view payment history, and set up automatic payments for your financing. We offer multiple payment methods including Creditcoin wallet, bank transfer, and credit/debit card.",
     keywords: ["payment", "repayment", "pay", "schedule", "history", "automatic"],
   },
   {

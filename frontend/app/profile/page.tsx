@@ -33,7 +33,7 @@ export default function ProfilePage() {
         </div>
 
         {user ? (
-          <UserProfileDisplay showHederaInfo={true} showPersonalInfo={true} />
+          <UserProfileDisplay showWalletInfo={true} showPersonalInfo={true} />
         ) : (
           <Card>
             <CardContent className="p-6">

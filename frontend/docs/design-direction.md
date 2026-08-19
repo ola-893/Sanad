@@ -99,7 +99,7 @@ Rules:
 
 - Residual `dark:`-prefixed legacy color variants in deep admin pages (dormant under the light default).
 - Mock data and placeholder images across dashboards.
-- "Hedera" copy remnants in deep components.
+- ~~"Hedera" copy remnants in deep components.~~ — **Done**: all rebranded to Creditcoin.
 - Portal pages still carry generic shadcn structure — a future pass could glass-panel them like the marketing pages.
 
 ## 9. Acceptance bar

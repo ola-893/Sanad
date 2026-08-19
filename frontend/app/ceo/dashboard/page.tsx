@@ -76,21 +76,21 @@ export default function CeoDashboardPage() {
                 <div className="flex items-center">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">Gold Necklace (24K)</p>
-                    <p className="text-sm text-muted-foreground">Current bid: 2,500 HBAR</p>
+                    <p className="text-sm text-muted-foreground">Current bid: 2,500 tCTC</p>
                   </div>
                   <div className="ml-auto font-medium">Ends in 2 days</div>
                 </div>
                 <div className="flex items-center">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">Diamond Ring (2.5 carat)</p>
-                    <p className="text-sm text-muted-foreground">Current bid: 5,800 HBAR</p>
+                    <p className="text-sm text-muted-foreground">Current bid: 5,800 tCTC</p>
                   </div>
                   <div className="ml-auto font-medium">Ends in 5 days</div>
                 </div>
                 <div className="flex items-center">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">Gold Bracelet (22K)</p>
-                    <p className="text-sm text-muted-foreground">Current bid: 1,200 HBAR</p>
+                    <p className="text-sm text-muted-foreground">Current bid: 1,200 tCTC</p>
                   </div>
                   <div className="ml-auto font-medium">Ends in 1 day</div>
                 </div>

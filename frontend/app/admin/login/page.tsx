@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
         "🏛️ Complete SAG Management",
         "🧮 Repayment & Extension Control",
         "🧾 Investor Management",
-        "🏦 Wallet & Hedera Integration",
+        "🏦 Wallet & Creditcoin Integration",
         "🧑‍💼 Ar Rahnu Partner Management",
         "⚠️ Compliance & Risk Management",
         "📈 Reporting & Analytics",

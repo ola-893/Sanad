@@ -28,9 +28,9 @@ export const enhancedKnowledgeBase = [
     ],
   },
   {
-    keywords: ["wallet", "hedera", "connect", "disconnect", "hbar"],
+    keywords: ["wallet", "creditcoin", "connect", "disconnect", "metamask"],
     response:
-      "We support Hedera wallets for receiving financing and making repayments. You can connect your wallet during the application process or from your dashboard. If you're experiencing connection issues, try refreshing your browser, ensuring your wallet has the latest updates, or using a different supported browser.",
+      "We support Creditcoin wallets (via MetaMask) for receiving financing and making repayments. You can connect your wallet during the application process or from your dashboard. If you're experiencing connection issues, try refreshing your browser, ensuring your wallet has the latest updates, or using a different supported browser.",
     links: [
       { text: "Wallet Connection Guide", url: "/wallet-guide" },
       { text: "Payment Methods", url: "/payment" },
@@ -39,7 +39,7 @@ export const enhancedKnowledgeBase = [
   {
     keywords: ["payment", "repayment", "schedule", "due", "installment", "monthly"],
     response:
-      "Your payment schedule is determined by the financing term you select (3-12 months). You'll receive payment reminders via email and SMS before each due date. You can make payments through your Hedera wallet, bank transfer, or credit/debit card. We also offer an auto-payment feature to ensure you never miss a payment.",
+      "Your payment schedule is determined by the financing term you select (3-12 months). You'll receive payment reminders via email and SMS before each due date. You can make payments through your Creditcoin wallet, bank transfer, or credit/debit card. We also offer an auto-payment feature to ensure you never miss a payment.",
     links: [
       { text: "Payment Center", url: "/payment" },
       { text: "Auto-Payment Setup", url: "/payment#auto-payment" },
@@ -54,10 +54,10 @@ export const enhancedKnowledgeBase = [
   {
     keywords: ["nft", "token", "collateral", "digital"],
     response:
-      "We create a digital representation of your jewelry as a non-transferable NFT on the Hedera network. This ensures security and transparency throughout the financing process. You can view your NFT collateral in your dashboard and track its status at any time. The NFT is released back to you upon full repayment of your financing.",
+      "We create a digital representation of your jewelry as a non-transferable NFT on the Creditcoin network. This ensures security and transparency throughout the financing process. You can view your NFT collateral in your dashboard and track its status at any time. The NFT is released back to you upon full repayment of your financing.",
     links: [
       { text: "NFT Collateral Explained", url: "/nft-collateral" },
-      { text: "Hedera Network Security", url: "/security" },
+      { text: "Creditcoin Network Security", url: "/security" },
     ],
   },
   {
@@ -138,7 +138,7 @@ export const enhancedKnowledgeBase = [
   {
     keywords: ["nft", "gold", "jewelry", "collateral", "digital"],
     response:
-      "Your gold jewelry is securely represented as a digital NFT on the Hedera network. This creates an immutable record of your collateral that cannot be altered or duplicated. The NFT contains details about your jewelry's specifications, value, and loan terms. You can view your NFT collateral in your dashboard at any time during the financing period.",
+      "Your gold jewelry is securely represented as a digital NFT on the Creditcoin network. This creates an immutable record of your collateral that cannot be altered or duplicated. The NFT contains details about your jewelry's specifications, value, and loan terms. You can view your NFT collateral in your dashboard at any time during the financing period.",
     links: [
       { text: "View NFT Collateral", url: "/dashboard/nfts" },
       { text: "How NFT Collateral Works", url: "/nft-collateral" },
@@ -147,7 +147,7 @@ export const enhancedKnowledgeBase = [
   {
     keywords: ["diamond", "nft", "collateral", "digital"],
     response:
-      "Your diamond jewelry is digitally represented as an NFT on the Hedera network, capturing details like carat weight, cut, color, clarity, and overall value. This creates a secure, transparent record of your collateral throughout the financing period. The NFT is linked to your account and loan agreement, providing an additional layer of security and verification.",
+      "Your diamond jewelry is digitally represented as an NFT on the Creditcoin network, capturing details like carat weight, cut, color, clarity, and overall value. This creates a secure, transparent record of your collateral throughout the financing period. The NFT is linked to your account and loan agreement, providing an additional layer of security and verification.",
     links: [
       { text: "Diamond Assessment Process", url: "/apply#diamond-assessment" },
       { text: "View Your NFT Collateral", url: "/dashboard/nfts" },

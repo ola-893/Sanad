@@ -4,8 +4,8 @@ import { Database, Globe, Lock, Zap, Code } from "lucide-react"
 export function TechnologyStack() {
   const technologies = [
     {
-      name: "Hedera Hashgraph",
-      description: "NFT, HTS Token Service",
+      name: "Creditcoin 3 (CC3)",
+      description: "NFT, EVM Smart Contracts",
       icon: <Zap className="h-8 w-8 text-primary" />,
       category: "Blockchain",
     },
@@ -28,7 +28,7 @@ export function TechnologyStack() {
       category: "Database",
     },
     {
-      name: "IPFS / HFS",
+      name: "IPFS",
       description: "SAG document storage",
       icon: <Globe className="h-8 w-8 text-primary" />,
       category: "Storage",

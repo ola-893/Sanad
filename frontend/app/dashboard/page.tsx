@@ -43,7 +43,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Active Loans" value="2" sub="Total value: RM 12,500" icon={CreditCard} />
             <StatCard label="Next Payment" value="15 Apr" sub="Amount: RM 1,250" icon={Clock} />
-            <StatCard label="NFT Collateral" value="2" sub="Secure on Hedera" icon={Gem} />
+            <StatCard label="NFT Collateral" value="2" sub="Secure on Creditcoin" icon={Gem} />
             <StatCard label="Notifications" value="3" sub="2 unread messages" icon={Bell} />
           </div>
 
