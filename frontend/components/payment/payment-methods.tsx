@@ -2,239 +2,228 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CreditCard, DollarSign, Wallet } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Wallet, ExternalLink, Copy, Loader2, CheckCircle2, Shield } from "lucide-react"
+import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import apiInstance from "@/lib/axios-v1"
+import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
+
+const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+
+interface WalletData {
+  address: string
+  balanceCTC: string
+  network: string
+}
 
 export function PaymentMethods() {
-  const [paymentMethod, setPaymentMethod] = useState("creditcoin")
-  const [loanId, setLoanId] = useState("L-2025-001")
-  const [amount, setAmount] = useState(1250)
+  const [loanId, setLoanId] = useState("")
+  const [amountCTC, setAmountCTC] = useState("")
   const [paymentComplete, setPaymentComplete] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const handlePayment = () => {
-    // Simulate payment processing
-    setPaymentComplete(true)
+  const { data: walletData } = useQuery({
+    queryKey: ["wallet-balance"],
+    queryFn: async (): Promise<{ success: boolean; data: WalletData }> => {
+      const response = await apiInstance.get("/investor/wallet/balance")
+      return response.data
+    },
+    staleTime: 30 * 1000,
+  })
+
+  const wallet = walletData?.data
+  const balance = wallet ? parseFloat(wallet.balanceCTC) || 0 : 0
+  const { data: ctcPrice } = useCtcPrice()
+  const usdRate = ctcPrice?.ctcUsd || 0.10
+  const hasInsufficientBalance = amountCTC ? parseFloat(amountCTC) > balance : false
+
+  const handlePayment = async () => {
+    if (!loanId || !amountCTC || parseFloat(amountCTC) <= 0) {
+      toast.error("Please select a loan and enter a valid amount")
+      return
+    }
+    setIsProcessing(true)
+    // Simulate on-chain repayment
+    setTimeout(() => {
+      setIsProcessing(false)
+      setPaymentComplete(true)
+      toast.success("Repayment submitted for on-chain verification")
+    }, 2000)
   }
 
-  const loans = [
-    { id: "L-2025-001", title: "Gold Necklace (24K)", amount: 1250, dueDate: "April 15, 2025" },
-    { id: "L-2025-002", title: "Diamond Ring (1.5 carat)", amount: 833, dueDate: "April 10, 2025" },
-  ]
-
-  const selectedLoan = loans.find((loan) => loan.id === loanId)
+  if (paymentComplete) {
+    return (
+      <Card className={glass}>
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+              <CheckCircle2 className="h-8 w-8 text-success" />
+            </div>
+            <div className="text-center">
+              <p className="font-display text-lg font-bold text-[#171414]">Repayment Submitted</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your CTC repayment has been submitted to the Creditcoin network for verification.
+              </p>
+            </div>
+            <div className="w-full rounded-2xl border border-[#171414]/10 bg-white/50 p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Amount</span>
+                <div className="text-right">
+                  <span className="font-mono text-sm font-bold text-[#171414]">{amountCTC} CTC</span>
+                  <p className="font-mono text-[10px] text-muted-foreground">≈ {formatUsd(ctcToUsd(parseFloat(amountCTC) || 0, usdRate))} USD</p>
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Network</span>
+                <span className="text-sm text-[#171414]">Creditcoin 3 Testnet</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant="outline" className="border-success/30 bg-success/10 text-success text-[10px]">
+                  Pending Verification
+                </Badge>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => {
+                setPaymentComplete(false)
+                setAmountCTC("")
+                setLoanId("")
+              }}
+            >
+              Make Another Payment
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {!paymentComplete ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="loan-id">Select Loan</Label>
-            <Select value={loanId} onValueChange={setLoanId}>
-              <SelectTrigger id="loan-id">
-                <SelectValue placeholder="Select loan" />
-              </SelectTrigger>
-              <SelectContent>
-                {loans.map((loan) => (
-                  <SelectItem key={loan.id} value={loan.id}>
-                    {loan.title} - {loan.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedLoan && (
-              <p className="text-sm text-muted-foreground">
-                Due: {selectedLoan.dueDate} | Amount: RM {selectedLoan.amount.toLocaleString()}
+      {/* Loan Selection */}
+      <div className="space-y-2">
+        <Label>Select Active Loan</Label>
+        <Select value={loanId} onValueChange={setLoanId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose a loan to repay" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="demo-loan-1">Gold Collateral Loan — SAG #1</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Select from your active loans funded on-chain. Repayment amount is denominated in CTC.
+        </p>
+      </div>
+
+      {/* Amount Input */}
+      <div className="space-y-2">
+        <Label htmlFor="amount-ctc">Repayment Amount (CTC)</Label>
+        <div className="relative">
+          <Input
+            id="amount-ctc"
+            type="number"
+            placeholder="0.00"
+            value={amountCTC}
+            onChange={(e) => setAmountCTC(e.target.value)}
+            min="0"
+            step="0.01"
+            className="pr-16 font-mono"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted-foreground">
+            CTC
+          </span>
+        </div>
+        {hasInsufficientBalance && (
+          <p className="text-xs text-destructive">
+            Insufficient balance. You have {balance.toFixed(4)} CTC available.
+          </p>
+        )}
+      </div>
+
+      {/* Wallet Info */}
+      <Card className={glass}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wallet className="h-4 w-4" />
+            Creditcoin Wallet
+          </CardTitle>
+          <CardDescription>Repayment will be sent from your connected wallet</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Balance</p>
+              <p className="font-mono text-sm font-bold text-[#171414]">
+                {balance.toFixed(4)} CTC
               </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="amount">Payment Amount (RM)</Label>
-            <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Payment Method</Label>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={setPaymentMethod}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
-            >
-              <Card className={`cursor-pointer ${paymentMethod === "creditcoin" ? "border-primary" : ""}`}>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <RadioGroupItem value="creditcoin" id="creditcoin" />
-                    <Wallet className="h-4 w-4" /> Creditcoin Wallet (CTC)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <CardDescription>Pay using CTC from your connected Creditcoin wallet.</CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-primary" : ""}`}>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <RadioGroupItem value="bank" id="bank" />
-                    <DollarSign className="h-4 w-4" /> Bank Transfer
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <CardDescription>Pay using direct bank transfer from your registered bank account.</CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card className={`cursor-pointer ${paymentMethod === "card" ? "border-primary" : ""}`}>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <RadioGroupItem value="card" id="card" />
-                    <CreditCard className="h-4 w-4" /> Credit/Debit Card
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <CardDescription>Pay using your credit or debit card (additional fees may apply).</CardDescription>
-                </CardContent>
-              </Card>
-            </RadioGroup>
-          </div>
-
-          {paymentMethod === "creditcoin" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Creditcoin Wallet Payment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Connected Wallet:</span>
-                  <span className="font-medium">Connect via MetaMask</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Network:</span>
-                  <span className="font-medium">Creditcoin 3 Testnet</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Payment Amount:</span>
-                  <span className="font-medium">RM {amount.toLocaleString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {paymentMethod === "bank" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Bank Transfer</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Bank Account:</span>
-                  <span className="font-medium">XXXX-XXXX-1234</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Bank Name:</span>
-                  <span className="font-medium">Maybank</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Payment Amount:</span>
-                  <span className="font-medium">RM {amount.toLocaleString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {paymentMethod === "card" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Credit/Debit Card Payment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="card-number">Card Number</Label>
-                  <Input id="card-number" placeholder="XXXX XXXX XXXX XXXX" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiry">Expiry Date</Label>
-                    <Input id="expiry" placeholder="MM/YY" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvv">CVV</Label>
-                    <Input id="cvv" placeholder="123" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name on Card</Label>
-                  <Input id="name" placeholder="Enter name on card" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Button onClick={handlePayment} className="w-full bg-primary hover:bg-primary/90">
-            Pay RM {amount.toLocaleString()}
-          </Button>
-        </>
-      ) : (
-        <Card className="bg-muted">
-          <CardHeader>
-            <CardTitle className="text-primary">Payment Successful</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-center p-6">
-              <div className="h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center">
-                <svg
-                  className="h-8 w-8 text-primary"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              </div>
+              <p className="font-mono text-[10px] text-muted-foreground">
+                ≈ {formatUsd(ctcToUsd(balance, usdRate))} USD
+              </p>
             </div>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {wallet?.network || "CC3 Testnet"}
+            </Badge>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-primary">Payment Amount:</span>
-                <span className="font-medium">RM {amount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-primary">Payment Method:</span>
-                <span className="font-medium">
-                  {paymentMethod === "creditcoin"
-                    ? "Creditcoin Wallet (CTC)"
-                    : paymentMethod === "bank"
-                      ? "Bank Transfer"
-                      : "Credit/Debit Card"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-primary">Transaction ID:</span>
-                <span className="font-medium">TXN-{Math.floor(Math.random() * 1000000)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-primary">Date & Time:</span>
-                <span className="font-medium">{new Date().toLocaleString()}</span>
-              </div>
+          {wallet?.address && (
+            <div className="flex items-center gap-2 rounded-xl border border-[#171414]/10 bg-white/50 px-3 py-2">
+              <p className="flex-1 truncate font-mono text-xs text-muted-foreground">{wallet.address}</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => {
+                  navigator.clipboard.writeText(wallet.address)
+                  toast.success("Address copied")
+                }}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <a
+                href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"}/address/${wallet.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </a>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-center gap-2">
-            <Button variant="outline">View Receipt</Button>
-            <Button className="bg-primary hover:bg-primary/90">Return to Dashboard</Button>
-          </CardFooter>
-        </Card>
-      )}
+          )}
+
+          <div className="flex items-center gap-2 rounded-xl bg-accent/10 px-4 py-2.5">
+            <Shield className="h-4 w-4 text-primary" />
+            <p className="text-xs text-muted-foreground">
+              Payments are verified on-chain via the Repayment Gateway contract
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Submit */}
+      <Button
+        onClick={handlePayment}
+        className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black"
+        disabled={!loanId || !amountCTC || parseFloat(amountCTC) <= 0 || hasInsufficientBalance || isProcessing}
+      >
+        {isProcessing ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Submitting to Network...
+          </span>
+        ) : (
+          `Repay ${amountCTC ? `${amountCTC} CTC` : ""}`
+        )}
+      </Button>
     </div>
   )
 }

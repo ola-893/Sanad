@@ -46,8 +46,11 @@ echo -e "  ${GREEN}✓ Done${NC}"
 # ============================================================================
 echo -e "${YELLOW}[2/5] Starting PostgreSQL & Redis...${NC}"
 
-# Ensure .env.production exists
-[ ! -f "$BACKEND_DIR/.env.production" ] && cp "$BACKEND_DIR/.env" "$BACKEND_DIR/.env.production"
+# Always sync .env → .env.production for Docker
+if [ -f "$BACKEND_DIR/.env" ]; then
+  cp "$BACKEND_DIR/.env" "$BACKEND_DIR/.env.production"
+  echo -e "  ${GREEN}✓ Synced .env → .env.production${NC}"
+fi
 
 cd "$PROJECT_ROOT"
 docker compose up -d postgres redis 2>&1 | tail -2
@@ -72,7 +75,6 @@ cd "$BACKEND_DIR"
 
 # Fix .env
 [ ! -f .env ] && cp .env.example .env
-grep -q 'PORT=5000' .env && sed -i '' 's/PORT=5000/PORT=5001/' .env
 grep -q 'POSTGRES_PORT="5432"' .env && sed -i '' 's/POSTGRES_PORT="5432"/POSTGRES_PORT="15432"/' .env && sed -i '' 's|localhost:5432|localhost:15432|' .env
 
 npm install --silent 2>&1 | tail -1

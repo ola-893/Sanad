@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Wallet, RefreshCw, ArrowUpRight, ExternalLink } from "lucide-react"
+import { Wallet, RefreshCw, ArrowDownLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
-import { TopUpDialog } from "@/components/dashboard/topup-dialog"
+import { toast } from "sonner"
+import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -25,7 +26,7 @@ function explorerHref(wallet: WalletData): string {
   const isMainnet = (wallet.network ?? "").toLowerCase().includes("mainnet")
   const base = isMainnet
     ? "https://creditcoin.subscan.io/account"
-    : "https://creditcoin-testnet.blockscout.com/address"
+    : `${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/address`
   return `${base}/${wallet.address}`
 }
 
@@ -100,6 +101,8 @@ export function WalletBalance() {
   const wallet = data.data
   const parsed = parseFloat(wallet.balanceCTC)
   const balance = Number.isFinite(parsed) ? parsed : 0
+  const { data: ctcPrice } = useCtcPrice()
+  const usdRate = ctcPrice?.ctcUsd || 0.10
 
   return (
     <Card className={glass}>
@@ -124,10 +127,13 @@ export function WalletBalance() {
           <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
             Available Balance
           </p>
-          <div className="mb-4 font-display text-5xl font-extrabold tabular-nums tracking-tight text-[#171414]">
+          <div className="mb-2 font-display text-5xl font-extrabold tabular-nums tracking-tight text-[#171414]">
             {balance.toLocaleString('en-US', { maximumFractionDigits: 4 })}
             <span className="ml-2 font-mono text-xl font-bold uppercase text-muted-foreground">CTC</span>
           </div>
+          <p className="mb-4 font-mono text-sm text-muted-foreground">
+            ≈ {formatUsd(ctcToUsd(balance, usdRate))} USD
+          </p>
           <p className="mb-2 truncate px-6 font-mono text-xs text-muted-foreground">{wallet.address}</p>
           <Link
             href={explorerHref(wallet)}
@@ -155,11 +161,21 @@ export function WalletBalance() {
         </div>
 
         <div className="flex gap-2 pt-2">
-          <div className="flex-1">
-            <TopUpDialog />
-          </div>
-          <Button variant="outline" className="flex-1 rounded-full">
-            <ArrowUpRight className="mr-2 h-4 w-4" />
+          <Button
+            variant="outline"
+            className="flex-1 rounded-full"
+            onClick={() => {
+              if (wallet.address) {
+                navigator.clipboard.writeText(wallet.address)
+                toast.success("Wallet address copied", { description: "Share this address to receive CTC tokens" })
+              }
+            }}
+          >
+            <ArrowDownLeft className="mr-2 h-4 w-4" />
+            Receive CTC
+          </Button>
+          <Button variant="outline" className="flex-1 rounded-full" disabled>
+            <ExternalLink className="mr-2 h-4 w-4" />
             Send CTC
           </Button>
         </div>

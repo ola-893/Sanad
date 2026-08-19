@@ -265,7 +265,7 @@ export default function ArRahnuIndustryPage() {
                 challenge: access to capital for growth and sustainability.
               </p>
               <Link
-                href="/apply"
+                href="/login"
                 className="flux-pill mt-9 inline-flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-[0.16em]"
               >
                 Join the Sanad Platform

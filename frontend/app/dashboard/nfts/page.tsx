@@ -15,7 +15,7 @@ function propertyOf(nft: SagNFT, key: string): string | null {
   return value === undefined || value === null ? null : String(value)
 }
 
-const explorerBase = "https://creditcoin-testnet.blockscout.com"
+const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
 
 export default function DashboardNftsPage() {
   const { data: nfts = [], isLoading, isError } = useInvestorNfts()

@@ -62,7 +62,7 @@ export function Header() {
               <Link href="/admin">{t("nav.admin")}</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/apply">{t("nav.applyNow")}</Link>
+              <Link href="/login">{t("nav.applyNow")}</Link>
             </Button>
           </nav>
         </div>

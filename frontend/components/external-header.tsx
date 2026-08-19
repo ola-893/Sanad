@@ -71,7 +71,7 @@ export function ExternalHeader() {
             <Link href="/login">{t("nav.login")}</Link>
           </Button>
           <Link
-            href="/apply"
+            href="/login"
             className="flux-pill hidden items-center gap-2 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] sm:inline-flex"
           >
             {t("nav.applyNow")}
@@ -97,7 +97,7 @@ export function ExternalHeader() {
             </Link>
           ))}
           <Link
-            href="/apply"
+            href="/login"
             onClick={() => setMobileOpen(false)}
             className="mt-1 block rounded-xl bg-[#171414] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#E1BAC2]"
           >

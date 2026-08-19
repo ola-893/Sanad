@@ -41,7 +41,18 @@ export class InvestorController {
   async getInvestorNFTInfo(req: Request, res: Response): Promise<void> {
     try {
       const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
-      const sags = await db.select().from(SagModel).limit(20);
+
+      if (!investorInfo) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
+      // Filter SAGs by the authenticated user's wallet address
+      const sags = await db
+        .select()
+        .from(SagModel)
+        .where(eq(SagModel.originalOwner, investorInfo.accountId))
+        .limit(20);
 
       res.status(200).json({
         success: true,

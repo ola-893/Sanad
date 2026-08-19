@@ -6,7 +6,7 @@ const quickLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About Us" },
   { href: "/ar-rahnu-industry", label: "Ar-Rahnu Industry" },
-  { href: "/register", label: "Register & Apply" },
+  { href: "/login", label: "Apply for Financing" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact Us" },
 ]

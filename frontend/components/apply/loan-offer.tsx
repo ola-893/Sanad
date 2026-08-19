@@ -861,7 +861,7 @@ export function LoanOffer() {
                       <div className="text-xs text-primary">
                         <p>Token ID: {tokenId}</p>
                         <a 
-                          href="https://creditcoin-testnet.blockscout.com"
+                          href={process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:text-primary underline mt-1 inline-block"

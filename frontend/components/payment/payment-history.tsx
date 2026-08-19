@@ -1,207 +1,141 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Download, Search } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { ExternalLink, CheckCircle2, CircleDollarSign, Clock, Loader2 } from "lucide-react"
+import { useInvestorNfts } from "@/hooks/use-investor-nfts"
+import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
+
+const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
+
+const formatCTC = (value: number) =>
+  value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })
 
 export function PaymentHistory() {
-  const [loanFilter, setLoanFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  const { data: nfts = [], isLoading: nftsLoading } = useInvestorNfts()
+  const { data: logs = [], isLoading: logsLoading } = useAuditLogs()
 
-  const payments = [
-    {
-      id: "P-2025-001",
-      loanId: "L-2025-001",
-      date: "March 15, 2025",
-      amount: 1250,
-      method: "Creditcoin Wallet",
-      status: "completed",
-      transactionId: "TXN-123456",
-    },
-    {
-      id: "P-2025-002",
-      loanId: "L-2025-002",
-      date: "March 10, 2025",
-      amount: 833,
-      method: "Bank Transfer",
-      status: "completed",
-      transactionId: "TXN-123457",
-    },
-    {
-      id: "P-2025-003",
-      loanId: "L-2025-001",
-      date: "February 15, 2025",
-      amount: 1250,
-      method: "Creditcoin Wallet",
-      status: "completed",
-      transactionId: "TXN-123458",
-    },
-    {
-      id: "P-2025-004",
-      loanId: "L-2025-002",
-      date: "February 10, 2025",
-      amount: 833,
-      method: "Credit Card",
-      status: "completed",
-      transactionId: "TXN-123459",
-    },
-    {
-      id: "P-2025-005",
-      loanId: "L-2025-001",
-      date: "April 15, 2025",
-      amount: 1250,
-      method: "Pending",
-      status: "upcoming",
-      transactionId: "-",
-    },
-    {
-      id: "P-2025-006",
-      loanId: "L-2025-002",
-      date: "April 10, 2025",
-      amount: 833,
-      method: "Pending",
-      status: "upcoming",
-      transactionId: "-",
-    },
-  ]
+  const ownTokens = useMemo(() => new Set(nfts.map((n) => String(n.tokenId))), [nfts])
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesLoan = loanFilter === "all" || payment.loanId === loanFilter
-    const matchesStatus = statusFilter === "all" || payment.status === statusFilter
-    const matchesSearch =
-      payment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.loanId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.method.toLowerCase().includes(searchQuery.toLowerCase())
+  const repayments = useMemo(() => {
+    return logs
+      .filter(
+        (log) =>
+          log.eventType === EVENT_TYPES.REPAYMENT_VERIFIED &&
+          ownTokens.has(String(log.tokenId))
+      )
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }, [logs, ownTokens])
 
-    return matchesLoan && matchesStatus && matchesSearch
-  })
+  const totalRepaid = useMemo(() => {
+    return repayments.reduce((sum, log) => sum + (amountOf(log) ?? 0), 0)
+  }, [repayments])
+
+  const loading = nftsLoading || logsLoading
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center rounded-2xl border border-[#171414]/10 bg-white/50 p-10">
+        <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
+        <span className="ml-2 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          Loading payment history...
+        </span>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/3 space-y-2">
-          <Label htmlFor="loan-filter">Filter by Loan</Label>
-          <Select value={loanFilter} onValueChange={setLoanFilter}>
-            <SelectTrigger id="loan-filter">
-              <SelectValue placeholder="Select loan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Loans</SelectItem>
-              <SelectItem value="L-2025-001">Gold Necklace (L-2025-001)</SelectItem>
-              <SelectItem value="L-2025-002">Diamond Ring (L-2025-002)</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-4 text-center">
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+            Total Repaid
+          </p>
+          <p className="mt-1 font-display text-xl font-extrabold tabular-nums text-[#171414]">
+            {formatCTC(totalRepaid)}
+            <span className="ml-1 font-mono text-xs font-bold uppercase text-muted-foreground">CTC</span>
+          </p>
         </div>
-
-        <div className="md:w-1/3 space-y-2">
-          <Label htmlFor="status-filter">Filter by Status</Label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger id="status-filter">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="upcoming">Upcoming</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="md:w-1/3 space-y-2">
-          <Label htmlFor="search">Search</Label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search"
-              placeholder="Search payments..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-4 text-center">
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+            Repayments
+          </p>
+          <p className="mt-1 font-display text-xl font-extrabold tabular-nums text-[#171414]">
+            {repayments.length}
+          </p>
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Payment ID</TableHead>
-              <TableHead>Loan ID</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPayments.length > 0 ? (
-              filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>{payment.id}</TableCell>
-                  <TableCell>{payment.loanId}</TableCell>
-                  <TableCell>{payment.date}</TableCell>
-                  <TableCell>RM {payment.amount.toLocaleString()}</TableCell>
-                  <TableCell>{payment.method}</TableCell>
-                  <TableCell>
+      {/* Repayment List */}
+      {repayments.length === 0 ? (
+        <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-10 text-center">
+          <CircleDollarSign className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm font-medium text-[#171414]">No repayments yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Verified repayments will appear here once confirmed on the Creditcoin network.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {repayments.map((payment) => {
+            const amount = amountOf(payment)
+            return (
+              <div
+                key={payment.id}
+                className="flex items-center gap-4 rounded-2xl border border-[#171414]/10 bg-white/50 p-4 transition-all hover:bg-white/80"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-success/10">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-[#171414]">Repayment verified</p>
                     <Badge
-                      className={
-                        payment.status === "completed"
-                          ? "bg-success/100"
-                          : payment.status === "upcoming"
-                            ? "bg-amber-500"
-                            : "bg-destructive/100"
-                      }
+                      variant="outline"
+                      className="border-success/20 bg-success/10 text-success text-[10px]"
                     >
-                      {payment.status === "completed"
-                        ? "Completed"
-                        : payment.status === "upcoming"
-                          ? "Upcoming"
-                          : "Overdue"}
+                      Confirmed
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {payment.status === "completed" && (
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4 mr-1" /> Receipt
-                      </Button>
-                    )}
-                    {payment.status === "upcoming" && (
-                      <Button size="sm" className="bg-primary hover:bg-primary/90">
-                        Pay Now
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">
-                  No payments found matching your filters.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredPayments.length} of {payments.length} payments
-        </p>
-        <Button variant="outline">
-          <Download className="h-4 w-4 mr-2" /> Export History
-        </Button>
-      </div>
+                  </div>
+                  <div className="mt-1 flex items-center gap-3">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                      Token #{payment.tokenId}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">·</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(payment.timestamp).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  {payment.transactionHash && (
+                    <a
+                      href={`${explorerBase}/tx/${payment.transactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                    >
+                      {payment.transactionHash.slice(0, 10)}...
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-mono text-sm font-bold tabular-nums text-[#171414]">
+                    {amount !== null ? formatCTC(amount) : "—"}
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground">CTC</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

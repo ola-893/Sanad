@@ -1,72 +1,99 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+'use client'
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PaymentMethods } from "@/components/payment/payment-methods"
 import { PaymentHistory } from "@/components/payment/payment-history"
 import { AutoPayment } from "@/components/payment/auto-payment"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Wallet, Clock, History } from "lucide-react"
+
+const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
 export default function PaymentPage() {
   return (
-    <div className="container mx-auto py-10 px-4 md:px-6">
-      <div className="flex flex-col items-center justify-center mb-10">
-        <h1 className="text-3xl font-bold mb-2">Payment Center</h1>
-        <p className="text-muted-foreground text-center max-w-2xl">
-          Make payments, view payment history, and set up automatic payments for your financing.
-        </p>
+    <ProtectedRoute requiredRole="investor">
+      <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+        <div className="mx-auto max-w-4xl space-y-6">
+
+          {/* Header */}
+          <div>
+            <p className="kicker-gold">Payments</p>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+              Repayment Center
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Submit CTC repayments on-chain and track your payment history
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="make-payment" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="make-payment" className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                <span className="hidden sm:inline">Make Payment</span>
+              </TabsTrigger>
+              <TabsTrigger value="payment-history" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">History</span>
+              </TabsTrigger>
+              <TabsTrigger value="auto-payment" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="hidden sm:inline">Auto-Repay</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="make-payment">
+              <Card className={glass}>
+                <CardHeader>
+                  <CardTitle className="font-display flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
+                      <Wallet className="h-4 w-4 text-[#171414]" />
+                    </span>
+                    Make a Repayment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PaymentMethods />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payment-history">
+              <Card className={glass}>
+                <CardHeader>
+                  <CardTitle className="font-display flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
+                      <History className="h-4 w-4 text-[#171414]" />
+                    </span>
+                    On-Chain Payment History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PaymentHistory />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="auto-payment">
+              <Card className={glass}>
+                <CardHeader>
+                  <CardTitle className="font-display flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
+                      <Clock className="h-4 w-4 text-[#171414]" />
+                    </span>
+                    Auto-Repay Setup
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AutoPayment />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-
-      <Alert className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Payment Due Soon</AlertTitle>
-        <AlertDescription>
-          Your next payment of RM 1,250 is due on April 15, 2025. Please ensure your account has sufficient funds.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs defaultValue="make-payment" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="make-payment">Make Payment</TabsTrigger>
-          <TabsTrigger value="payment-history">Payment History</TabsTrigger>
-          <TabsTrigger value="auto-payment">Auto Payment</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="make-payment">
-          <Card>
-            <CardHeader>
-              <CardTitle>Make a Payment</CardTitle>
-              <CardDescription>Choose your preferred payment method to make a payment.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentMethods />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="payment-history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-              <CardDescription>View your payment history and upcoming payments.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentHistory />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="auto-payment">
-          <Card>
-            <CardHeader>
-              <CardTitle>Auto Payment Setup</CardTitle>
-              <CardDescription>Set up automatic payments to avoid missing due dates.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AutoPayment />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+    </ProtectedRoute>
   )
 }

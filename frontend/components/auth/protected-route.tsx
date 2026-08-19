@@ -1,10 +1,13 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from '@/hooks/use-auth'
 import { UserRole } from '@/lib/auth/auth-service'
 import { useAtom } from 'jotai'
 import { userAtom } from '@/store/atoms'
 import { BrandedLoader } from '@/components/branded-loader'
+import apiInstance from "@/lib/axios-v1"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -13,95 +16,59 @@ interface ProtectedRouteProps {
   redirectTo?: string
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRole, 
+export function ProtectedRoute({
+  children,
+  requiredRole,
   fallback,
-  redirectTo 
+  redirectTo
 }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuth();
-  const [user] = useAtom(userAtom);
+  const [user, setUser] = useAtom(userAtom);
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
-  const loadingFallback = fallback ?? <BrandedLoader message="Verifying access..." />
-  // const router = useRouter()
-  // const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
+  useEffect(() => {
+    // If not authenticated at all, stop checking and let the render handle it
+    if (!isAuthenticated) {
+      setChecking(false);
+      return;
+    }
 
-  // console.log("user in protected route", user, requiredRole);
+    // If user data already exists, we're good
+    if (user) {
+      setChecking(false);
+      return;
+    }
 
-  // useEffect(() => {
-  //   if (isAuthenticated) {
-  //     const refreshToken = sessionStorage.getItem('refreshToken');
+    // Token exists but user atom is empty — fetch profile from API
+    const fetchProfile = async () => {
+      try {
+        const response = await apiInstance.get('/auth/user/profile');
+        if (response.data.success) {
+          setUser(response.data.data);
+        } else {
+          // Profile fetch failed — token might be expired
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setChecking(false);
+      }
+    };
 
-  //     const interval = setInterval(async () => {
-  //       const response = await apiInstance.post('/auth/refresh-token', { refreshToken });
-  //       if (response.status === 200) {
-  //         sessionStorage.setItem('accessToken', response.data.accessToken);
-  //         setTokens({
-  //           refreshToken: tokens.refreshToken!,
-  //           expiredAt: tokens.expiredAt!,
-  //           accessToken: response.data.accessToken
-  //         });
-  //       }
-  //     }, 1000 * 60 * 15); // 15 minutes
+    fetchProfile();
+  }, [isAuthenticated, user, setUser]);
 
-  //     return () => clearInterval(interval);
+  // Still loading auth state or fetching profile
+  if (!isAuthenticated || checking) {
+    return fallback ?? <BrandedLoader message="Verifying access..." />;
+  }
 
-  //   }
-  // }, [isAuthenticated]);
-
-  // useEffect(() => {
-  //   if (isLoading) {
-  //     console.log('🔒 ProtectedRoute: Still loading auth state...')
-  //     return
-  //   }
-
-  //   // Add a small delay on first check to allow login state to settle
-  //   if (!hasCheckedAuth) {
-  //     const timer = setTimeout(() => {
-  //       setHasCheckedAuth(true)
-  //     }, 200)
-  //     return () => clearTimeout(timer)
-  //   }
-
-  //   console.log('🔒 ProtectedRoute check:', {
-  //     isAuthenticated,
-  //     currentRole: role,
-  //     requiredRole,
-  //     pathname: window.location.pathname,
-  //     hasCheckedAuth
-  //   })
-
-  //   if (!isAuthenticated) {
-  //     const redirectPath = redirectTo || getRedirectPath(requiredRole)
-  //     console.log('🔒 Not authenticated, redirecting to:', redirectPath)
-  //     if (redirectPath && redirectPath !== window.location.pathname) {
-  //       router.push(redirectPath)
-  //     }
-  //     return
-  //   }
-
-  //   if (requiredRole && role !== requiredRole) {
-  //     const redirectPath = redirectTo || getRedirectPath(requiredRole)
-  //     console.log('🔒 Role mismatch! Current:', role, 'Required:', requiredRole, 'Redirecting to:', redirectPath)
-  //     if (redirectPath && redirectPath !== window.location.pathname) {
-  //       router.push(redirectPath)
-  //     }
-  //     return
-  //   }
-
-  //   console.log('🔒 ProtectedRoute: Access granted ✓')
-  // }, [isAuthenticated, isLoading, role, requiredRole, redirectTo, getRedirectPath, router, hasCheckedAuth])
-
-  // if (!hasCheckedAuth) {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen">
-  //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-  //     </div>
-  //   )
-  // }
-
-  if (!isAuthenticated || !user) {
-    return loadingFallback
+  // Not authenticated — redirect to login
+  if (!user) {
+    router.push(redirectTo || '/login');
+    return <BrandedLoader message="Redirecting..." />;
   }
 
   /**
@@ -148,7 +115,7 @@ export function withAuth<T extends object>(
 ) {
   return function AuthenticatedComponent(props: T) {
     return (
-      <ProtectedRoute 
+      <ProtectedRoute
         requiredRole={options.requiredRole}
         redirectTo={options.redirectTo}
       >

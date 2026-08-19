@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { useAuth } from "@/hooks/use-auth"
+import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -45,14 +46,26 @@ export default function ProfilePage() {
   const gender = profile?.gender || ""
   const accountId = profile?.accountId || ""
   const walletAddress = wallet?.address || accountId
-  const balance = wallet?.balanceCTC || "0.0"
+  // Fetch live wallet balance from backend
+  const { data: walletData } = useQuery({
+    queryKey: ["wallet-balance"],
+    queryFn: async () => {
+      const response = await apiInstance.get("/investor/wallet/balance")
+      return response.data?.data
+    },
+    staleTime: 30 * 1000,
+  })
+  const liveBalance = walletData?.balanceCTC || wallet?.balanceCTC || "0.0"
+  const liveAddress = walletData?.address || walletAddress
   const network = wallet?.network || "Creditcoin 3 Testnet"
   const createdAt = profile?.createdAt
   const updatedAt = profile?.updatedAt
   const status = profile?.status || "ACTIVE"
   const roleId = profile?.roleId || "INVESTOR"
+  const { data: ctcPrice } = useCtcPrice()
+  const usdRate = ctcPrice?.ctcUsd || 0.10
 
-  const explorerUrl = `https://creditcoin-testnet.blockscout.com/address/${walletAddress}`
+  const explorerUrl = `${process.env.NEXT_PUBLIC_SUBSCAN_URL || 'https://creditcoin3-testnet.subscan.io'}/account/${liveAddress || walletAddress}`
 
   return (
     <ProtectedRoute requiredRole="investor">
@@ -115,19 +128,22 @@ export default function ProfilePage() {
                     Available Balance
                   </p>
                   <div className="font-display text-4xl font-extrabold tabular-nums text-[#171414]">
-                    {parseFloat(balance).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                    {parseFloat(liveBalance).toLocaleString("en-US", { maximumFractionDigits: 4 })}
                     <span className="ml-2 font-mono text-lg font-bold uppercase text-muted-foreground">CTC</span>
                   </div>
+                  <p className="mt-1 font-mono text-sm text-muted-foreground">
+                    ≈ {formatUsd(ctcToUsd(parseFloat(liveBalance) || 0, usdRate))} USD
+                  </p>
                 </div>
 
-                {walletAddress && (
+                {liveAddress && (
                   <div className="space-y-2">
                     <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
                       Wallet Address
                     </p>
                     <div className="flex items-center gap-2 rounded-xl border border-[#171414]/10 bg-white/50 px-3 py-2">
-                      <p className="flex-1 truncate font-mono text-xs text-[#171414]">{walletAddress}</p>
-                      <CopyButton text={walletAddress} />
+                      <p className="flex-1 truncate font-mono text-xs text-[#171414]">{liveAddress}</p>
+                      <CopyButton text={liveAddress} />
                       <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
                         <Button variant="ghost" size="icon" className="h-6 w-6">
                           <ExternalLink className="h-3 w-3" />

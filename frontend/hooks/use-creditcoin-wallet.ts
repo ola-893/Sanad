@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export const CREDITCOIN_CC3_PARAMS = {
-  chainId: '0x18e8f', // 102031 in hex (0x18e8f)
+  chainId: process.env.NEXT_PUBLIC_CREDITCOIN_CHAIN_ID_HEX || '0x18e8f',
   chainName: 'Creditcoin 3 Testnet',
   nativeCurrency: {
     name: 'Testnet Creditcoin',
     symbol: 'tCTC',
     decimals: 18,
   },
-  rpcUrls: ['https://rpc.cc3-testnet.creditcoin.network'],
-  blockExplorerUrls: ['https://creditcoin-testnet.blockscout.com/'],
+  rpcUrls: [process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network'],
+  blockExplorerUrls: [process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com/'],
 };
 
 export function useCreditcoinWallet() {

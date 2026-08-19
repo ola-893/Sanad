@@ -241,7 +241,7 @@ export function TokenPurchaseProgressTracker({
                         <div className="pt-2">
                           <Button asChild size="sm" variant="outline" className="w-full">
                             <a 
-                              href="https://creditcoin-testnet.blockscout.com"
+                              href={process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center justify-center gap-2"

@@ -148,10 +148,10 @@ export default function AboutPage() {
                 tokenized loan.&rdquo;
               </p>
               <Link
-                href="/register"
+                href="/login"
                 className="flux-pill mt-9 inline-flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-[0.16em]"
               >
-                Register & Apply
+                Apply Now
               </Link>
             </Reveal>
           </div>

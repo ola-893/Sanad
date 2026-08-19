@@ -109,7 +109,7 @@ export default function InvestorDashboard() {
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">EVM Address:</p>
                     <a 
-                      href={`https://creditcoin-testnet.blockscout.com/address/${address}`}
+                      href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/address/${address}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-mono text-xs bg-muted p-2 rounded block text-primary hover:underline break-all"

@@ -37,10 +37,8 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
       const raw = localStorage.getItem('authState')
       const auth = raw ? JSON.parse(raw) : null
       const hasToken = !!auth?.token
-      const userRaw = localStorage.getItem('authStorage')
-      const userStore = userRaw ? JSON.parse(userRaw) : null
-      const hasUser = !!userStore?.user?.userInfo
-      setAuthed(hasToken && hasUser)
+      // Only check for token — user data is fetched by ProtectedRoute
+      setAuthed(hasToken)
     } catch {
       setAuthed(false)
     }

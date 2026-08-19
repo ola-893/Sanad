@@ -22,7 +22,7 @@ export async function fetchSAGsServer(params: SAGApiParams = {}): Promise<SAGRes
       queryParams.append('sort_order', params.sort_order);
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const url = `${baseUrl}/v1/sag${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     console.log('🚀 Server-side fetching SAGs from:', url);
@@ -134,7 +134,7 @@ export async function fetchSAGsServer(params: SAGApiParams = {}): Promise<SAGRes
 
 export async function fetchTokenDataServer(tokenId: string): Promise<TokenData | undefined> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const url = `${baseUrl}/v1/token/${tokenId}`;
     
     console.log('🪙 Server-side fetching token data from:', url);
@@ -208,7 +208,7 @@ export async function fetchSAGsWithTokenData(params: SAGApiParams = {}): Promise
 
 export async function fetchSAGByIdServer(id: string): Promise<SAG> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const url = `${baseUrl}/v1/sag/${id}`;
     
     const response = await fetch(url, {

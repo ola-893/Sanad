@@ -5,13 +5,14 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { useAuth } from "@/hooks/use-auth"
-import { Menu, X, LayoutDashboard, Wallet, CreditCard, Briefcase, LogOut } from "lucide-react"
+import { Menu, X, LayoutDashboard, Wallet, CreditCard, Briefcase, LogOut, User } from "lucide-react"
 
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
   { href: "/dashboard/nfts", label: "NFT Collateral", icon: Briefcase },
+  { href: "/profile", label: "Profile", icon: User },
 ]
 
 export function InternalHeader() {

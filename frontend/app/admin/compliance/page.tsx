@@ -468,7 +468,7 @@ export default function CompliancePage() {
                         </td>
                         <td className="px-6 py-4 font-mono text-xs">
                           <a
-                            href={`https://creditcoin-testnet.blockscout.com/tx/${log.transactionHash}`}
+                            href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/tx/${log.transactionHash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 hover:underline"

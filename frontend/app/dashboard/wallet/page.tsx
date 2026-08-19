@@ -9,10 +9,11 @@ import { Wallet, RefreshCw, Copy, ExternalLink, ArrowUpRight, ArrowDownLeft, Shi
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 import { toast } from "sonner"
-import { TopUpDialog } from "@/components/dashboard/topup-dialog"
+
 import Link from "next/link"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { useCreditcoinStatus } from "@/hooks/use-creditcoin-status"
+import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -57,7 +58,10 @@ export default function DashboardWalletPage() {
   const balance = wallet ? parseFloat(wallet.balanceCTC) || 0 : 0
   const address = wallet?.address || ""
   const network = wallet?.network || "Creditcoin 3 Testnet"
-  const explorerBase = "https://creditcoin-testnet.blockscout.com"
+  const { data: ctcPrice } = useCtcPrice()
+  const usdRate = ctcPrice?.ctcUsd || 0.10
+  const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
+  const subscanBase = process.env.NEXT_PUBLIC_SUBSCAN_URL || "https://creditcoin3-testnet.subscan.io"
 
   return (
     <ProtectedRoute requiredRole="investor">
@@ -111,12 +115,15 @@ export default function DashboardWalletPage() {
                     {isLoading ? "—" : balance.toLocaleString("en-US", { maximumFractionDigits: 4 })}
                     <span className="ml-3 font-mono text-xl font-bold uppercase text-white/60">CTC</span>
                   </div>
+                  <p className="mt-1 font-mono text-sm text-white/40">
+                    ≈ {isLoading ? "—" : formatUsd(ctcToUsd(balance, usdRate))} USD
+                  </p>
                 </div>
                 {address && (
                   <div className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 max-w-lg">
                     <p className="flex-1 truncate font-mono text-xs text-white/80">{address}</p>
                     <CopyButton text={address} />
-                    <a href={`${explorerBase}/address/${address}`} target="_blank" rel="noopener noreferrer">
+                    <a href={`${subscanBase}/account/${address}`} target="_blank" rel="noopener noreferrer" title="View on Subscan (Official)">
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:text-white">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
@@ -129,20 +136,41 @@ export default function DashboardWalletPage() {
 
           {/* Quick Actions */}
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex-1">
-              <TopUpDialog />
-            </div>
-            <Button variant="outline" className="rounded-full h-auto py-3" disabled>
-              <div className="flex items-center gap-3">
+            <Card className={`${glass} cursor-pointer transition-all hover:bg-white/80`}>
+              <CardContent className="flex items-center gap-3 p-4">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
+                  <ArrowDownLeft className="h-4 w-4 text-[#171414]" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#171414]">Receive CTC</p>
+                  <p className="text-[10px] text-muted-foreground">Copy your wallet address</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    if (address) {
+                      navigator.clipboard.writeText(address)
+                      toast.success("Address copied", { description: "Share this address to receive CTC tokens" })
+                    }
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className={`${glass} opacity-60`}>
+              <CardContent className="flex items-center gap-3 p-4">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
                   <ArrowUpRight className="h-4 w-4 text-[#171414]" />
                 </span>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Send CTC</p>
+                <div>
+                  <p className="text-sm font-medium text-[#171414]">Send CTC</p>
                   <p className="text-[10px] text-muted-foreground">Transfer to another wallet</p>
                 </div>
-              </div>
-            </Button>
+              </CardContent>
+            </Card>
             <Link href="/dashboard/nfts" className="flex-1">
               <Card className={`${glass} cursor-pointer transition-all hover:bg-white/80 h-full`}>
                 <CardContent className="flex items-center gap-3 p-4 h-full">
@@ -227,14 +255,24 @@ export default function DashboardWalletPage() {
                   </div>
                   <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
                     <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Explorer</p>
-                    <a
-                      href={`${explorerBase}/address/${address}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-medium text-[#171414] hover:underline"
-                    >
-                      Blockscout <ExternalLink className="h-3 w-3" />
-                    </a>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`${subscanBase}/account/${address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#171414] hover:underline"
+                      >
+                        Subscan <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <a
+                        href={`${explorerBase}/address/${address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:underline"
+                      >
+                        Blockscout <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </CardContent>

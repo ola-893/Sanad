@@ -115,7 +115,7 @@ export function UserProfileDisplay({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Wallet Address</p>
                 <a
-                  href={`https://creditcoin-testnet.blockscout.com/address/${wallet?.address || profile?.accountId}`}
+                  href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/address/${wallet?.address || profile?.accountId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-mono text-xs text-primary underline break-all"
