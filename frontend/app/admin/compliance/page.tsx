@@ -32,6 +32,7 @@ import {
   Coins,
   FileCheck
 } from "lucide-react"
+import apiInstance from "@/lib/axios-v1"
 
 interface AuditLogEntry {
   id: string
@@ -63,8 +64,7 @@ export default function CompliancePage() {
   const fetchAuditLogs = async () => {
     setLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/v1/creditcoin/audit-logs")
-      const data = await res.json()
+      const { data } = await apiInstance.get("/creditcoin/audit-logs")
       if (data.success && Array.isArray(data.logs)) {
         setAuditLogs(data.logs)
       }
@@ -91,17 +91,12 @@ export default function CompliancePage() {
     setActionMessage(null)
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/creditcoin/compliance/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: actionType,
-          target: targetInput,
-          reason: reasonInput,
-        }),
+      const { data } = await apiInstance.post(`/creditcoin/compliance/${action}`, {
+        type: actionType,
+        target: targetInput,
+        reason: reasonInput,
       })
 
-      const data = await res.json()
       if (data.success) {
         setActionMessage({
           type: "success",
@@ -114,7 +109,7 @@ export default function CompliancePage() {
         setActionMessage({ type: "error", text: data.error || `Failed to execute ${action}` })
       }
     } catch (err: any) {
-      setActionMessage({ type: "error", text: err.message || "Network error submitting compliance action" })
+      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message || "Network error submitting compliance action" })
     } finally {
       setActionLoading(false)
     }
@@ -124,16 +119,11 @@ export default function CompliancePage() {
     if (!wipeTokenId || !wipeReason) return
     setActionLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/v1/creditcoin/compliance/wipe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tokenId: wipeTokenId,
-          reason: wipeReason,
-        }),
+      const { data } = await apiInstance.post("/creditcoin/compliance/wipe", {
+        tokenId: wipeTokenId,
+        reason: wipeReason,
       })
 
-      const data = await res.json()
       if (data.success) {
         setActionMessage({
           type: "success",
@@ -147,7 +137,7 @@ export default function CompliancePage() {
         setActionMessage({ type: "error", text: data.error || "Wipe action failed" })
       }
     } catch (err: any) {
-      setActionMessage({ type: "error", text: err.message || "Network error" })
+      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message || "Network error" })
     } finally {
       setActionLoading(false)
     }
@@ -267,7 +257,7 @@ export default function CompliancePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-700">916 Standard (22K)</div>
-            <p className="text-xs text-gray-500 mt-1">Malaysian assay benchmark certified</p>
+            <p className="text-xs text-gray-500 mt-1">22K gold standard (916 purity)</p>
           </CardContent>
         </Card>
 
@@ -350,7 +340,7 @@ export default function CompliancePage() {
             <div>
               <Label className="text-xs font-semibold text-gray-600">Compliance Reason / Case ID</Label>
               <Input
-                placeholder="e.g. AML Sanction Alert BNM-2026-44"
+                placeholder="e.g. AML Sanction Alert CC-2026-44"
                 value={reasonInput}
                 onChange={(e) => setReasonInput(e.target.value)}
                 className="mt-1 text-sm"

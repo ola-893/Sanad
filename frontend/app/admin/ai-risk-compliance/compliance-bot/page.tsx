@@ -28,7 +28,7 @@ export default function ComplianceBotPage() {
       id: "1",
       question: "What are the KYC requirements for high-value transactions?",
       response:
-        "For transactions above RM 50,000, enhanced KYC requires: 1) Government-issued ID verification, 2) Proof of income documentation, 3) Source of funds declaration, 4) Biometric verification, 5) Enhanced due diligence screening.",
+        "For transactions above 50,000 CTC, enhanced KYC requires: 1) Government-issued ID verification, 2) Proof of income documentation, 3) Source of funds declaration, 4) Biometric verification, 5) Enhanced due diligence screening.",
       confidence: 95,
       timestamp: "2024-01-15 14:30",
       status: "answered",

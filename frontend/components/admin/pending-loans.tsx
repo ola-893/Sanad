@@ -9,7 +9,7 @@ export function PendingLoans() {
     {
       id: "L-2025-007",
       user: {
-        name: "Ahmad Razif",
+        name: "Marcus Webb",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "AR",
       },
@@ -21,7 +21,7 @@ export function PendingLoans() {
     {
       id: "L-2025-008",
       user: {
-        name: "Nurul Huda",
+        name: "Emma Davis",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "NH",
       },
@@ -33,7 +33,7 @@ export function PendingLoans() {
     {
       id: "L-2025-009",
       user: {
-        name: "Tan Wei Ming",
+        name: "Kai Nakamura",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "TW",
       },
@@ -45,7 +45,7 @@ export function PendingLoans() {
     {
       id: "L-2025-010",
       user: {
-        name: "Sarah Abdullah",
+        name: "Lisa Morgan",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "SA",
       },
@@ -79,7 +79,7 @@ export function PendingLoans() {
                   <p className="text-sm text-muted-foreground">Applied: {loan.date}</p>
                 </div>
                 <div className="text-right md:text-left">
-                  <p className="font-bold">RM {loan.amount.toLocaleString()}</p>
+                  <p className="font-bold">CTC {loan.amount.toLocaleString()}</p>
                   <Badge variant="outline">Pending Review</Badge>
                 </div>
                 <div className="flex gap-2 mt-2 md:mt-0">

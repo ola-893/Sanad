@@ -9,18 +9,18 @@ export function PendingKyc() {
     {
       id: "KYC-2025-012",
       user: {
-        name: "Lim Mei Ling",
+        name: "Chloe Zhang",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "ML",
       },
-      idType: "MyKad",
+      idType: "Government ID",
       date: "March 20, 2025",
       status: "pending",
     },
     {
       id: "KYC-2025-013",
       user: {
-        name: "Rajesh Kumar",
+        name: "Daniel Brown",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "RK",
       },
@@ -31,22 +31,22 @@ export function PendingKyc() {
     {
       id: "KYC-2025-014",
       user: {
-        name: "Aisha Binti Hassan",
+        name: "Sofia Martinez",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "AH",
       },
-      idType: "MyKad",
+      idType: "Government ID",
       date: "March 19, 2025",
       status: "pending",
     },
     {
       id: "KYC-2025-015",
       user: {
-        name: "David Wong",
+        name: "Michael Taylor",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "DW",
       },
-      idType: "MyKad",
+      idType: "Government ID",
       date: "March 18, 2025",
       status: "pending",
     },

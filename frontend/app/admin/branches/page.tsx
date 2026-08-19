@@ -20,40 +20,40 @@ const branchData = [
   {
     id: "BR-001",
     name: "KL Central Branch",
-    location: "Kuala Lumpur",
-    address: "123 Jalan Bukit Bintang, 50200 KL",
-    phone: "+60 3-2141 8200",
-    email: "klcentral@arrahnu.com.my",
-    manager: "Ahmad Rahman",
+    location: "Central Hub",
+    address: "100 Blockchain Ave, Digital Zone",
+    phone: "+1-555-0201",
+    email: "klcentral@sanad.io",
+    manager: "Alex Chen",
     status: "active",
     totalSAGs: 45,
-    totalValue: "RM 675,000",
+    totalValue: "CTC 675,000",
     joinDate: "2023-01-15",
   },
   {
     id: "BR-002",
-    name: "Johor Bahru Branch",
-    location: "Johor Bahru",
-    address: "456 Jalan Wong Ah Fook, 80000 JB",
-    phone: "+60 7-222 3344",
-    email: "jb@arrahnu.com.my",
-    manager: "Siti Aminah",
+    name: "Southern Branch",
+    location: "Southern Region",
+    address: "200 Crypto St, Tech District",
+    phone: "+1-555-0202",
+    email: "jb@sanad.io",
+    manager: "Maya Patel",
     status: "active",
     totalSAGs: 32,
-    totalValue: "RM 480,000",
+    totalValue: "CTC 480,000",
     joinDate: "2023-03-20",
   },
   {
     id: "BR-003",
-    name: "Penang Branch",
+    name: "Northern Branch",
     location: "George Town",
-    address: "789 Lebuh Campbell, 10100 Penang",
-    phone: "+60 4-261 5566",
-    email: "penang@arrahnu.com.my",
-    manager: "Lim Wei Ming",
+    address: "300 Token Rd, Innovation Hub",
+    phone: "+1-555-0203",
+    email: "penang@sanad.io",
+    manager: "Jordan Lee",
     status: "pending",
     totalSAGs: 0,
-    totalValue: "RM 0",
+    totalValue: "CTC 0",
     joinDate: "2025-01-10",
   },
 ]
@@ -141,7 +141,7 @@ export default function BranchesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RM 2.4M</div>
+            <div className="text-2xl font-bold">CTC 2.4M</div>
             <p className="text-xs text-muted-foreground">Combined portfolio</p>
           </CardContent>
         </Card>

@@ -23,7 +23,7 @@ const suspiciousTransactions = [
   {
     id: "TX001",
     wallet: "0x1234...5678",
-    amount: "RM 85,000",
+    amount: "CTC 85,000",
     type: "Large Transfer",
     riskScore: 95,
     timestamp: "2024-01-15 14:30:22",
@@ -33,7 +33,7 @@ const suspiciousTransactions = [
   {
     id: "TX002",
     wallet: "0x9876...4321",
-    amount: "RM 12,500",
+    amount: "CTC 12,500",
     type: "Multiple Small",
     riskScore: 78,
     timestamp: "2024-01-15 13:45:11",
@@ -43,7 +43,7 @@ const suspiciousTransactions = [
   {
     id: "TX003",
     wallet: "0x5555...7777",
-    amount: "RM 45,000",
+    amount: "CTC 45,000",
     type: "Cross-border",
     riskScore: 82,
     timestamp: "2024-01-15 12:15:33",
@@ -55,8 +55,8 @@ const suspiciousTransactions = [
 const monitoredWallets = [
   {
     address: "0x1234567890abcdef",
-    owner: "Ahmad Rahman",
-    balance: "RM 125,000",
+    owner: "Alex Chen",
+    balance: "CTC 125,000",
     riskLevel: "Medium",
     lastActivity: "2 hours ago",
     transactionCount: 47,
@@ -64,8 +64,8 @@ const monitoredWallets = [
   },
   {
     address: "0x9876543210fedcba",
-    owner: "Siti Nurhaliza",
-    balance: "RM 89,500",
+    owner: "Priya Sharma",
+    balance: "CTC 89,500",
     riskLevel: "Low",
     lastActivity: "1 day ago",
     transactionCount: 23,
@@ -74,7 +74,7 @@ const monitoredWallets = [
   {
     address: "0x5555777799991111",
     owner: "Unknown",
-    balance: "RM 250,000",
+    balance: "CTC 250,000",
     riskLevel: "High",
     lastActivity: "30 minutes ago",
     transactionCount: 156,
@@ -137,7 +137,7 @@ export default function WalletMonitoringPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Daily Volume</p>
-                <p className="text-2xl font-bold">RM 2.1M</p>
+                <p className="text-2xl font-bold">CTC 2.1M</p>
                 <p className="text-xs text-primary">↑ 12% from yesterday</p>
               </div>
               <DollarSign className="h-8 w-8 text-success" />
@@ -180,7 +180,7 @@ export default function WalletMonitoringPage() {
           <ChartContainer
             config={{
               volume: {
-                label: "Transaction Volume (RM)",
+                label: "Transaction Volume (CTC)",
                 color: "hsl(var(--chart-1))",
               },
               suspicious: {

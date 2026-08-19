@@ -18,41 +18,41 @@ import { AlertTriangle, DollarSign, Calendar, CheckCircle, FileText, TrendingDow
 const defaultData = [
   {
     sagId: "SAG-2024-023",
-    arRahnu: "KL Central Branch",
-    originalAmount: "RM 15,000",
-    outstandingAmount: "RM 15,450",
+    arRahnu: "Hub Alpha",
+    originalAmount: "CTC 15,000",
+    outstandingAmount: "CTC 15,450",
     defaultDate: "2024-12-15",
-    collateralValue: "RM 18,000",
+    collateralValue: "CTC 18,000",
     saleDate: "2025-01-10",
     recoveryStatus: "sold",
-    recoveredAmount: "RM 16,500",
-    investorPayout: "RM 15,450",
+    recoveredAmount: "CTC 16,500",
+    investorPayout: "CTC 15,450",
     status: "completed",
   },
   {
     sagId: "SAG-2024-034",
-    arRahnu: "Johor Bahru Branch",
-    originalAmount: "RM 22,000",
-    outstandingAmount: "RM 22,660",
+    arRahnu: "Hub Beta",
+    originalAmount: "CTC 22,000",
+    outstandingAmount: "CTC 22,660",
     defaultDate: "2024-11-20",
-    collateralValue: "RM 25,000",
+    collateralValue: "CTC 25,000",
     saleDate: "2025-01-15",
     recoveryStatus: "pending_sale",
-    recoveredAmount: "RM 0",
-    investorPayout: "RM 0",
+    recoveredAmount: "CTC 0",
+    investorPayout: "CTC 0",
     status: "in_progress",
   },
   {
     sagId: "SAG-2024-045",
-    arRahnu: "Penang Branch",
-    originalAmount: "RM 8,500",
-    outstandingAmount: "RM 8,755",
+    arRahnu: "Hub Gamma",
+    originalAmount: "CTC 8,500",
+    outstandingAmount: "CTC 8,755",
     defaultDate: "2024-10-30",
-    collateralValue: "RM 9,200",
+    collateralValue: "CTC 9,200",
     saleDate: "2025-01-05",
     recoveryStatus: "sold",
-    recoveredAmount: "RM 8,900",
-    investorPayout: "RM 8,755",
+    recoveredAmount: "CTC 8,900",
+    investorPayout: "CTC 8,755",
     status: "completed",
   },
 ]
@@ -149,7 +149,7 @@ export default function DefaultsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RM 22,660</div>
+            <div className="text-2xl font-bold">CTC 22,660</div>
             <p className="text-xs text-muted-foreground">Pending recovery</p>
           </CardContent>
         </Card>
@@ -365,7 +365,7 @@ export default function DefaultsPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm">Total Recovered</span>
                 <Badge variant="outline" className="bg-muted text-primary">
-                  RM 1.2M
+                  CTC 1.2M
                 </Badge>
               </div>
             </div>
@@ -385,13 +385,13 @@ export default function DefaultsPage() {
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Johor Bahru</span>
+                <span className="text-sm">Southern Region</span>
                 <Badge variant="outline" className="bg-warning/10 text-warning">
                   3.5%
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Penang</span>
+                <span className="text-sm">Northern Region</span>
                 <Badge variant="outline" className="bg-success/10 text-success">
                   1.8%
                 </Badge>

@@ -1,162 +1,133 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, AlertTriangle, CreditCard, FileText, Users } from "lucide-react"
+import { CheckCircle, Clock, AlertTriangle, CreditCard, FileText, Shield, Coins } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import apiInstance from "@/lib/axios-v1"
 
-interface ActivityItem {
+interface AuditLogEntry {
   id: string
-  type: "approval" | "settlement" | "kyc" | "alert" | "mint" | "burn"
-  title: string
-  description: string
+  eventType: string
+  tokenId: string
+  blockNumber: number
+  transactionHash: string
   timestamp: string
-  user?: {
-    name: string
-    avatar?: string
-    initials: string
-  }
-  status: "completed" | "pending" | "failed"
+  details: any
 }
 
-const activities: ActivityItem[] = [
-  {
-    id: "1",
-    type: "approval",
-    title: "SAG Approved",
-    description: "SAG-2025-127 approved for listing",
-    timestamp: "2 minutes ago",
-    user: { name: "Admin User", initials: "AU" },
-    status: "completed",
-  },
-  {
-    id: "2",
-    type: "settlement",
-    title: "Settlement Processed",
-    description: "RM 15,000 distributed to investors",
-    timestamp: "15 minutes ago",
-    status: "completed",
-  },
-  {
-    id: "3",
-    type: "kyc",
-    title: "KYC Verification",
-    description: "New investor KYC approved",
-    timestamp: "1 hour ago",
-    user: { name: "Sarah Ahmad", initials: "SA" },
-    status: "completed",
-  },
-  {
-    id: "4",
-    type: "alert",
-    title: "Extension Request",
-    description: "Loan extension requested for SAG-2025-098",
-    timestamp: "2 hours ago",
-    status: "pending",
-  },
-  {
-    id: "5",
-    type: "mint",
-    title: "Token Minted",
-    description: "NFT and fractional tokens created",
-    timestamp: "3 hours ago",
-    status: "completed",
-  },
-  {
-    id: "6",
-    type: "burn",
-    title: "Token Burned",
-    description: "Settlement completed, tokens burned",
-    timestamp: "4 hours ago",
-    status: "completed",
-  },
-]
-
-const getActivityIcon = (type: ActivityItem["type"], status: ActivityItem["status"]) => {
-  const iconClass = "h-4 w-4"
-
-  switch (type) {
-    case "approval":
-      return <CheckCircle className={`${iconClass} text-success`} />
-    case "settlement":
-      return <CreditCard className={`${iconClass} text-primary`} />
-    case "kyc":
-      return <Users className={`${iconClass} text-primary`} />
-    case "alert":
-      return <AlertTriangle className={`${iconClass} text-warning`} />
-    case "mint":
-    case "burn":
-      return <FileText className={`${iconClass} text-indigo-600`} />
-    default:
-      return <Clock className={`${iconClass} text-muted-foreground`} />
+const getEventMeta = (eventType: string) => {
+  if (eventType.includes("MINTED") || eventType.includes("COLLATERAL_MINTED")) {
+    return { icon: Coins, color: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "Token Minted" }
   }
-}
-
-const getStatusBadge = (status: ActivityItem["status"]) => {
-  switch (status) {
-    case "completed":
-      return (
-        <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-          Completed
-        </Badge>
-      )
-    case "pending":
-      return (
-        <Badge variant="outline" className="bg-warning/10 text-warning border-yellow-300">
-          Pending
-        </Badge>
-      )
-    case "failed":
-      return (
-        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
-          Failed
-        </Badge>
-      )
-    default:
-      return <Badge variant="outline">Unknown</Badge>
+  if (eventType.includes("FROZEN")) {
+    return { icon: Shield, color: "text-amber-600", badge: "bg-amber-50 text-amber-700 border-amber-200", label: "Asset Frozen" }
   }
+  if (eventType.includes("WIPED")) {
+    return { icon: AlertTriangle, color: "text-red-600", badge: "bg-red-50 text-red-700 border-red-200", label: "Token Wiped" }
+  }
+  if (eventType.includes("REPAYMENT") || eventType.includes("SETTLED")) {
+    return { icon: CreditCard, color: "text-blue-600", badge: "bg-blue-50 text-blue-700 border-blue-200", label: "Repayment" }
+  }
+  if (eventType.includes("UNLOCKED")) {
+    return { icon: CheckCircle, color: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "Collateral Unlocked" }
+  }
+  return { icon: FileText, color: "text-gray-600", badge: "bg-gray-50 text-gray-700 border-gray-200", label: eventType.replace(/_/g, " ") }
 }
 
 export function RecentActivity({ showAll = false }: { showAll?: boolean }) {
-  const displayActivities = showAll ? activities : activities.slice(0, 6)
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-recent-activity"],
+    queryFn: async () => {
+      const { data } = await apiInstance.get("/creditcoin/audit-logs")
+      return data?.logs as AuditLogEntry[] | undefined
+    },
+    refetchInterval: 30_000,
+  })
 
-  return (
-    <div className="space-y-4">
-      {displayActivities.map((activity) => (
-        <div
-          key={activity.id}
-          className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/40 transition-colors"
-        >
-          <div className="flex-shrink-0 mt-0.5">{getActivityIcon(activity.type, activity.status)}</div>
+  const logs = (data || []).slice(0, showAll ? 20 : 6)
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h4 className="text-sm font-medium text-foreground truncate">{activity.title}</h4>
-              {getStatusBadge(activity.status)}
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-2">{activity.description}</p>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
-              {activity.user && (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={activity.user.avatar || "/placeholder.svg"} alt={activity.user.name} />
-                    <AvatarFallback className="text-xs">{activity.user.initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground">{activity.user.name}</span>
-                </div>
-              )}
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
+            <div className="h-4 w-4 bg-muted rounded" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-muted rounded w-1/2" />
+              <div className="h-3 bg-muted rounded w-3/4" />
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+    )
+  }
 
-      {!showAll && activities.length > 6 && (
-        <div className="text-center pt-2">
-          <button className="text-sm text-primary hover:text-primary font-medium">View all activities →</button>
-        </div>
-      )}
+  if (logs.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+        <p className="text-sm">No recent activity</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {logs.map((log) => {
+        const meta = getEventMeta(log.eventType)
+        const Icon = meta.icon
+        const timeAgo = getTimeAgo(log.timestamp)
+
+        return (
+          <div
+            key={log.id}
+            className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/40 transition-colors"
+          >
+            <div className="flex-shrink-0 mt-0.5">
+              <Icon className={`h-4 w-4 ${meta.color}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-sm font-medium text-foreground truncate">{meta.label}</h4>
+                <Badge variant="outline" className={`text-[10px] ${meta.badge}`}>
+                  {log.eventType.replace(/_/g, " ")}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {log.tokenId ? `Token #${log.tokenId}` : "System event"}
+                {log.blockNumber ? ` · Block #${log.blockNumber}` : ""}
+              </p>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs text-muted-foreground">{timeAgo}</span>
+                {log.transactionHash && (
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"}/tx/${log.transactionHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {log.transactionHash.slice(0, 8)}...
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
+}
+
+function getTimeAgo(timestamp: string): string {
+  const now = Date.now()
+  const then = new Date(timestamp).getTime()
+  const diff = now - then
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }

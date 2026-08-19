@@ -132,7 +132,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="minLoan">Minimum Loan Amount (MYR)</Label>
+                  <Label htmlFor="minLoan">Minimum Loan Amount (CTC)</Label>
                   <Input
                     id="minLoan"
                     type="number"
@@ -141,7 +141,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="maxLoan">Maximum Loan Amount (MYR)</Label>
+                  <Label htmlFor="maxLoan">Maximum Loan Amount (CTC)</Label>
                   <Input
                     id="maxLoan"
                     type="number"
@@ -162,7 +162,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="autoApproval">Auto-Approval Limit (MYR)</Label>
+                  <Label htmlFor="autoApproval">Auto-Approval Limit (CTC)</Label>
                   <Input
                     id="autoApproval"
                     type="number"

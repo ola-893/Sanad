@@ -171,7 +171,7 @@ export default function CompletedSAGListingsPage() {
                 {isLoading ? (
                   <Skeleton className="h-8 w-20" />
                 ) : (
-                  <p className="text-2xl font-bold">RM {totalApprovedValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">CTC {totalApprovedValue.toLocaleString()}</p>
                 )}
                 <p className="text-xs text-success">Approved items</p>
               </div>
@@ -187,7 +187,7 @@ export default function CompletedSAGListingsPage() {
                 {isLoading ? (
                   <Skeleton className="h-8 w-20" />
                 ) : (
-                  <p className="text-2xl font-bold">RM {totalLoanAmount.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">CTC {totalLoanAmount.toLocaleString()}</p>
                 )}
                 <p className="text-xs text-primary">Based on loan percentage</p>
               </div>

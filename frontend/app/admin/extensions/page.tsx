@@ -18,8 +18,8 @@ import { RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle, Calendar } from 
 const extensionData = [
   {
     sagId: "SAG-2024-089",
-    arRahnu: "KL Central Branch",
-    originalAmount: "RM 15,000",
+    arRahnu: "Hub Alpha",
+    originalAmount: "CTC 15,000",
     extensionType: "Extension 1",
     requestDate: "2025-01-10",
     currentMaturity: "2025-01-15",
@@ -31,8 +31,8 @@ const extensionData = [
   },
   {
     sagId: "SAG-2024-067",
-    arRahnu: "Johor Bahru Branch",
-    originalAmount: "RM 22,000",
+    arRahnu: "Hub Beta",
+    originalAmount: "CTC 22,000",
     extensionType: "Extension 2",
     requestDate: "2025-01-08",
     currentMaturity: "2025-01-20",
@@ -44,8 +44,8 @@ const extensionData = [
   },
   {
     sagId: "SAG-2024-045",
-    arRahnu: "Penang Branch",
-    originalAmount: "RM 18,500",
+    arRahnu: "Hub Gamma",
+    originalAmount: "CTC 18,500",
     extensionType: "Extension 1",
     requestDate: "2025-01-05",
     currentMaturity: "2025-01-10",

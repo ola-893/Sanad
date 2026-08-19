@@ -23,9 +23,9 @@ const investorData = [
     id: "INV-001",
     walletAddress: "0x1234...5678",
     kycStatus: "verified",
-    totalInvested: "RM 45,000",
+    totalInvested: "CTC 45,000",
     activeSAGs: 8,
-    totalReturns: "RM 2,700",
+    totalReturns: "CTC 2,700",
     joinDate: "2024-06-15",
     lastActivity: "2025-01-15",
     riskScore: "low",
@@ -35,9 +35,9 @@ const investorData = [
     id: "INV-002",
     walletAddress: "0x2345...6789",
     kycStatus: "pending",
-    totalInvested: "RM 12,000",
+    totalInvested: "CTC 12,000",
     activeSAGs: 3,
-    totalReturns: "RM 720",
+    totalReturns: "CTC 720",
     joinDate: "2024-08-20",
     lastActivity: "2025-01-14",
     riskScore: "medium",
@@ -47,9 +47,9 @@ const investorData = [
     id: "INV-003",
     walletAddress: "0x3456...7890",
     kycStatus: "verified",
-    totalInvested: "RM 78,500",
+    totalInvested: "CTC 78,500",
     activeSAGs: 15,
-    totalReturns: "RM 4,710",
+    totalReturns: "CTC 4,710",
     joinDate: "2024-03-10",
     lastActivity: "2025-01-16",
     riskScore: "low",
@@ -184,7 +184,7 @@ export default function InvestorsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Invested</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RM 2.4M</div>
+            <div className="text-2xl font-bold">CTC 2.4M</div>
             <p className="text-xs text-muted-foreground">Across all SAGs</p>
           </CardContent>
         </Card>
@@ -353,7 +353,7 @@ export default function InvestorsPage() {
                                     </div>
                                     <div className="p-3 border rounded-lg">
                                       <div className="text-sm font-medium text-muted-foreground">Average Investment</div>
-                                      <div className="text-lg font-bold">RM 5,625</div>
+                                      <div className="text-lg font-bold">CTC 5,625</div>
                                     </div>
                                   </div>
                                   <div className="border rounded-lg p-4">
@@ -361,15 +361,15 @@ export default function InvestorsPage() {
                                     <div className="space-y-2">
                                       <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2025-001</span>
-                                        <span className="text-sm font-medium">RM 5,000</span>
+                                        <span className="text-sm font-medium">CTC 5,000</span>
                                       </div>
                                       <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2025-003</span>
-                                        <span className="text-sm font-medium">RM 3,500</span>
+                                        <span className="text-sm font-medium">CTC 3,500</span>
                                       </div>
                                       <div className="flex justify-between items-center p-2 bg-muted/40 rounded">
                                         <span className="text-sm">SAG-2024-089</span>
-                                        <span className="text-sm font-medium">RM 7,200</span>
+                                        <span className="text-sm font-medium">CTC 7,200</span>
                                       </div>
                                     </div>
                                   </div>
@@ -395,14 +395,14 @@ export default function InvestorsPage() {
                                           <span className="text-sm font-medium">SAG-2024-067</span>
                                           <p className="text-xs text-muted-foreground">Completed 2025-01-10</p>
                                         </div>
-                                        <span className="text-sm font-medium text-success">+RM 450</span>
+                                        <span className="text-sm font-medium text-success">+CTC 450</span>
                                       </div>
                                       <div className="flex justify-between items-center p-2 bg-success/10 rounded">
                                         <div>
                                           <span className="text-sm font-medium">SAG-2024-045</span>
                                           <p className="text-xs text-muted-foreground">Completed 2024-12-15</p>
                                         </div>
-                                        <span className="text-sm font-medium text-success">+RM 320</span>
+                                        <span className="text-sm font-medium text-success">+CTC 320</span>
                                       </div>
                                     </div>
                                   </div>

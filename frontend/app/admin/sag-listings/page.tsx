@@ -240,7 +240,7 @@ export default function SagListingsPage() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-2xl font-bold">
-                RM {sags.reduce((total, sag) => total + sag.sagProperties.valuation, 0).toLocaleString()}
+                CTC {sags.reduce((total, sag) => total + sag.sagProperties.valuation, 0).toLocaleString()}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Combined asset value</p>

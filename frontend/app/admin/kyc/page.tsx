@@ -14,9 +14,9 @@ import { Users, CheckCircle, XCircle, Clock, Search, Download, Eye, UserCheck } 
 const kycApplications = [
   {
     id: "KYC-2024-0847",
-    name: "Ahmad Rahman",
+    name: "Alex Chen",
     email: "ahmad.rahman@email.com",
-    phone: "+60123456789",
+    phone: "+1-555-0101",
     status: "approved",
     submittedDate: "2024-06-20",
     reviewedDate: "2024-06-21",
@@ -25,9 +25,9 @@ const kycApplications = [
   },
   {
     id: "KYC-2024-0848",
-    name: "Siti Nurhaliza",
+    name: "Priya Sharma",
     email: "siti.nur@email.com",
-    phone: "+60198765432",
+    phone: "+1-555-0102",
     status: "pending",
     submittedDate: "2024-06-22",
     reviewedDate: null,
@@ -36,9 +36,9 @@ const kycApplications = [
   },
   {
     id: "KYC-2024-0849",
-    name: "Raj Kumar",
+    name: "Ryan Cooper",
     email: "raj.kumar@email.com",
-    phone: "+60187654321",
+    phone: "+1-555-0103",
     status: "rejected",
     submittedDate: "2024-06-19",
     reviewedDate: "2024-06-20",

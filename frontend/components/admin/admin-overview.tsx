@@ -25,11 +25,11 @@ const tokenData = [
 ]
 
 const branchData = [
-  { name: "KL Central", volume: 450000, count: 25 },
-  { name: "Selangor", volume: 380000, count: 22 },
-  { name: "Penang", volume: 320000, count: 18 },
-  { name: "Johor", volume: 280000, count: 15 },
-  { name: "Perak", volume: 220000, count: 12 },
+  { name: "Hub Alpha", volume: 450000, count: 25 },
+  { name: "Hub Beta", volume: 380000, count: 22 },
+  { name: "Hub Gamma", volume: 320000, count: 18 },
+  { name: "Hub Delta", volume: 280000, count: 15 },
+  { name: "Hub Epsilon", volume: 220000, count: 12 },
   { name: "Others", volume: 350000, count: 28 },
 ]
 
@@ -102,12 +102,12 @@ export function AdminOverview() {
               formatter={(value, name) => {
                 const v = Number(value ?? 0)
                 return [
-                  name === "volume" ? `RM ${v.toLocaleString()}` : v,
+                  name === "volume" ? `CTC ${v.toLocaleString()}` : v,
                   name === "volume" ? "Total Volume" : "SAG Count",
                 ]
               }}
             />
-            <Bar dataKey="volume" fill="var(--chart-4)" name="Volume (RM)" />
+            <Bar dataKey="volume" fill="var(--chart-4)" name="Volume (CTC)" />
           </BarChart>
         </ResponsiveContainer>
       </div>

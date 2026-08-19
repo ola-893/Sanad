@@ -296,7 +296,7 @@ export default function RepaymentPage() {
     // Check if balance is sufficient
     if (walletBalance < requiredAmount) {
       toast.error('Insufficient Balance', {
-        description: `You need ${investorPayout} but only have RM ${walletBalance.toLocaleString()}. Please top up your account.`,
+        description: `You need ${investorPayout} but only have CTC ${walletBalance.toLocaleString()}. Please top up your account.`,
         duration: 5000,
       })
       setIsProcessing(false)
@@ -400,7 +400,7 @@ export default function RepaymentPage() {
               <>
                 <Badge variant="outline" className="bg-muted text-primary border-blue-200 text-base py-1.5 px-3">
                   <Wallet className="h-4 w-4 mr-2" />
-                  Wallet Balance: RM {walletBalance.toLocaleString()}
+                  Wallet Balance: CTC {walletBalance.toLocaleString()}
                 </Badge>
                 <Button 
                   onClick={handleRefreshBalance} 
@@ -437,7 +437,7 @@ export default function RepaymentPage() {
             {balanceLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold text-primary">RM {walletBalance.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-primary">CTC {walletBalance.toLocaleString()}</div>
             )}
             <p className="text-xs text-primary mt-1">Available funds</p>
           </CardContent>
@@ -450,7 +450,7 @@ export default function RepaymentPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold">RM {(totalDue / 1000000).toFixed(2)}M</div>
+              <div className="text-2xl font-bold">CTC {(totalDue / 1000000).toFixed(2)}M</div>
             )}
             <p className="text-xs text-muted-foreground">Across all SAGs</p>
           </CardContent>
@@ -700,10 +700,10 @@ export default function RepaymentPage() {
                                                 Required: <span className="font-semibold">{selectedRepayment.investorPayout}</span>
                                               </p>
                                               <p className="text-destructive">
-                                                Available: <span className="font-semibold">RM {walletBalance.toLocaleString()}</span>
+                                                Available: <span className="font-semibold">CTC {walletBalance.toLocaleString()}</span>
                                               </p>
                                               <p className="text-destructive mt-1">
-                                                Shortfall: <span className="font-semibold">RM {(parseFloat(selectedRepayment.investorPayout.replace(/[^\d.]/g, '')) - walletBalance).toLocaleString()}</span>
+                                                Shortfall: <span className="font-semibold">CTC {(parseFloat(selectedRepayment.investorPayout.replace(/[^\d.]/g, '')) - walletBalance).toLocaleString()}</span>
                                               </p>
                                               <p className="text-destructive mt-2 text-xs">
                                                 Please top up your account to proceed with the buyback.

@@ -11,6 +11,8 @@ import { goldPriceRoutes } from '@/features/gold-price/index.js';
 import authenticateJWT from '@/middleware/authenticate-jwt.js';
 import uploadRoutes from '@/features/upload/upload.routes.js';
 import { creditcoinRoutes } from '@/features/creditcoin/index.js';
+import rbacRoutes from '@/features/rbac/rbac.routes.js';
+import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
 
 const v1Router = express.Router();
 
@@ -25,5 +27,11 @@ v1Router.use('/gold-price', goldPriceRoutes);
 
 // Creditcoin & Attestcoin Protocol Routes
 v1Router.use('/creditcoin', creditcoinRoutes);
+
+// RBAC & Admin routes
+v1Router.use('/rbac', rbacRoutes);
+
+// Scheduler & queue management
+v1Router.use('/scheduler', schedulerRoutes);
 
 export default v1Router;

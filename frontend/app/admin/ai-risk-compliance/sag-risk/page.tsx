@@ -25,8 +25,8 @@ const pendingEvaluations = [
   {
     id: "SAG001",
     itemType: "Gold Necklace",
-    submittedBy: "Ahmad Rahman",
-    estimatedValue: "RM 8,500",
+    submittedBy: "Alex Chen",
+    estimatedValue: "CTC 8,500",
     riskScore: 25,
     status: "processing",
     factors: ["Market Volatility", "Authentication"],
@@ -35,8 +35,8 @@ const pendingEvaluations = [
   {
     id: "SAG002",
     itemType: "Diamond Ring",
-    submittedBy: "Siti Nurhaliza",
-    estimatedValue: "RM 15,000",
+    submittedBy: "Priya Sharma",
+    estimatedValue: "CTC 15,000",
     riskScore: 75,
     status: "high_risk",
     factors: ["Certification Missing", "Price Anomaly"],
@@ -45,8 +45,8 @@ const pendingEvaluations = [
   {
     id: "SAG003",
     itemType: "Silver Bracelet",
-    submittedBy: "Raj Kumar",
-    estimatedValue: "RM 2,200",
+    submittedBy: "Ryan Cooper",
+    estimatedValue: "CTC 2,200",
     riskScore: 15,
     status: "approved",
     factors: ["Standard Valuation"],

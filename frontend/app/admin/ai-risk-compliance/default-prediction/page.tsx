@@ -28,8 +28,8 @@ const riskFactorData = [
 const highRiskLoans = [
   {
     id: "L001",
-    borrower: "Ahmad Rahman",
-    amount: "RM 45,000",
+    borrower: "Alex Chen",
+    amount: "CTC 45,000",
     riskScore: 85,
     probability: "78%",
     daysOverdue: 15,
@@ -37,8 +37,8 @@ const highRiskLoans = [
   },
   {
     id: "L002",
-    borrower: "Siti Nurhaliza",
-    amount: "RM 32,000",
+    borrower: "Priya Sharma",
+    amount: "CTC 32,000",
     riskScore: 82,
     probability: "74%",
     daysOverdue: 8,
@@ -46,8 +46,8 @@ const highRiskLoans = [
   },
   {
     id: "L003",
-    borrower: "Raj Kumar",
-    amount: "RM 28,500",
+    borrower: "Ryan Cooper",
+    amount: "CTC 28,500",
     riskScore: 79,
     probability: "71%",
     daysOverdue: 22,

@@ -23,7 +23,7 @@ const notifications = [
   {
     id: 1,
     title: "New SAG Application Submitted",
-    message: "SAG #10295 has been submitted for review by Ahmad Bin Abdullah",
+    message: "SAG #10295 has been submitted for review by James Wilson",
     type: "info",
     recipient: "All Admins",
     timestamp: "2 minutes ago",
