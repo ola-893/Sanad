@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
-import { User, UserProfile, HederaAccount } from "@/lib/auth/auth-service"
+import { User, UserProfile, CreditcoinWallet } from "@/lib/auth/auth-service"
 
 interface UserProfileDisplayProps {
-  showHederaInfo?: boolean
+  showWalletInfo?: boolean
   showPersonalInfo?: boolean
 }
 
 export function UserProfileDisplay({ 
-  showHederaInfo = true, 
+  showWalletInfo = true, 
   showPersonalInfo = true 
 }: UserProfileDisplayProps) {
   const [user] = useAtom(userAtom)
@@ -28,7 +28,7 @@ export function UserProfileDisplay({
   }
 
   const profile = user.profile
-  const hederaAccount = user.hederaAccount
+  const wallet = user.wallet
 
   return (
     <div className="space-y-4">
@@ -93,59 +93,40 @@ export function UserProfileDisplay({
                 <p className="text-sm">{profile.gender}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Account ID</p>
-                <p className="text-sm font-mono text-xs">{profile.accountId}</p>
+                <p className="text-sm font-medium text-muted-foreground">Creditcoin EVM Address</p>
+                <p className="text-sm font-mono text-xs break-all">{profile.accountId || wallet?.address || 'N/A'}</p>
               </div>
             </div>
-            
-            {profile.walletId && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Wallet ID</p>
-                <p className="text-sm font-mono text-xs">{profile.walletId}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Hedera Account Information */}
-      {showHederaInfo && hederaAccount && (
+      {/* Creditcoin CC3 Wallet Information */}
+      {showWalletInfo && (wallet || profile?.accountId) && (
         <Card>
           <CardHeader>
-            <CardTitle>Hedera Account</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>Creditcoin 3 EVM Wallet</span>
+              <Badge variant="outline">{wallet?.network || 'Creditcoin 3 Testnet'}</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Account ID</p>
-                <p className="text-sm font-mono text-xs">{hederaAccount.hederaAccountId}</p>
+                <p className="text-sm font-medium text-muted-foreground">Wallet Address</p>
+                <a
+                  href={`https://creditcoin-testnet.blockscout.com/address/${wallet?.address || profile?.accountId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-mono text-xs text-primary underline break-all"
+                >
+                  {wallet?.address || profile?.accountId}
+                </a>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Network</p>
-                <Badge variant="outline">{hederaAccount.network}</Badge>
+                <p className="text-sm font-medium text-muted-foreground">CTC Balance</p>
+                <p className="text-sm font-semibold">{wallet?.balanceCTC || '0.0'} CTC</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Balance</p>
-                <p className="text-sm">{hederaAccount.accountInfo.balance}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
-                <Badge variant={hederaAccount.accountInfo.isDeleted ? 'destructive' : 'default'}>
-                  {hederaAccount.accountInfo.isDeleted ? 'Deleted' : 'Active'}
-                </Badge>
-              </div>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Public Key</p>
-              <p className="text-sm font-mono text-xs break-all">{hederaAccount.accountInfo.key}</p>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Expiration Time</p>
-              <p className="text-sm">
-                {new Date(parseInt(hederaAccount.accountInfo.expirationTime) * 1000).toLocaleString()}
-              </p>
             </div>
           </CardContent>
         </Card>

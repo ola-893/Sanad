@@ -81,6 +81,9 @@ contract SanadLiquidityPool is Ownable {
     }
     mapping(uint256 => LiquidationAuction) public auctions;
 
+    // Track immutable write-once liquidation inception timestamp per token (for Shariah Ujrah fee freeze)
+    mapping(uint256 => uint256) public liquidationInceptionTimestamp;
+
     // Events
     event LiquidityDeposited(address indexed provider, uint256 amount, uint256 newTotalLiquidity);
     event LiquidityWithdrawn(address indexed provider, uint256 amount, uint256 newTotalLiquidity);
@@ -253,6 +256,8 @@ contract SanadLiquidityPool is Ownable {
         uint256 startPrice = collateral.appraisedValueUSD;
         uint256 reservePrice = tokenLoanBalance[tokenId]; // Minimum recovery is principal owed
 
+        liquidationInceptionTimestamp[tokenId] = block.timestamp;
+
         auctions[tokenId] = LiquidationAuction({
             tokenId: tokenId,
             startPriceUSD: startPrice,
@@ -275,6 +280,7 @@ contract SanadLiquidityPool is Ownable {
      *      with a lower clearance floor (distressed liquidation) so that the pool can recover
      *      whatever liquidity the market will bear. Any resulting capital shortfall is absorbed
      *      by the LP pool waterfall.
+     *      NOTE: liquidationInceptionTimestamp remains untouched so borrower Ujrah remains strictly frozen.
      * @param tokenId SAG Token ID
      * @param discountedReservePriceUSD New lower clearance floor in USD (must be < current reserve)
      */
@@ -305,8 +311,9 @@ contract SanadLiquidityPool is Ownable {
     /**
      * @notice Computes exact accrued Ujrah safekeeping fee based on elapsed physical vault custody time
      * @dev Under AAOIFI Standard 39 and Bank Negara Malaysia Rahn Policy, Ujrah accrues on a linear
-     *      pro-rata basis for vault custody. Safekeeping fees freeze when collateral enters liquidation
-     *      auction (auction.startTime) so borrowers are not penalized during price discovery.
+     *      pro-rata basis for vault custody. Safekeeping fees permanently freeze when collateral enters
+     *      liquidation auction (liquidationInceptionTimestamp) so borrowers are never charged custody
+     *      fees during primary price discovery or subsequent reset rounds.
      *      accruedUjrah = (monthlyUjrahUSD * elapsedSeconds) / (30 days)
      */
     function calculateAccruedUjrah(uint256 tokenId) public view returns (uint256) {
@@ -314,10 +321,9 @@ contract SanadLiquidityPool is Ownable {
         if (collateral.monthlyUjrahUSD == 0) return 0;
         if (block.timestamp <= collateral.originationTimestamp) return 0;
 
-        // Freeze custody accrual at the moment liquidation auction began
-        uint256 custodyEnd = (auctions[tokenId].active && auctions[tokenId].startTime > 0)
-            ? auctions[tokenId].startTime
-            : block.timestamp;
+        // Permanently freeze custody fee calculation at the write-once liquidation inception timestamp
+        uint256 inception = liquidationInceptionTimestamp[tokenId];
+        uint256 custodyEnd = (inception > 0) ? inception : block.timestamp;
 
         if (custodyEnd <= collateral.originationTimestamp) return 0;
         uint256 elapsed = custodyEnd - collateral.originationTimestamp;

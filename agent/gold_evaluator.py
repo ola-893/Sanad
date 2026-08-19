@@ -416,7 +416,7 @@ def encrypt_message(message: str, encryption_key: str) -> str:
     
     try:
         # Derive 32-byte key from encryption key using PBKDF2HMAC
-        salt = b'hedera-topic-salt'  # Fixed salt for consistency
+        salt = b'sanad-audit-salt'  # Fixed salt for Creditcoin audit log encryption
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA512(),
             length=32,
@@ -438,7 +438,7 @@ def encrypt_message(message: str, encryption_key: str) -> str:
         encryptor = cipher.encryptor()
         
         # Add associated data
-        encryptor.authenticate_additional_data(b'hedera-topic-message')
+        encryptor.authenticate_additional_data(b'sanad-audit-message')
         
         # Encrypt the message
         ciphertext = encryptor.update(message.encode('utf-8')) + encryptor.finalize()
@@ -455,17 +455,33 @@ def encrypt_message(message: str, encryption_key: str) -> str:
 
 
 # ------------------------------------------------------------------------------
-# Ollama LLM caller
+# Creditcoin Audit Logger for AI Agent Appraisals
 # ------------------------------------------------------------------------------
-def send_to_hedera_topic(api_base: str, topic_id: str, message: str, encryption_key: str = "") -> None:
-    """Safe logger for audit traces (Creditcoin EVM & IPFS compatible)."""
-    if not topic_id or not api_base:
-        return  # No-op on Creditcoin architecture
+def send_to_creditcoin_audit_log(api_base: str, event_type: str, message: Any, encryption_key: str = "") -> None:
+    """Logs structured AI appraisal telemetry directly to the Creditcoin audit ledger."""
+    target_api = api_base or os.getenv("BACKEND_API_BASE_URL", "http://localhost:5000")
     try:
-        url = f"{api_base}/api/v1/creditcoin/audit-logs"
-        # Optional logging
-    except Exception:
-        pass
+        msg_str = json.dumps(message) if isinstance(message, dict) else str(message)
+        encrypted_payload = encrypt_message(msg_str, encryption_key) if encryption_key else message
+        
+        url = f"{target_api}/api/v1/creditcoin/audit-logs"
+        payload = {
+            "eventType": event_type,
+            "contractAddress": os.getenv("SAG_TOKEN_ADDRESS", "0x8DA26C2b004f5962c0846f57d193de12f2F62612"),
+            "transactionHash": "0x" + hashlib.sha256(msg_str.encode('utf-8')).hexdigest()[:64],
+            "blockNumber": 0,
+            "details": {
+                "eventType": event_type,
+                "payload": encrypted_payload,
+                "encrypted": bool(encryption_key),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        }
+        resp = requests.post(url, json=payload, timeout=5)
+        if resp.ok:
+            print(f"[AUDIT] Successfully recorded {event_type} to Creditcoin audit ledger", file=sys.stderr)
+    except Exception as e:
+        print(f"[WARN] Failed to write Creditcoin audit log: {e}", file=sys.stderr)
 
 
 def call_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str, tracer: Tracer, 
@@ -490,8 +506,8 @@ def call_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str,
         
         # Track AI agent input (Generative AI semantic key)
         span.set_attribute("input.value", user_prompt)
-        # Send encrypted input to Hedera topic (without risk_level)
-        send_to_hedera_topic(api_base, input_topic_id, user_prompt, encryption_key)
+        # Log input prompt to Creditcoin audit ledger
+        send_to_creditcoin_audit_log(api_base, "AI_APPRAISAL_INPUT_PROMPT", user_prompt, encryption_key)
 
         try:
             resp = requests.post(chat_url, json=payload_chat, timeout=120)
@@ -506,8 +522,8 @@ def call_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str,
                     "llm_response": text,
                     "metrics": metrics
                 }
-                # Send encrypted AI response with risk_level to Hedera topic
-                send_to_hedera_topic(api_base, output_topic_id, json.dumps(output_data), encryption_key)
+                # Log AI output to Creditcoin audit ledger
+                send_to_creditcoin_audit_log(api_base, "AI_APPRAISAL_OUTPUT_EVALUATION", output_data, encryption_key)
                 
                 span.set_attribute("llm.mode", "chat")
                 span.set_attribute("llm.tokens_out_len", len(text))
@@ -536,8 +552,8 @@ def call_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str,
             "llm_response": text,
             "metrics": metrics
         }
-        # Send encrypted AI response with risk_level to Hedera topic
-        send_to_hedera_topic(api_base, output_topic_id, json.dumps(output_data), encryption_key)
+        # Log AI output to Creditcoin audit ledger
+        send_to_creditcoin_audit_log(api_base, "AI_APPRAISAL_OUTPUT_EVALUATION", output_data, encryption_key)
 
         span.set_attribute("llm.mode", "generate")
         span.set_attribute("llm.tokens_out_len", len(text))
