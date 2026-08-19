@@ -288,7 +288,7 @@ export default function Home() {
                     Financing Calculator
                   </h3>
                   <span className="rounded-full border border-[#E1BAC2]/30 bg-[#E1BAC2]/10 px-3 py-1 font-mono text-[10px] font-bold text-[#E1BAC2]">
-                    MYR · Live
+                    CTC · Live
                   </span>
                 </div>
                 <LoanCalculator />

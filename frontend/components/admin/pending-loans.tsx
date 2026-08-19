@@ -9,7 +9,7 @@ export function PendingLoans() {
     {
       id: "L-2025-007",
       user: {
-        name: "Marcus Webb",
+        name: "Ibrahim Musa",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "AR",
       },
@@ -21,7 +21,7 @@ export function PendingLoans() {
     {
       id: "L-2025-008",
       user: {
-        name: "Emma Davis",
+        name: "Aisha Bello",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "NH",
       },
@@ -33,7 +33,7 @@ export function PendingLoans() {
     {
       id: "L-2025-009",
       user: {
-        name: "Kai Nakamura",
+        name: "Tunde Oladipo",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "TW",
       },
@@ -45,7 +45,7 @@ export function PendingLoans() {
     {
       id: "L-2025-010",
       user: {
-        name: "Lisa Morgan",
+        name: "Ngozi Okafor",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "SA",
       },

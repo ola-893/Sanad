@@ -59,7 +59,7 @@ export function CreateNFTForm() {
             investorFinancingType: 'Conventional',
             investorRoiPercentage: 2,
             investorRoiFixedAmount: 0,
-            currency: 'MYR',
+            currency: 'CTC',
             loanPercentage: 60,
             loan: 0,
             pawnerInterestP: 5,
@@ -313,7 +313,7 @@ export function CreateNFTForm() {
                                 rules={{ required: 'Valuation is required', min: 1 }}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Total Valuation (MYR)</FormLabel>
+                                        <FormLabel>Total Valuation (CTC)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
@@ -353,7 +353,7 @@ export function CreateNFTForm() {
                                 <>
                                     <div className="p-3 bg-muted border border-blue-200 rounded-lg">
                                         <p className="text-sm text-primary">
-                                            <strong>Note:</strong> Each mint share must have a minimum value of RM 1.00.
+                                            <strong>Note:</strong> Each mint share must have a minimum value of CTC 1.00.
                                             The system will automatically adjust shares if needed to maintain this requirement.
                                         </p>
                                     </div>
@@ -417,7 +417,7 @@ export function CreateNFTForm() {
                                             rules={{ required: 'Fixed RoI amount is required for Islamic financing', min: 0 }}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Total Fixed Profit Pool (MYR)</FormLabel>
+                                                    <FormLabel>Total Fixed Profit Pool (CTC)</FormLabel>
                                                     <FormControl>
                                                         <Input
                                                             type="number"
@@ -448,7 +448,7 @@ export function CreateNFTForm() {
 
                                                 const valuation = form.getValues('valuation')
                                                 if (valuation && value && (valuation / value) < 1) {
-                                                    return `Maximum ${Math.floor(valuation)} shares allowed (mint value cannot be less than 1 MYR)`
+                                                    return `Maximum ${Math.floor(valuation)} shares allowed (mint value cannot be less than 1 CTC)`
                                                 }
                                                 return true
                                             }
@@ -491,7 +491,7 @@ export function CreateNFTForm() {
                                             <div className="flex justify-between">
                                                 <span>Mint Value per Share:</span>
                                                 <span className={`font-medium ${mintValue < 1 ? 'text-destructive' : ''}`}>
-                                                    MYR {mintValue}
+                                                    CTC {mintValue}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
@@ -511,7 +511,7 @@ export function CreateNFTForm() {
                                                     <div className="flex justify-between">
                                                         <span>Monthly Return per Share:</span>
                                                         <span className="font-medium text-success">
-                                                            MYR {((mintValue * (form.watch('investorRoiPercentage') || 0)) / 100).toFixed(2)}
+                                                            CTC {((mintValue * (form.watch('investorRoiPercentage') || 0)) / 100).toFixed(2)}
                                                         </span>
                                                     </div>
                                                     {form.watch('tenorM') && (
@@ -519,13 +519,13 @@ export function CreateNFTForm() {
                                                             <div className="flex justify-between border-t pt-1 mt-2">
                                                                 <span>Total Return per Share ({form.watch('tenorM')} months):</span>
                                                                 <span className="font-medium text-primary">
-                                                                    MYR {(mintValue * (1 + (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0))).toFixed(2)}
+                                                                    CTC {(mintValue * (1 + (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0))).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span>Profit per Share:</span>
                                                                 <span className="font-medium text-success">
-                                                                    MYR {(mintValue * (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0)).toFixed(2)}
+                                                                    CTC {(mintValue * (form.watch('investorRoiPercentage') || 0) / 100 * (form.watch('tenorM') || 0)).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                         </>
@@ -536,12 +536,12 @@ export function CreateNFTForm() {
                                                 <>
                                                     <div className="flex justify-between">
                                                         <span>Total Profit Pool:</span>
-                                                        <span className="font-medium text-success">MYR {form.watch('investorRoiFixedAmount') || 0}</span>
+                                                        <span className="font-medium text-success">CTC {form.watch('investorRoiFixedAmount') || 0}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Profit per Share:</span>
                                                         <span className="font-medium text-success">
-                                                            MYR {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
+                                                            CTC {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
                                                         </span>
                                                     </div>
                                                     {form.watch('tenorM') && (
@@ -549,13 +549,13 @@ export function CreateNFTForm() {
                                                             <div className="flex justify-between border-t pt-1 mt-2">
                                                                 <span>Total Return per Share ({form.watch('tenorM')} months):</span>
                                                                 <span className="font-medium text-primary">
-                                                                    MYR {(mintValue + (form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)) : 0)).toFixed(2)}
+                                                                    CTC {(mintValue + (form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)) : 0)).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span>Profit per Share:</span>
                                                                 <span className="font-medium text-success">
-                                                                    MYR {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
+                                                                    CTC {form.watch('mintShare') ? ((form.watch('investorRoiFixedAmount') || 0) / (form.watch('mintShare') || 1)).toFixed(2) : '0.00'}
                                                                 </span>
                                                             </div>
                                                         </>
@@ -564,7 +564,7 @@ export function CreateNFTForm() {
                                             )}
                                             {mintValue < 1 && (
                                                 <div className="text-xs text-destructive mt-2">
-                                                    ⚠️ Mint value must be at least MYR 1.00
+                                                    ⚠️ Mint value must be at least CTC 1.00
                                                 </div>
                                             )}
                                         </div>
@@ -612,7 +612,7 @@ export function CreateNFTForm() {
                                 rules={{ required: 'Pawn date is required' }}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Pawn Date (Tarikh Gadai)</FormLabel>
+                                        <FormLabel>Pawn Date (Pawn Date)</FormLabel>
                                         <FormControl>
                                             <DatePicker
                                                 value={field.value}
@@ -649,7 +649,7 @@ export function CreateNFTForm() {
                             name="maturityDate"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Maturity Date (Tarikh Luput)</FormLabel>
+                                    <FormLabel>Maturity Date (Maturity Date)</FormLabel>
                                     <FormControl>
                                         <DatePicker
                                             value={field.value}
@@ -678,7 +678,7 @@ export function CreateNFTForm() {
                                     <div className="flex justify-between">
                                         <span>Pawn DateTime:</span>
                                         <span className="font-medium">
-                                            {new Date(`${form.watch('pawnDate')}T${form.watch('pawnTime')}:00`).toLocaleString('en-MY')}
+                                            {new Date(`${form.watch('pawnDate')}T${form.watch('pawnTime')}:00`).toLocaleString('en-NG')}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -688,7 +688,7 @@ export function CreateNFTForm() {
                                                 const pawnDateTime = new Date(`${form.watch('pawnDate')}T${form.watch('pawnTime')}:00`)
                                                 const maturityDateTime = new Date(pawnDateTime)
                                                 maturityDateTime.setMonth(maturityDateTime.getMonth() + Number(form.watch('tenorM')))
-                                                return maturityDateTime.toLocaleString('en-MY')
+                                                return maturityDateTime.toLocaleString('en-NG')
                                             })()}
                                         </span>
                                     </div>

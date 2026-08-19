@@ -9,7 +9,7 @@ export function PendingKyc() {
     {
       id: "KYC-2025-012",
       user: {
-        name: "Chloe Zhang",
+        name: "Halima Yusuf",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "ML",
       },
@@ -20,7 +20,7 @@ export function PendingKyc() {
     {
       id: "KYC-2025-013",
       user: {
-        name: "Daniel Brown",
+        name: "Oluwaseun Adebayo",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "RK",
       },
@@ -31,7 +31,7 @@ export function PendingKyc() {
     {
       id: "KYC-2025-014",
       user: {
-        name: "Sofia Martinez",
+        name: "Funke Adekunle",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "AH",
       },
@@ -42,7 +42,7 @@ export function PendingKyc() {
     {
       id: "KYC-2025-015",
       user: {
-        name: "Michael Taylor",
+        name: "Bola Ahmed",
         avatar: "/placeholder.svg?height=36&width=36",
         initials: "DW",
       },

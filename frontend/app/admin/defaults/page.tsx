@@ -18,7 +18,7 @@ import { AlertTriangle, DollarSign, Calendar, CheckCircle, FileText, TrendingDow
 const defaultData = [
   {
     sagId: "SAG-2024-023",
-    arRahnu: "Hub Alpha",
+    arRahnu: "Abuja Central",
     originalAmount: "CTC 15,000",
     outstandingAmount: "CTC 15,450",
     defaultDate: "2024-12-15",
@@ -31,7 +31,7 @@ const defaultData = [
   },
   {
     sagId: "SAG-2024-034",
-    arRahnu: "Hub Beta",
+    arRahnu: "Wuse Zone",
     originalAmount: "CTC 22,000",
     outstandingAmount: "CTC 22,660",
     defaultDate: "2024-11-20",
@@ -44,7 +44,7 @@ const defaultData = [
   },
   {
     sagId: "SAG-2024-045",
-    arRahnu: "Hub Gamma",
+    arRahnu: "Garki Hub",
     originalAmount: "CTC 8,500",
     outstandingAmount: "CTC 8,755",
     defaultDate: "2024-10-30",
@@ -385,13 +385,13 @@ export default function DefaultsPage() {
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Southern Region</span>
+                <span className="text-sm">Lugbe Office</span>
                 <Badge variant="outline" className="bg-warning/10 text-warning">
                   3.5%
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Northern Region</span>
+                <span className="text-sm">Nyanya Branch</span>
                 <Badge variant="outline" className="bg-success/10 text-success">
                   1.8%
                 </Badge>

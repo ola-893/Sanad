@@ -11,7 +11,7 @@ export function RecentLoans() {
         </Avatar>
         <div className="ml-4 space-y-1">
           <p className="text-sm font-medium leading-none">John Doe</p>
-          <p className="text-sm text-muted-foreground">Gold Necklace (24K) - RM 5,000</p>
+          <p className="text-sm text-muted-foreground">Gold Necklace (24K) - CTC 5,000</p>
         </div>
         <div className="ml-auto">
           <Badge>Approved</Badge>
@@ -24,7 +24,7 @@ export function RecentLoans() {
         </Avatar>
         <div className="ml-4 space-y-1">
           <p className="text-sm font-medium leading-none">Alice Smith</p>
-          <p className="text-sm text-muted-foreground">Diamond Ring (1.5 carat) - RM 8,500</p>
+          <p className="text-sm text-muted-foreground">Diamond Ring (1.5 carat) - CTC 8,500</p>
         </div>
         <div className="ml-auto">
           <Badge variant="outline">Pending</Badge>
@@ -37,7 +37,7 @@ export function RecentLoans() {
         </Avatar>
         <div className="ml-4 space-y-1">
           <p className="text-sm font-medium leading-none">Robert Johnson</p>
-          <p className="text-sm text-muted-foreground">Gold Bracelet (22K) - RM 3,200</p>
+          <p className="text-sm text-muted-foreground">Gold Bracelet (22K) - CTC 3,200</p>
         </div>
         <div className="ml-auto">
           <Badge className="bg-success/100">Disbursed</Badge>
@@ -50,7 +50,7 @@ export function RecentLoans() {
         </Avatar>
         <div className="ml-4 space-y-1">
           <p className="text-sm font-medium leading-none">Maria Wong</p>
-          <p className="text-sm text-muted-foreground">Gold Earrings (24K) - RM 2,800</p>
+          <p className="text-sm text-muted-foreground">Gold Earrings (24K) - CTC 2,800</p>
         </div>
         <div className="ml-auto">
           <Badge variant="destructive">Rejected</Badge>
@@ -63,7 +63,7 @@ export function RecentLoans() {
         </Avatar>
         <div className="ml-4 space-y-1">
           <p className="text-sm font-medium leading-none">Kamal Lee</p>
-          <p className="text-sm text-muted-foreground">Gold Chain (22K) - RM 4,100</p>
+          <p className="text-sm text-muted-foreground">Gold Chain (22K) - CTC 4,100</p>
         </div>
         <div className="ml-auto">
           <Badge>Approved</Badge>

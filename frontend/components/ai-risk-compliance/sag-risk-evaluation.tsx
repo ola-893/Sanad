@@ -376,13 +376,13 @@ export function SagRiskEvaluation() {
                                   <div>
                                     <label className="text-sm font-medium">Raise Amount</label>
                                     <p className="text-sm text-muted-foreground">
-                                      RM {selectedSag.raiseAmount.toLocaleString()}
+                                      CTC {selectedSag.raiseAmount.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>
                                     <label className="text-sm font-medium">Collateral Value</label>
                                     <p className="text-sm text-muted-foreground">
-                                      RM {selectedSag.collateralValue.toLocaleString()}
+                                      CTC {selectedSag.collateralValue.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>

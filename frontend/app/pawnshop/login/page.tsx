@@ -23,6 +23,8 @@ import { AuthShell } from "@/components/auth/auth-shell"
 import apiInstance from '@/lib/axios-v1'
 import { toast } from 'sonner'
 import type { AxiosError, AxiosResponse } from 'axios'
+import { useAtom } from 'jotai'
+import { authStateAtom } from '@/store/atoms'
 
 const loginSchema = z.object({
   username: z.string().email('Please enter a valid email address'),
@@ -34,6 +36,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export default function PawnshopLoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [, setAuthState] = useAtom(authStateAtom)
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -44,18 +47,40 @@ export default function PawnshopLoginPage() {
   })
 
   const onSubmit = async (data: LoginFormData) => {
-    sessionStorage.setItem("userType", "pawnshop");
-
     const response = apiInstance.post('/auth/login', data);
 
     toast.promise(response, {
       loading: 'Signing in...',
       success: (returnedData: AxiosResponse) => {
         const tokenData = returnedData.data.data;
+        const role = tokenData.roleName || tokenData.role || 'PAWNSHOP';
 
+        // Store tokens in sessionStorage for the pawnshop portal
         sessionStorage.setItem("accessToken", tokenData.accessToken);
         sessionStorage.setItem("refreshToken", tokenData.refreshToken);
         sessionStorage.setItem("expiredAt", tokenData.expiredAt);
+        sessionStorage.setItem("userType", "pawnshop");
+
+        // Update the Jotai auth state so the rest of the app knows the user is authenticated
+        setAuthState({
+          isAuthenticated: true,
+          role: role,
+          isLoading: false,
+          user: {
+            userInfo: {
+              roleId: role,
+              ...tokenData.user,
+            },
+          } as any,
+        });
+
+        // Also store in localStorage for the admin panel compatibility
+        localStorage.setItem('authState', JSON.stringify({
+          isAuthenticated: true,
+          token: tokenData.accessToken,
+          userType: 'pawnshop',
+          refreshToken: tokenData.refreshToken,
+        }));
 
         setTimeout(() => {
           router.push('/pawnshop/dashboard')
@@ -64,17 +89,13 @@ export default function PawnshopLoginPage() {
         return `Login Successful!`
       },
       error: (error: AxiosError) => {
-        console.log("error", error);
-
         if (error.status === 401) {
           form.setError('password', {
             type: 'manual',
             message: 'Invalid email or password. Please try again.',
           })
-
           return 'Invalid email or password. Please try again.'
         }
-
         return 'Error signing in. Please try again later.'
       }
     });

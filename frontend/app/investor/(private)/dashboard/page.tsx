@@ -21,9 +21,9 @@ export default function InvestorDashboard() {
       duration: "6 Months",
       annualReturn: "6%",
       subscribed: 78,
-      expectedROI: "RM 210",
-      minInvestment: "RM 1,000",
-      totalValue: "RM 50,000",
+      expectedROI: "CTC 210",
+      minInvestment: "CTC 1,000",
+      totalValue: "CTC 50,000",
       status: "Active",
     },
     {
@@ -31,9 +31,9 @@ export default function InvestorDashboard() {
       duration: "12 Months",
       annualReturn: "6%",
       subscribed: 45,
-      expectedROI: "RM 420",
-      minInvestment: "RM 2,000",
-      totalValue: "RM 100,000",
+      expectedROI: "CTC 420",
+      minInvestment: "CTC 2,000",
+      totalValue: "CTC 100,000",
       status: "Active",
     },
   ]
@@ -167,7 +167,7 @@ export default function InvestorDashboard() {
                       <DollarSignIcon className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">Total Invested</span>
                     </div>
-                    <p className={investorStyles.text.value}>RM 0</p>
+                    <p className={investorStyles.text.value}>CTC 0</p>
                   </div>
 
                   <div className={`${investorStyles.background.warning} p-4 rounded-lg`}>
@@ -175,7 +175,7 @@ export default function InvestorDashboard() {
                       <TrendingUpIcon className="h-4 w-4 text-gold" />
                       <span className="text-sm font-medium">Expected Returns</span>
                     </div>
-                    <p className={`text-2xl font-bold ${investorStyles.text.accent}`}>RM 0</p>
+                    <p className={`text-2xl font-bold ${investorStyles.text.accent}`}>CTC 0</p>
                   </div>
 
                   <div className="bg-muted p-4 rounded-lg">

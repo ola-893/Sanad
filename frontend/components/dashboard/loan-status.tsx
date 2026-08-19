@@ -62,11 +62,11 @@ export function LoanStatus() {
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Financing Amount:</span>
-                  <span className="font-bold">RM {loan.amount.toLocaleString()}</span>
+                  <span className="font-bold">CTC {loan.amount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Remaining:</span>
-                  <span>RM {loan.remainingAmount.toLocaleString()}</span>
+                  <span>CTC {loan.remainingAmount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Next Payment:</span>
@@ -74,7 +74,7 @@ export function LoanStatus() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Payment Amount:</span>
-                  <span>RM {loan.nextPaymentAmount.toLocaleString()}</span>
+                  <span>CTC {loan.nextPaymentAmount.toLocaleString()}</span>
                 </div>
               </div>
             </div>

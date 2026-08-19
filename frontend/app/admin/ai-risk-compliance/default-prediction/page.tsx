@@ -28,7 +28,7 @@ const riskFactorData = [
 const highRiskLoans = [
   {
     id: "L001",
-    borrower: "Alex Chen",
+    borrower: "Chukwuemeka Okafor",
     amount: "CTC 45,000",
     riskScore: 85,
     probability: "78%",
@@ -37,7 +37,7 @@ const highRiskLoans = [
   },
   {
     id: "L002",
-    borrower: "Priya Sharma",
+    borrower: "Fatima Abubakar",
     amount: "CTC 32,000",
     riskScore: 82,
     probability: "74%",
@@ -46,7 +46,7 @@ const highRiskLoans = [
   },
   {
     id: "L003",
-    borrower: "Ryan Cooper",
+    borrower: "Olumide Adeyemi",
     amount: "CTC 28,500",
     riskScore: 79,
     probability: "71%",

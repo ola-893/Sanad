@@ -25,7 +25,7 @@ const pendingEvaluations = [
   {
     id: "SAG001",
     itemType: "Gold Necklace",
-    submittedBy: "Alex Chen",
+    submittedBy: "Chukwuemeka Okafor",
     estimatedValue: "CTC 8,500",
     riskScore: 25,
     status: "processing",
@@ -35,7 +35,7 @@ const pendingEvaluations = [
   {
     id: "SAG002",
     itemType: "Diamond Ring",
-    submittedBy: "Priya Sharma",
+    submittedBy: "Fatima Abubakar",
     estimatedValue: "CTC 15,000",
     riskScore: 75,
     status: "high_risk",
@@ -45,7 +45,7 @@ const pendingEvaluations = [
   {
     id: "SAG003",
     itemType: "Silver Bracelet",
-    submittedBy: "Ryan Cooper",
+    submittedBy: "Olumide Adeyemi",
     estimatedValue: "CTC 2,200",
     riskScore: 15,
     status: "approved",

@@ -25,11 +25,11 @@ const tokenData = [
 ]
 
 const branchData = [
-  { name: "Hub Alpha", volume: 450000, count: 25 },
-  { name: "Hub Beta", volume: 380000, count: 22 },
-  { name: "Hub Gamma", volume: 320000, count: 18 },
-  { name: "Hub Delta", volume: 280000, count: 15 },
-  { name: "Hub Epsilon", volume: 220000, count: 12 },
+  { name: "Abuja Central", volume: 450000, count: 25 },
+  { name: "Wuse Zone", volume: 380000, count: 22 },
+  { name: "Garki Hub", volume: 320000, count: 18 },
+  { name: "Maitama Office", volume: 280000, count: 15 },
+  { name: "Kubwa Branch", volume: 220000, count: 12 },
   { name: "Others", volume: 350000, count: 28 },
 ]
 

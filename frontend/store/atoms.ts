@@ -13,7 +13,7 @@ type AuthState = {
     isLoading: boolean;
 };
 
-const authStateAtom = atomWithStorage<AuthState>("authStorage", {
+export const authStateAtom = atomWithStorage<AuthState>("authStorage", {
     user: null,
     role: null,
     isAuthenticated: false,

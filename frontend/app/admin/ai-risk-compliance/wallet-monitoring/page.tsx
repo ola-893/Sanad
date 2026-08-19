@@ -55,7 +55,7 @@ const suspiciousTransactions = [
 const monitoredWallets = [
   {
     address: "0x1234567890abcdef",
-    owner: "Alex Chen",
+    owner: "Chukwuemeka Okafor",
     balance: "CTC 125,000",
     riskLevel: "Medium",
     lastActivity: "2 hours ago",
@@ -64,7 +64,7 @@ const monitoredWallets = [
   },
   {
     address: "0x9876543210fedcba",
-    owner: "Priya Sharma",
+    owner: "Fatima Abubakar",
     balance: "CTC 89,500",
     riskLevel: "Low",
     lastActivity: "1 day ago",

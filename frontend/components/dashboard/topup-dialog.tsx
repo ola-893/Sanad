@@ -50,7 +50,7 @@ export function TopUpDialog() {
         setAmount("")
         setOpen(false)
         await queryClient.refetchQueries({ queryKey: ['wallet-balance'] })
-        return `RM ${parseFloat(amount).toFixed(2)} has been added to your wallet.`
+        return `CTC ${parseFloat(amount).toFixed(2)} has been added to your wallet.`
       },
       error: 'Failed to top up wallet. Please try again.',
       finally: () => {
@@ -98,14 +98,14 @@ export function TopUpDialog() {
                   size="sm"
                   onClick={() => handlePresetClick(preset)}
                 >
-                  RM {preset.toLocaleString()}
+                  CTC {preset.toLocaleString()}
                 </Button>
               ))}
             </div>
           </div>
           <div className="rounded-lg bg-muted p-3 text-sm">
             <p className="text-muted-foreground">
-              <strong>Total:</strong> RM {amount ? parseFloat(amount).toFixed(2) : "0.00"}
+              <strong>Total:</strong> CTC {amount ? parseFloat(amount).toFixed(2) : "0.00"}
             </p>
           </div>
         </div>

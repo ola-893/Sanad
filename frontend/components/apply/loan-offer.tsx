@@ -240,7 +240,7 @@ export function LoanOffer() {
     }
     
     if (mintValue < 1) {
-      toast.error('Mint value per share must be at least RM 1.00')
+      toast.error('Mint value per share must be at least CTC 1.00')
       return false
     }
 
@@ -293,7 +293,7 @@ export function LoanOffer() {
           investorFinancingType: formData.investorFinancingType,
           investorRoiPercentage: formData.investorRoiPercentage,
           investorRoiFixedAmount: formData.investorRoiFixedAmount,
-          currency: 'MYR',
+          currency: 'CTC',
           loanPercentage: formData.loanPercentage,
           loan: loanDetails.loanAmount,
           pawnerInterestP: formData.pawnerInterestP,
@@ -398,7 +398,7 @@ export function LoanOffer() {
                           </FormControl>
                         </div>
                         <FormDescription>
-                          Loan Amount: RM {Math.round(loanAmount).toLocaleString()}
+                          Loan Amount: CTC {Math.round(loanAmount).toLocaleString()}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -489,11 +489,11 @@ export function LoanOffer() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Estimated Value:</span>
-                        <span className="font-medium">RM {estimatedJewelryValue.toLocaleString()}</span>
+                        <span className="font-medium">CTC {estimatedJewelryValue.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Loan Amount ({form.watch('loanPercentage')}%):</span>
-                        <span className="font-medium">RM {Math.round(loanAmount).toLocaleString()}</span>
+                        <span className="font-medium">CTC {Math.round(loanAmount).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Interest Rate:</span>
@@ -502,19 +502,19 @@ export function LoanOffer() {
                       <div className="flex justify-between">
                         <span>Total Interest ({form.watch('tenorM')} months):</span>
                         <span className="font-medium text-orange-600">
-                          RM {Math.round(loanAmount * (form.watch('pawnerInterestP') / 100) * form.watch('tenorM')).toLocaleString()}
+                          CTC {Math.round(loanAmount * (form.watch('pawnerInterestP') / 100) * form.watch('tenorM')).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between border-t pt-2 mt-2">
                         <span className="font-semibold">Total Repayment:</span>
                         <span className="font-semibold text-primary">
-                          RM {Math.round(loanAmount * (1 + (form.watch('pawnerInterestP') / 100) * form.watch('tenorM'))).toLocaleString()}
+                          CTC {Math.round(loanAmount * (1 + (form.watch('pawnerInterestP') / 100) * form.watch('tenorM'))).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Maturity Date:</span>
                         <span className="font-medium">
-                          {new Date(form.watch('maturityDate')).toLocaleDateString('en-MY')}
+                          {new Date(form.watch('maturityDate')).toLocaleDateString('en-NG')}
                         </span>
                       </div>
                     </div>
@@ -534,7 +534,7 @@ export function LoanOffer() {
                 <div className="space-y-4">
                   <div className="p-3 bg-muted border border-blue-200 rounded-lg">
                     <p className="text-sm text-primary">
-                      <strong>Note:</strong> Each share must have a minimum value of RM 1.00.
+                      <strong>Note:</strong> Each share must have a minimum value of CTC 1.00.
                     </p>
                   </div>
 
@@ -596,7 +596,7 @@ export function LoanOffer() {
                       rules={{ required: 'Fixed profit pool is required', min: { value: 0, message: 'Must be non-negative' } }}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Total Fixed Profit Pool (MYR)</FormLabel>
+                          <FormLabel>Total Fixed Profit Pool (CTC)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -624,7 +624,7 @@ export function LoanOffer() {
                       validate: (value) => {
                         const maxShares = Math.floor(loanAmount)
                         if (value > maxShares) {
-                          return `Maximum ${maxShares} shares allowed (mint value cannot be less than 1 MYR)`
+                          return `Maximum ${maxShares} shares allowed (mint value cannot be less than 1 CTC)`
                         }
                         return true
                       }
@@ -646,7 +646,7 @@ export function LoanOffer() {
                           />
                         </FormControl>
                         <FormDescription>
-                          Maximum {Math.floor(loanAmount)} shares (mint value: RM {mintValue.toFixed(2)})
+                          Maximum {Math.floor(loanAmount)} shares (mint value: CTC {mintValue.toFixed(2)})
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -662,7 +662,7 @@ export function LoanOffer() {
                       <div className="flex justify-between">
                         <span>Mint Value per Share:</span>
                         <span className={`font-medium ${mintValue < 1 ? 'text-destructive' : ''}`}>
-                          RM {mintValue.toFixed(2)}
+                          CTC {mintValue.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -682,19 +682,19 @@ export function LoanOffer() {
                           <div className="flex justify-between">
                             <span>Monthly Return per Share:</span>
                             <span className="font-medium text-success">
-                              RM {((mintValue * form.watch('investorRoiPercentage')) / 100).toFixed(2)}
+                              CTC {((mintValue * form.watch('investorRoiPercentage')) / 100).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between border-t pt-2 mt-2">
                             <span>Total Return per Share ({form.watch('tenorM')} months):</span>
                             <span className="font-medium text-primary">
-                              RM {(mintValue * (1 + (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM'))).toFixed(2)}
+                              CTC {(mintValue * (1 + (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM'))).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span>Profit per Share:</span>
                             <span className="font-medium text-success">
-                              RM {(mintValue * (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM')).toFixed(2)}
+                              CTC {(mintValue * (form.watch('investorRoiPercentage') / 100) * form.watch('tenorM')).toFixed(2)}
                             </span>
                           </div>
                         </>
@@ -703,18 +703,18 @@ export function LoanOffer() {
                         <>
                           <div className="flex justify-between">
                             <span>Total Profit Pool:</span>
-                            <span className="font-medium text-success">RM {form.watch('investorRoiFixedAmount')}</span>
+                            <span className="font-medium text-success">CTC {form.watch('investorRoiFixedAmount')}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Profit per Share:</span>
                             <span className="font-medium text-success">
-                              RM {(form.watch('investorRoiFixedAmount') / form.watch('mintShare')).toFixed(2)}
+                              CTC {(form.watch('investorRoiFixedAmount') / form.watch('mintShare')).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between border-t pt-2 mt-2">
                             <span>Total Return per Share:</span>
                             <span className="font-medium text-primary">
-                              RM {(mintValue + (form.watch('investorRoiFixedAmount') / form.watch('mintShare'))).toFixed(2)}
+                              CTC {(mintValue + (form.watch('investorRoiFixedAmount') / form.watch('mintShare'))).toFixed(2)}
                             </span>
                           </div>
                         </>
@@ -740,11 +740,11 @@ export function LoanOffer() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Assessed Value</Label>
-                  <p className="font-medium">RM {loanDetails.jewelryValue.toLocaleString()}</p>
+                  <p className="font-medium">CTC {loanDetails.jewelryValue.toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Financing Amount</Label>
-                  <p className="font-medium text-primary">RM {loanDetails.loanAmount.toLocaleString()}</p>
+                  <p className="font-medium text-primary">CTC {loanDetails.loanAmount.toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Profit Rate</Label>
@@ -792,7 +792,7 @@ export function LoanOffer() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-primary">
-                        RM {calculateMonthlyPayment().toLocaleString()}
+                        CTC {calculateMonthlyPayment().toLocaleString()}
                       </p>
                       <p className="text-xs text-primary">for {tenorM} months</p>
                     </div>
@@ -884,7 +884,7 @@ export function LoanOffer() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Financing Amount</Label>
-                  <p className="font-medium">RM {loanDetails.loanAmount.toLocaleString()}</p>
+                  <p className="font-medium">CTC {loanDetails.loanAmount.toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Start Date</Label>
@@ -897,7 +897,7 @@ export function LoanOffer() {
                 <div className="space-y-1">
                   <Label className="text-sm text-muted-foreground">Payment Amount</Label>
                   <p className="font-medium">
-                    RM {calculateMonthlyPayment().toLocaleString()} ({paymentFrequency})
+                    CTC {calculateMonthlyPayment().toLocaleString()} ({paymentFrequency})
                   </p>
                 </div>
               </div>

@@ -43,7 +43,7 @@ async function fetchGoldPrice(): Promise<{
     return {
       value: 305.67, // Malaysian Ringgit per gram
       unit: "gram",
-      currency: "MYR",
+      currency: "CTC",
       timestamp: new Date().toLocaleString("en-MY", {
         year: "numeric",
         month: "long",
@@ -59,7 +59,7 @@ async function fetchGoldPrice(): Promise<{
     // return {
     //   value: data.price_per_gram_myr,
     //   unit: "gram",
-    //   currency: "MYR",
+    //   currency: "CTC",
     //   timestamp: new Date(data.timestamp).toLocaleString()
     // }
   } catch (error) {

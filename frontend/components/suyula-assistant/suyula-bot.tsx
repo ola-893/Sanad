@@ -346,15 +346,15 @@ export function SuyulaBot() {
                             <div className="space-y-2">
                               <div className="flex justify-between">
                                 <span>Total Investment:</span>
-                                <span className="font-bold">RM {message.data.totalInvestment}</span>
+                                <span className="font-bold">CTC {message.data.totalInvestment}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Current Value:</span>
-                                <span className="font-bold text-success">RM {message.data.currentValue}</span>
+                                <span className="font-bold text-success">CTC {message.data.currentValue}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Total Profit:</span>
-                                <span className="font-bold text-success">+RM {message.data.profit}</span>
+                                <span className="font-bold text-success">+CTC {message.data.profit}</span>
                               </div>
                             </div>
                           )}

@@ -343,7 +343,7 @@ export class SuyulaBotService {
       name: "Cawangan Bangi",
       maxRaise: "80%",
       currentUtilization: "65%",
-      availableLimit: "RM 350,000",
+      availableLimit: "CTC 350,000",
     }
 
     return {
