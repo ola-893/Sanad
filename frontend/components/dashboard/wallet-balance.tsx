@@ -53,8 +53,10 @@ export function WalletBalance() {
       const response = await apiInstance.get('/investor/wallet/balance')
       return response.data
     },
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on every page navigation
+    retry: 1,
   })
 
   const handleRefresh = () => {

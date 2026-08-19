@@ -79,13 +79,19 @@ export class InvestorController {
   async getInvestorWalletBalance(req: Request, res: Response): Promise<void> {
     try {
       const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
+
+      if (!investorInfo) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
       const walletService = new CreditcoinWalletService();
-      const balance = investorInfo?.accountId ? await walletService.getBalance(investorInfo.accountId) : '0.0';
+      const balance = investorInfo.accountId ? await walletService.getBalance(investorInfo.accountId) : '0.0';
 
       res.status(200).json({
         success: true,
         data: {
-          address: investorInfo?.accountId,
+          address: investorInfo.accountId,
           balanceCTC: balance,
           network: 'Creditcoin 3 Testnet',
         }

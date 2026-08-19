@@ -53,7 +53,8 @@ export default function ProfilePage() {
       const response = await apiInstance.get("/investor/wallet/balance")
       return response.data?.data
     },
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
   })
   const liveBalance = walletData?.balanceCTC || wallet?.balanceCTC || "0.0"
   const liveAddress = walletData?.address || walletAddress

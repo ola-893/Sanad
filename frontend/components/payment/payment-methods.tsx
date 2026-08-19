@@ -33,7 +33,8 @@ export function PaymentMethods() {
       const response = await apiInstance.get("/investor/wallet/balance")
       return response.data
     },
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
   })
 
   const wallet = walletData?.data
