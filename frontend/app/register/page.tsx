@@ -11,7 +11,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, PhoneIcon } from "lucide-react"
+import { toast } from "sonner"
+import apiInstance from "@/lib/axios-v1"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -21,6 +24,8 @@ export default function RegisterPage() {
     firstName: "",
     lastName: "",
     email: "",
+    phone: "",
+    gender: "",
     password: "",
     confirmPassword: "",
     agreeTerms: false,
@@ -29,6 +34,8 @@ export default function RegisterPage() {
     firstName: "",
     lastName: "",
     email: "",
+    phone: "",
+    gender: "",
     password: "",
     confirmPassword: "",
     agreeTerms: "",
@@ -47,6 +54,13 @@ export default function RegisterPage() {
         ...errors,
         [name]: "",
       })
+    }
+  }
+
+  const handleGenderChange = (value: string) => {
+    setFormData({ ...formData, gender: value })
+    if (errors.gender) {
+      setErrors({ ...errors, gender: "" })
     }
   }
 
@@ -69,6 +83,16 @@ export default function RegisterPage() {
       valid = false
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid"
+      valid = false
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required"
+      valid = false
+    }
+
+    if (!formData.gender) {
+      newErrors.gender = "Gender is required"
       valid = false
     }
 
@@ -103,11 +127,40 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await apiInstance.post("/auth/register", {
+        userFirstName: formData.firstName.trim(),
+        userLastName: formData.lastName.trim(),
+        userEmail: formData.email.trim().toLowerCase(),
+        userPassword: formData.password,
+        userContactNo: formData.phone.trim(),
+        gender: formData.gender,
+        // Required by DB schema — placeholders replaced during KYC
+        icNo: "000000000000",
+        addressId: "PENDING",
+        companyId: "PENDING",
+        roleId: "INVESTOR",
+      })
+
+      if (response.data.success) {
+        toast.success("Account created successfully!", {
+          description: "Please sign in with your new account.",
+        })
+        router.push("/login")
+      } else {
+        toast.error("Registration failed", {
+          description: response.data.message || "Please try again.",
+        })
+      }
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Registration failed. Please try again."
+      toast.error("Registration failed", { description: message })
+    } finally {
       setIsLoading(false)
-      router.push("/register/kyc")
-    }, 1500)
+    }
   }
 
   return (
@@ -172,6 +225,38 @@ export default function RegisterPage() {
                   />
                 </div>
                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <PhoneIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="+60 12 345 6789"
+                      className="pl-10"
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={formData.gender} onValueChange={handleGenderChange}>
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">Male</SelectItem>
+                      <SelectItem value="FEMALE">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.gender && <p className="text-xs text-destructive">{errors.gender}</p>}
+                </div>
               </div>
 
               <div className="space-y-2">

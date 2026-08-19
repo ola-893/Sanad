@@ -29,9 +29,9 @@ const stageDescriptions = {
   queued: 'Your SAG creation request has been queued for processing',
   validating: 'Validating SAG data and user permissions',
   creating_sag: 'Creating SAG record in database',
-  creating_token: 'Creating Hedera token for your jewelry',
+  creating_token: 'Creating Creditcoin token for your jewelry',
   uploading_metadata: 'Uploading NFT metadata to IPFS',
-  minting_tokens: 'Minting NFT tokens on Hedera network',
+  minting_tokens: 'Minting NFT tokens on Creditcoin network',
   updating_sag: 'Updating SAG with token information',
   complete: 'SAG creation completed successfully',
 }
@@ -147,7 +147,7 @@ export function SAGCreationProgressTracker({
                       NFT Collateral Generated
                     </p>
                     <p className="text-xs text-success dark:text-green-300 mt-1">
-                      Your jewelry is now secured as an NFT on Hedera
+                      Your jewelry is now secured as an NFT on Creditcoin
                     </p>
                     <p className="text-xs text-success dark:text-success mt-1">
                       {new Date(completeData.timestamp).toLocaleString()}
@@ -196,7 +196,7 @@ export function SAGCreationProgressTracker({
                               className="flex items-center justify-center gap-2"
                             >
                               <ExternalLinkIcon className="h-3 w-3" />
-                              View on HashScan
+                              View on Creditcoin Explorer
                             </a>
                           </Button>
                         </div>

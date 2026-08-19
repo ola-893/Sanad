@@ -60,7 +60,7 @@ export async function generateChatResponse(query: string, history: Message[]): P
 
   // Check if query is about payment
   if (lowerQuery.includes("payment") || lowerQuery.includes("repay") || lowerQuery.includes("pay back")) {
-    return "You can make payments through multiple options including HBAR, stablecoins, or bank transfer. Our platform provides a convenient payment center where you can view your payment history, make payments, and set up automatic payments to avoid missing due dates."
+    return "You can make payments through multiple options including Creditcoin wallet (CTC), bank transfer, or credit/debit card. Our platform provides a convenient payment center where you can view your payment history, make payments, and set up automatic payments to avoid missing due dates."
   }
 
   // Check knowledge base for relevant information

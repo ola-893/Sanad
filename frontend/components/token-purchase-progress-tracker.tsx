@@ -241,13 +241,13 @@ export function TokenPurchaseProgressTracker({
                         <div className="pt-2">
                           <Button asChild size="sm" variant="outline" className="w-full">
                             <a 
-                              href={`${process.env.NEXT_PUBLIC_ENV_URL}/${completeData.tokenId}`}
+                              href="https://creditcoin-testnet.blockscout.com"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center justify-center gap-2"
                             >
                               <ExternalLinkIcon className="h-3 w-3" />
-                              View Token on HashScan
+                              View Token on Creditcoin Explorer
                             </a>
                           </Button>
                         </div>

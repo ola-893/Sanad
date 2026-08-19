@@ -10,7 +10,7 @@ import { Check, ExternalLink, Wallet, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function WalletConnection() {
-  const [connectionMethod, setConnectionMethod] = useState("hedera")
+  const [connectionMethod, setConnectionMethod] = useState("creditcoin")
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
@@ -51,8 +51,8 @@ export function WalletConnection() {
         <Label>Disbursement Method</Label>
         <RadioGroup value={connectionMethod} onValueChange={setConnectionMethod} className="flex flex-col space-y-1">
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="hedera" id="hedera" />
-            <Label htmlFor="hedera">Hedera Wallet (HBAR)</Label>
+            <RadioGroupItem value="creditcoin" id="creditcoin" />
+            <Label htmlFor="creditcoin">Creditcoin Wallet (CTC)</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="bank" id="bank" />
@@ -61,11 +61,11 @@ export function WalletConnection() {
         </RadioGroup>
       </div>
 
-      {connectionMethod === "hedera" ? (
+      {connectionMethod === "creditcoin" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Connect Hedera Wallet</CardTitle>
-            <CardDescription>Connect your Hedera wallet to receive financing and make repayments.</CardDescription>
+            <CardTitle>Connect Creditcoin Wallet</CardTitle>
+            <CardDescription>Connect your Creditcoin wallet to receive financing and make repayments.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {connectionError && (
@@ -98,7 +98,7 @@ export function WalletConnection() {
                   <Label>Wallet Balance</Label>
                   <div className="p-3 border rounded-md bg-muted/40">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">HBAR</span>
+                      <span className="font-medium">CTC</span>
                       <span className="font-bold text-primary">100.00</span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">≈ $30.00 USD</div>
@@ -113,7 +113,7 @@ export function WalletConnection() {
                 <div className="text-center">
                   <h3 className="font-medium text-lg">No Wallet Connected</h3>
                   <p className="text-sm text-muted-foreground">
-                    Connect your Hedera wallet to proceed with your financing application.
+                    Connect your Creditcoin wallet to proceed with your financing application.
                   </p>
                 </div>
                 <Button
@@ -186,7 +186,7 @@ export function WalletConnection() {
         <Button
           className="bg-primary hover:bg-primary/90"
           disabled={
-            connectionMethod === "hedera"
+            connectionMethod === "creditcoin"
               ? !walletConnected
               : !bankDetails.accountName || !bankDetails.accountNumber || !bankDetails.bankName
           }

@@ -10,11 +10,23 @@ import { TopUpDialog } from "@/components/dashboard/topup-dialog"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
+interface WalletData {
+  address: string
+  balanceCTC: string
+  network: string
+}
+
 interface WalletBalanceResponse {
   success: boolean
-  data: {
-    balance: string
-  }
+  data: WalletData
+}
+
+function explorerHref(wallet: WalletData): string {
+  const isMainnet = (wallet.network ?? "").toLowerCase().includes("mainnet")
+  const base = isMainnet
+    ? "https://creditcoin.subscan.io/account"
+    : "https://creditcoin-testnet.blockscout.com/address"
+  return `${base}/${wallet.address}`
 }
 
 function WalletCardShell({ children }: { children: React.ReactNode }) {
@@ -24,9 +36,9 @@ function WalletCardShell({ children }: { children: React.ReactNode }) {
         <p className="kicker-gold">Wallet</p>
         <CardTitle className="flex items-center gap-2 font-display">
           <Wallet className="h-5 w-5" />
-          MYR Stable Coin Balance
+          CTC Wallet Balance
         </CardTitle>
-        <CardDescription>Your wallet balance and available funds</CardDescription>
+        <CardDescription>Your Creditcoin wallet linked to this account</CardDescription>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -40,7 +52,7 @@ export function WalletBalance() {
       const response = await apiInstance.get('/investor/wallet/balance')
       return response.data
     },
-    staleTime: 30 * 1000, // 30 seconds - refresh more frequently for balance
+    staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
   })
 
@@ -85,7 +97,8 @@ export function WalletBalance() {
     )
   }
 
-  const parsed = parseFloat(data.data.balance)
+  const wallet = data.data
+  const parsed = parseFloat(wallet.balanceCTC)
   const balance = Number.isFinite(parsed) ? parsed : 0
 
   return (
@@ -96,9 +109,9 @@ export function WalletBalance() {
             <p className="kicker-gold">Wallet</p>
             <CardTitle className="mt-1 flex items-center gap-2 font-display">
               <Wallet className="h-5 w-5" />
-              MYR Stable Coin Balance
+              CTC Wallet Balance
             </CardTitle>
-            <CardDescription>Your wallet balance and available funds</CardDescription>
+            <CardDescription>Your Creditcoin wallet linked to this account</CardDescription>
           </div>
           <Button onClick={handleRefresh} variant="outline" size="sm" className="rounded-full" disabled={isLoading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -112,33 +125,32 @@ export function WalletBalance() {
             Available Balance
           </p>
           <div className="mb-4 font-display text-5xl font-extrabold tabular-nums tracking-tight text-[#171414]">
-            {balance.toLocaleString('en-MY', {
-              style: 'currency',
-              currency: 'MYR'
-            })}
+            {balance.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+            <span className="ml-2 font-mono text-xl font-bold uppercase text-muted-foreground">CTC</span>
           </div>
+          <p className="mb-2 truncate px-6 font-mono text-xs text-muted-foreground">{wallet.address}</p>
           <Link
-            href="https://hashscan.io/hedera/account/0.0.12345"
+            href={explorerHref(wallet)}
             target="_blank"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-[#171414] hover:underline"
           >
             <ExternalLink className="h-4 w-4" />
-            Check your wallet in hashscan
+            View on Creditcoin Explorer ({wallet.network || "Testnet"})
           </Link>
         </div>
 
         <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
           <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-4 text-center">
             <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-              This Month
+              Network
             </p>
-            <p className="font-display text-lg font-semibold">-</p>
+            <p className="font-display text-lg font-semibold capitalize">{wallet.network || "—"}</p>
           </div>
           <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-4 text-center">
             <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
               Total Transactions
             </p>
-            <p className="font-display text-lg font-semibold">-</p>
+            <p className="font-display text-lg font-semibold">—</p>
           </div>
         </div>
 
@@ -148,7 +160,7 @@ export function WalletBalance() {
           </div>
           <Button variant="outline" className="flex-1 rounded-full">
             <ArrowUpRight className="mr-2 h-4 w-4" />
-            Send MYR
+            Send CTC
           </Button>
         </div>
       </CardContent>

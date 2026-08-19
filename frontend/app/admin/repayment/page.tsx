@@ -313,7 +313,7 @@ export default function RepaymentPage() {
       const response = await apiInstance.post('/pawnshop/repayment', {
         sagId: sagId,
         tokenId: tokenId,
-        pawnshopAccountId: user?.hederaAccount?.hederaAccountId
+        pawnshopAccountId: user?.profile?.accountId || (user as any)?.wallet?.address
       })
       
       // The Socket.IO events will handle the success/error states

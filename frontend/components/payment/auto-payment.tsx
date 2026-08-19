@@ -12,7 +12,7 @@ import { Bell, CreditCard, DollarSign, Wallet } from "lucide-react"
 
 export function AutoPayment() {
   const [autoPayEnabled, setAutoPayEnabled] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState("hedera")
+  const [paymentMethod, setPaymentMethod] = useState("creditcoin")
   const [reminderEnabled, setReminderEnabled] = useState(true)
   const [reminderDays, setReminderDays] = useState("3")
   const [selectedLoans, setSelectedLoans] = useState<string[]>(["L-2025-001"])
@@ -73,12 +73,12 @@ export function AutoPayment() {
               onValueChange={setPaymentMethod}
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
-              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-primary" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "creditcoin" ? "border-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="hedera" id="auto-hedera" />
-                    <Label htmlFor="auto-hedera" className="flex items-center gap-2 cursor-pointer">
-                      <Wallet className="h-4 w-4" /> Hedera Wallet
+                    <RadioGroupItem value="creditcoin" id="auto-creditcoin" />
+                    <Label htmlFor="auto-creditcoin" className="flex items-center gap-2 cursor-pointer">
+                      <Wallet className="h-4 w-4" /> Creditcoin Wallet (CTC)
                     </Label>
                   </div>
                 </CardContent>

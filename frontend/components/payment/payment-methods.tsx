@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CreditCard, DollarSign, Wallet } from "lucide-react"
 
 export function PaymentMethods() {
-  const [paymentMethod, setPaymentMethod] = useState("hedera")
+  const [paymentMethod, setPaymentMethod] = useState("creditcoin")
   const [loanId, setLoanId] = useState("L-2025-001")
   const [amount, setAmount] = useState(1250)
   const [paymentComplete, setPaymentComplete] = useState(false)
@@ -64,15 +64,15 @@ export function PaymentMethods() {
               onValueChange={setPaymentMethod}
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
-              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-primary" : ""}`}>
+              <Card className={`cursor-pointer ${paymentMethod === "creditcoin" ? "border-primary" : ""}`}>
                 <CardHeader className="p-4">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <RadioGroupItem value="hedera" id="hedera" />
-                    <Wallet className="h-4 w-4" /> Hedera Wallet
+                    <RadioGroupItem value="creditcoin" id="creditcoin" />
+                    <Wallet className="h-4 w-4" /> Creditcoin Wallet (CTC)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <CardDescription>Pay using HBAR or stablecoins from your connected Hedera wallet.</CardDescription>
+                  <CardDescription>Pay using CTC from your connected Creditcoin wallet.</CardDescription>
                 </CardContent>
               </Card>
 
@@ -102,19 +102,19 @@ export function PaymentMethods() {
             </RadioGroup>
           </div>
 
-          {paymentMethod === "hedera" && (
+          {paymentMethod === "creditcoin" && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Hedera Wallet Payment</CardTitle>
+                <CardTitle className="text-base">Creditcoin Wallet Payment</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Connected Wallet:</span>
-                  <span className="font-medium">0.0.12345</span>
+                  <span className="font-medium">Connect via MetaMask</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm">Available Balance:</span>
-                  <span className="font-medium">100.00 HBAR</span>
+                  <span className="text-sm">Network:</span>
+                  <span className="font-medium">Creditcoin 3 Testnet</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Payment Amount:</span>
@@ -212,8 +212,8 @@ export function PaymentMethods() {
               <div className="flex justify-between">
                 <span className="text-sm text-primary">Payment Method:</span>
                 <span className="font-medium">
-                  {paymentMethod === "hedera"
-                    ? "Hedera Wallet"
+                  {paymentMethod === "creditcoin"
+                    ? "Creditcoin Wallet (CTC)"
                     : paymentMethod === "bank"
                       ? "Bank Transfer"
                       : "Credit/Debit Card"}

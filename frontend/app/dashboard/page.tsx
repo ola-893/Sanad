@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,9 +9,10 @@ import { RecentActivity } from "@/components/dashboard/recent-activity"
 import { PaymentSchedule } from "@/components/dashboard/payment-schedule"
 import { NFTCollateral } from "@/components/dashboard/nft-collateral"
 import { Overview } from "@/components/dashboard/overview"
-import { AlertCircle, ArrowRight, Bell, Clock, CreditCard, Gem, type LucideIcon } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ArrowRight, Clock, CircleDollarSign, CreditCard, Gem, type LucideIcon } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { useInvestorNfts } from "@/hooks/use-investor-nfts"
+import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -34,6 +36,32 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
 }
 
 export default function DashboardPage() {
+  const { data: nfts = [], isLoading: nftsLoading, isError: nftsError } = useInvestorNfts()
+  const { data: logs = [], isLoading: logsLoading, isError: logsError } = useAuditLogs()
+
+  const stats = useMemo(() => {
+    const ownTokens = new Set(nfts.map((n) => String(n.tokenId)))
+    const myLogs = logs.filter((log) => ownTokens.has(String(log.tokenId)))
+
+    let totalFinanced = 0
+    const funded = new Set<string>()
+    const closed = new Set<string>()
+    for (const log of myLogs) {
+      if (log.eventType === EVENT_TYPES.LOAN_FUNDED) {
+        totalFinanced += amountOf(log) ?? 0
+        funded.add(String(log.tokenId))
+      } else if (log.eventType === EVENT_TYPES.SURPLUS_RETURNED) {
+        closed.add(String(log.tokenId))
+      }
+    }
+    const activeLoans = [...funded].filter((t) => !closed.has(t)).length
+    return { totalFinanced, activeLoans }
+  }, [nfts, logs])
+
+  const loading = nftsLoading || logsLoading
+  const dataUnavailable = nftsError || logsError
+  const usd = (v: number) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+
   return (
     <ProtectedRoute requiredRole="investor">
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -41,10 +69,30 @@ export default function DashboardPage() {
           <DashboardHeader />
 
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Active Loans" value="2" sub="Total value: RM 12,500" icon={CreditCard} />
-            <StatCard label="Next Payment" value="15 Apr" sub="Amount: RM 1,250" icon={Clock} />
-            <StatCard label="NFT Collateral" value="2" sub="Secure on Hedera" icon={Gem} />
-            <StatCard label="Notifications" value="3" sub="2 unread messages" icon={Bell} />
+            <StatCard
+              label="Total Financed"
+              value={loading ? "—" : dataUnavailable ? "$0" : usd(stats.totalFinanced)}
+              sub="Verified on-chain (USD)"
+              icon={CircleDollarSign}
+            />
+            <StatCard
+              label="Active Loans"
+              value={loading ? "—" : dataUnavailable ? "0" : String(stats.activeLoans)}
+              sub="Funded and not yet settled"
+              icon={CreditCard}
+            />
+            <StatCard
+              label="NFT Collateral"
+              value={loading ? "—" : dataUnavailable ? "0" : String(nfts.length)}
+              sub="Secured on Creditcoin"
+              icon={Gem}
+            />
+            <StatCard
+              label="Next Payment"
+              value="—"
+              sub="No upcoming payments"
+              icon={Clock}
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -62,7 +110,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <p className="kicker-gold">Activity</p>
                 <CardTitle className="font-display">Recent Activity</CardTitle>
-                <CardDescription>Latest account events</CardDescription>
+                <CardDescription>On-chain events for your account</CardDescription>
               </CardHeader>
               <CardContent>
                 <RecentActivity />
@@ -70,22 +118,12 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <Alert className={`${glass} rounded-2xl border-l-4 border-l-warning`}>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/30">
-              <AlertCircle className="h-4 w-4" />
-            </span>
-            <AlertTitle className="font-display">Payment Reminder</AlertTitle>
-            <AlertDescription>
-              Your next payment of RM 1,250 is due on April 15, 2025. Please ensure your account has sufficient funds.
-            </AlertDescription>
-          </Alert>
-
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className={`${glass} lg:col-span-4`}>
               <CardHeader>
                 <p className="kicker-gold">Schedule</p>
                 <CardTitle className="font-display">Payment Schedule</CardTitle>
-                <CardDescription>Your upcoming payments for all active loans</CardDescription>
+                <CardDescription>Your upcoming and verified repayments</CardDescription>
               </CardHeader>
               <CardContent>
                 <PaymentSchedule />
@@ -102,7 +140,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <p className="kicker-gold">Collateral</p>
                 <CardTitle className="font-display">NFT Collateral</CardTitle>
-                <CardDescription>Your jewelry secured as NFTs</CardDescription>
+                <CardDescription>Your gold secured as on-chain NFTs</CardDescription>
               </CardHeader>
               <CardContent>
                 <NFTCollateral />

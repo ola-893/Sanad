@@ -21,7 +21,7 @@ Sunday & Public Holidays: Closed`,
 2. Jewelry Submission - Upload images of your jewelry for AI-powered assessment
 3. Receive Offer - Get a financing offer based on your jewelry's value
 4. Financing Disbursement - Accept the offer and receive funds in your wallet or bank account
-5. Repayment - Make repayments through multiple options including HBAR, stablecoins, or bank transfer`,
+5. Repayment - Make repayments through multiple options including CTC wallet, bank transfer, or credit/debit card`,
   },
   {
     keyword: "gold",
@@ -46,7 +46,7 @@ Sunday & Public Holidays: Closed`,
   {
     keyword: "wallet",
     response:
-      "We support Hedera wallets for receiving financing and making repayments. You can connect your existing Hedera wallet or set up a new one during the application process. We also offer bank transfer options for those who prefer traditional banking methods.",
+      "We support Creditcoin wallets for receiving financing and making repayments. You can connect your existing Creditcoin wallet or set up a new one during the application process. We also offer bank transfer options for those who prefer traditional banking methods.",
   },
   {
     keyword: "duration",

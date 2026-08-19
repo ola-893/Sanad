@@ -23,7 +23,7 @@ const supportTickets = [
   {
     id: "TK001",
     title: "Unable to connect wallet",
-    description: "User cannot connect their Hedera wallet to the platform",
+    description: "User cannot connect their Creditcoin wallet to the platform",
     customer: "Ahmad Bin Abdullah",
     email: "ahmad@example.com",
     priority: "high",
