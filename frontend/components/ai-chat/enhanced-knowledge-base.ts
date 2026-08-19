@@ -153,4 +153,13 @@ export const enhancedKnowledgeBase = [
       { text: "View Your NFT Collateral", url: "/dashboard/nfts" },
     ],
   },
+  {
+    keywords: ["blockchain", "network", "creditcoin", "cc3", "chain", "evm", "smart contract"],
+    response:
+      "Sanad Protocol runs natively on Creditcoin 3 (CC3) Testnet (EVM Layer, Chain ID: 102031). Collateral notes are minted as ERC-721 SAG tokens directly on Creditcoin, and loan liquidity, custody fees (Ujrah), and Dutch auctions are managed by our verified Creditcoin smart contracts.",
+    links: [
+      { text: "Creditcoin Block Explorer", url: "https://creditcoin-testnet.blockscout.com" },
+      { text: "Security Measures", url: "/security" },
+    ],
+  },
 ]

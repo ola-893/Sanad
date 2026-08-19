@@ -77,7 +77,9 @@ server.listen(PORT, () => {
   console.log(`Sanad Protocol CC3 Backend is live on port ${PORT}`);
   console.log(`Network: ${CREDITCOIN_CONFIG.chainName} (Chain ID: ${CREDITCOIN_CONFIG.chainId})`);
   console.log(`Explorer: ${CREDITCOIN_CONFIG.explorerUrl}`);
-  console.log(`Prover:   ${CREDITCOIN_CONFIG.proverUrl}`);
+  console.log(`Contracts:`);
+  console.log(`  - SAGToken:           ${CREDITCOIN_CONFIG.contracts.sagTokenAddress}`);
+  console.log(`  - SanadLiquidityPool: ${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress}`);
   console.log(`================================================================\n`);
 });
 

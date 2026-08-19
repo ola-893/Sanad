@@ -68,4 +68,9 @@ Sunday & Public Holidays: Closed`,
     response:
       "Our jewelry assessment process uses AI technology combined with expert human verification to ensure accurate valuation. You'll need to upload clear images of your jewelry from multiple angles, and provide details such as weight, karat (for gold), or specifications (for diamonds). The assessment typically takes less than 24 hours.",
   },
+  {
+    keyword: "blockchain",
+    response:
+      "Sanad Protocol is deployed natively on Creditcoin 3 (CC3) Testnet (EVM Layer, Chain ID: 102031). Collateral assets are minted as ERC-721 SAG tokens directly on Creditcoin, and loan liquidity and Dutch auctions are managed through our on-chain Creditcoin smart contracts.",
+  },
 ]

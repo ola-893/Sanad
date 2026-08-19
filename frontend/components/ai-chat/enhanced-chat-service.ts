@@ -92,6 +92,7 @@ function analyzeQuery(query: string): {
     loanInfo: ["loan", "financing", "borrow", "ar-rahnu", "pawning", "collateral", "jewelry"],
     accountIssue: ["account", "login", "password", "sign in", "register", "profile"],
     walletIssue: ["wallet", "payment", "transfer", "creditcoin", "metamask", "connect", "disconnect"],
+    blockchainInfo: ["blockchain", "creditcoin", "network", "cc3", "chain", "evm", "smart contract"],
     paymentTimeline: ["payment", "schedule", "due date", "repayment", "installment", "tenure", "monthly"],
     generalInfo: ["how", "what", "when", "where", "why", "who", "can", "do"],
   }
@@ -204,6 +205,15 @@ export async function generateEnhancedResponse(query: string, history: Message[]
       } else {
         response.text =
           "We support Creditcoin wallets (via MetaMask) for receiving financing and making repayments. You can connect your existing MetaMask wallet or set up a new one during the application process. If you're experiencing issues with your wallet connection, please ensure you have the latest wallet software and try reconnecting. For persistent issues, please contact our technical support team."
+      }
+      break
+
+    case "blockchainInfo":
+      if (knowledgeBaseAnswer) {
+        response.text = knowledgeBaseAnswer
+      } else {
+        response.text =
+          "Sanad Protocol is deployed natively on Creditcoin 3 (CC3) Testnet (EVM Layer, Chain ID: 102031). Collateral assets are minted as ERC-721 SAG tokens directly on Creditcoin, and loan liquidity and Dutch auctions are managed through our on-chain Creditcoin smart contracts."
       }
       break
 
