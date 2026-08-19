@@ -4,30 +4,14 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCw, Copy, ExternalLink, Shield, Wallet, User, Mail, Phone, CreditCard, Calendar, CheckCircle, ArrowUpRight } from "lucide-react"
-import { toast } from "sonner"
+import { Wallet, User, Mail, Phone, CreditCard, Calendar, CheckCircle, ArrowUpRight, Shield } from "lucide-react"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import Link from "next/link"
-import { useQuery } from "@tanstack/react-query"
-import apiInstance from "@/lib/axios-v1"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { useAuth } from "@/hooks/use-auth"
-import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
-
-function CopyButton({ text }: { text: string }) {
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard")
-  }
-  return (
-    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy}>
-      <Copy className="h-3 w-3" />
-    </Button>
-  )
-}
 
 export default function ProfilePage() {
   const [user] = useAtom(userAtom)
@@ -35,7 +19,6 @@ export default function ProfilePage() {
   const { data: nfts = [] } = useInvestorNfts()
 
   const profile = user?.userInfo || user?.profile
-  const wallet = (user as any)?.wallet
 
   const firstName = profile?.userFirstName || user?.name?.split(" ")[0] || "User"
   const lastName = profile?.userLastName || user?.name?.split(" ")[1] || ""
@@ -44,29 +27,10 @@ export default function ProfilePage() {
   const phone = profile?.userContactNo || ""
   const icNo = profile?.icNo || ""
   const gender = profile?.gender || ""
-  const accountId = profile?.accountId || ""
-  const walletAddress = wallet?.address || accountId
-  // Fetch live wallet balance from backend
-  const { data: walletData } = useQuery({
-    queryKey: ["wallet-balance"],
-    queryFn: async () => {
-      const response = await apiInstance.get("/investor/wallet/balance")
-      return response.data?.data
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnMount: false,
-  })
-  const liveBalance = walletData?.balanceCTC || wallet?.balanceCTC || "0.0"
-  const liveAddress = walletData?.address || walletAddress
-  const network = wallet?.network || "Creditcoin 3 Testnet"
+  const roleId = profile?.roleId || "INVESTOR"
   const createdAt = profile?.createdAt
   const updatedAt = profile?.updatedAt
   const status = profile?.status || "ACTIVE"
-  const roleId = profile?.roleId || "INVESTOR"
-  const { data: ctcPrice } = useCtcPrice()
-  const usdRate = ctcPrice?.ctcUsd || 0.10
-
-  const explorerUrl = `${process.env.NEXT_PUBLIC_SUBSCAN_URL || 'https://creditcoin3-testnet.subscan.io'}/account/${liveAddress || walletAddress}`
 
   return (
     <ProtectedRoute requiredRole="investor">
@@ -106,70 +70,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-2">
-
-            {/* Wallet Card */}
-            <Card className={`${glass}`}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
-                      <Wallet className="h-4 w-4 text-[#171414]" />
-                    </span>
-                    <CardTitle className="font-display text-base">Creditcoin Wallet</CardTitle>
-                  </div>
-                  <Badge variant="outline" className="font-mono text-[10px]">
-                    {network}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-[#171414]/10 bg-white/50 p-6 text-center">
-                  <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                    Available Balance
-                  </p>
-                  <div className="font-display text-4xl font-extrabold tabular-nums text-[#171414]">
-                    {parseFloat(liveBalance).toLocaleString("en-US", { maximumFractionDigits: 4 })}
-                    <span className="ml-2 font-mono text-lg font-bold uppercase text-muted-foreground">CTC</span>
-                  </div>
-                  <p className="mt-1 font-mono text-sm text-muted-foreground">
-                    ≈ {formatUsd(ctcToUsd(parseFloat(liveBalance) || 0, usdRate))} USD
-                  </p>
-                </div>
-
-                {liveAddress && (
-                  <div className="space-y-2">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                      Wallet Address
-                    </p>
-                    <div className="flex items-center gap-2 rounded-xl border border-[#171414]/10 bg-white/50 px-3 py-2">
-                      <p className="flex-1 truncate font-mono text-xs text-[#171414]">{liveAddress}</p>
-                      <CopyButton text={liveAddress} />
-                      <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Link href="/dashboard/wallet">
-                    <Button variant="outline" className="w-full rounded-full text-xs">
-                      <ArrowUpRight className="mr-1 h-3 w-3" />
-                      View Wallet
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/nfts">
-                    <Button variant="outline" className="w-full rounded-full text-xs">
-                      <Shield className="mr-1 h-3 w-3" />
-                      NFT Collateral ({nfts.length})
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-6">
 
             {/* Personal Information */}
             <Card className={`${glass}`}>

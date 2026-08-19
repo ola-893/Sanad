@@ -20,7 +20,6 @@ export function useInvestorNfts() {
       }
       throw new Error('Failed to fetch NFTs')
     },
-    staleTime: 5 * 60 * 1000,
     retry: 2,
   })
 }

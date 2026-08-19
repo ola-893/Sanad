@@ -397,14 +397,13 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
     enabled: isOpen && !!sag.tokenId, // Only fetch when dialog is open and tokenId exists
   })
 
-  // Fetch wallet balance
+  // Fetch wallet balance — uses shared ['wallet-balance'] key so data persists across pages
   const { data: walletBalance, isLoading: balanceLoading } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: async (): Promise<WalletBalanceResponse> => {
       const response = await apiInstance.get('/investor/wallet/balance')
       return response.data
     },
-    staleTime: 30 * 1000, // 30 seconds
   })
 
   const sharePrice = sag.sagProperties.valuation / sag.sagProperties.mintShare

@@ -45,8 +45,6 @@ export function useCtcPrice() {
   return useQuery({
     queryKey: ["ctc-price"],
     queryFn: fetchCtcPrice,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
   })
 }
 

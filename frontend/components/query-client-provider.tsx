@@ -20,10 +20,11 @@ export function QueryProvider({ children }: QueryProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // With SSR, we usually want to set some default staleTime
-            // above 0 to avoid refetching immediately on the client
-            staleTime: 60 * 1000, // 1 minute
-            gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+            staleTime: 5 * 60 * 1000, // 5 minutes — data persists across page navigations
+            gcTime: 30 * 60 * 1000, // 30 minutes — keep cached data alive longer
+            refetchOnMount: false, // Never refetch on component mount — use cached data first
+            refetchOnWindowFocus: false, // Don't refetch when tab gains focus
+            refetchOnReconnect: false, // Don't refetch on network reconnect
             retry: (failureCount, error: any) => {
               // Don't retry on 4xx errors except for 408, 429
               if (error?.response?.status >= 400 && error?.response?.status < 500) {
