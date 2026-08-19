@@ -10,7 +10,7 @@ import { Check, ExternalLink, Wallet, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function WalletConnection() {
-  const [connectionMethod, setConnectionMethod] = useState("hedera")
+  const [connectionMethod, setConnectionMethod] = useState("metamask")
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
@@ -31,7 +31,7 @@ export function WalletConnection() {
 
       // Simulate successful connection
       setWalletConnected(true)
-      setWalletAddress("0.0.12345")
+      setWalletAddress("0x8DA2...F612")
     } catch (error) {
       setConnectionError("Failed to connect wallet. Please try again.")
     } finally {
@@ -51,8 +51,8 @@ export function WalletConnection() {
         <Label>Disbursement Method</Label>
         <RadioGroup value={connectionMethod} onValueChange={setConnectionMethod} className="flex flex-col space-y-1">
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="hedera" id="hedera" />
-            <Label htmlFor="hedera">Hedera Wallet (HBAR)</Label>
+            <RadioGroupItem value="metamask" id="metamask" />
+            <Label htmlFor="metamask">Creditcoin Wallet (MetaMask)</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="bank" id="bank" />
@@ -61,11 +61,11 @@ export function WalletConnection() {
         </RadioGroup>
       </div>
 
-      {connectionMethod === "hedera" ? (
+      {connectionMethod === "metamask" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Connect Hedera Wallet</CardTitle>
-            <CardDescription>Connect your Hedera wallet to receive financing and make repayments.</CardDescription>
+            <CardTitle>Connect Creditcoin Wallet</CardTitle>
+            <CardDescription>Connect your MetaMask wallet to receive financing and make repayments on the Creditcoin network.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {connectionError && (
@@ -98,10 +98,10 @@ export function WalletConnection() {
                   <Label>Wallet Balance</Label>
                   <div className="p-3 border rounded-md bg-muted/40">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">HBAR</span>
+                      <span className="font-medium">tCTC</span>
                       <span className="font-bold text-primary">100.00</span>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">≈ $30.00 USD</div>
+                    <div className="text-sm text-muted-foreground mt-1">Creditcoin 3 Testnet</div>
                   </div>
                 </div>
               </div>
@@ -113,7 +113,7 @@ export function WalletConnection() {
                 <div className="text-center">
                   <h3 className="font-medium text-lg">No Wallet Connected</h3>
                   <p className="text-sm text-muted-foreground">
-                    Connect your Hedera wallet to proceed with your financing application.
+                    Connect your MetaMask wallet to proceed with your financing application.
                   </p>
                 </div>
                 <Button
@@ -186,7 +186,7 @@ export function WalletConnection() {
         <Button
           className="bg-primary hover:bg-primary/90"
           disabled={
-            connectionMethod === "hedera"
+            connectionMethod === "metamask"
               ? !walletConnected
               : !bankDetails.accountName || !bankDetails.accountNumber || !bankDetails.bankName
           }

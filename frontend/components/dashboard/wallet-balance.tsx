@@ -118,12 +118,12 @@ export function WalletBalance() {
             })}
           </div>
           <Link
-            href="https://hashscan.io/hedera/account/0.0.12345"
+            href="https://creditcoin-testnet.blockscout.com"
             target="_blank"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-[#171414] hover:underline"
           >
             <ExternalLink className="h-4 w-4" />
-            Check your wallet in hashscan
+            View on Creditcoin Explorer
           </Link>
         </div>
 

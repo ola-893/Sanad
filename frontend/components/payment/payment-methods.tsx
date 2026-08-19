@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CreditCard, DollarSign, Wallet } from "lucide-react"
 
 export function PaymentMethods() {
-  const [paymentMethod, setPaymentMethod] = useState("hedera")
+  const [paymentMethod, setPaymentMethod] = useState("bank")
   const [loanId, setLoanId] = useState("L-2025-001")
   const [amount, setAmount] = useState(1250)
   const [paymentComplete, setPaymentComplete] = useState(false)
@@ -62,20 +62,8 @@ export function PaymentMethods() {
             <RadioGroup
               value={paymentMethod}
               onValueChange={setPaymentMethod}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
             >
-              <Card className={`cursor-pointer ${paymentMethod === "hedera" ? "border-primary" : ""}`}>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <RadioGroupItem value="hedera" id="hedera" />
-                    <Wallet className="h-4 w-4" /> Hedera Wallet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <CardDescription>Pay using HBAR or stablecoins from your connected Hedera wallet.</CardDescription>
-                </CardContent>
-              </Card>
-
               <Card className={`cursor-pointer ${paymentMethod === "bank" ? "border-primary" : ""}`}>
                 <CardHeader className="p-4">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -101,28 +89,6 @@ export function PaymentMethods() {
               </Card>
             </RadioGroup>
           </div>
-
-          {paymentMethod === "hedera" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Hedera Wallet Payment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Connected Wallet:</span>
-                  <span className="font-medium">0.0.12345</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Available Balance:</span>
-                  <span className="font-medium">100.00 HBAR</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Payment Amount:</span>
-                  <span className="font-medium">RM {amount.toLocaleString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {paymentMethod === "bank" && (
             <Card>
@@ -212,11 +178,9 @@ export function PaymentMethods() {
               <div className="flex justify-between">
                 <span className="text-sm text-primary">Payment Method:</span>
                 <span className="font-medium">
-                  {paymentMethod === "hedera"
-                    ? "Hedera Wallet"
-                    : paymentMethod === "bank"
-                      ? "Bank Transfer"
-                      : "Credit/Debit Card"}
+                  {paymentMethod === "bank"
+                    ? "Bank Transfer"
+                    : "Credit/Debit Card"}
                 </span>
               </div>
               <div className="flex justify-between">
