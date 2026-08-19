@@ -340,6 +340,30 @@ export class CreditcoinIndexerService {
     }
   }
 
+  public async recordAuditLog(entry: {
+    eventType: string;
+    contractAddress?: string;
+    transactionHash?: string;
+    blockNumber?: number;
+    tokenId?: string;
+    details: any;
+  }): Promise<AuditLogEntry> {
+    const logEntry: AuditLogEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      eventType: entry.eventType as any,
+      tokenId: entry.tokenId || '',
+      blockNumber: entry.blockNumber || 0,
+      transactionHash: entry.transactionHash || `0x${Date.now().toString(16)}`,
+      timestamp: new Date().toISOString(),
+      details: entry.details,
+    };
+
+    this.memoryAuditLogs.unshift(logEntry);
+    await this.persistToDb(logEntry, entry.contractAddress || CREDITCOIN_CONFIG.contracts.sagTokenAddress);
+    this.emitSocketEvent(logEntry);
+    return logEntry;
+  }
+
   public async getAuditLogs(tokenId?: string): Promise<AuditLogEntry[]> {
     try {
       const query = db.select().from(CreditcoinAuditLogModel).orderBy(desc(CreditcoinAuditLogModel.timestamp)).limit(100);

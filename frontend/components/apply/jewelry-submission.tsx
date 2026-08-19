@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Camera, Check, Upload, AlertTriangle, Shield, Eye, Calculator } from "lucide-react"
+import { Camera, Check, Upload, AlertTriangle, Shield, Eye, Calculator, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form"
+import { useGoldPrice } from "@/hooks/use-gold-price"
 
 interface JewelryFormData {
   jewelryType: string
@@ -28,6 +29,7 @@ interface JewelryFormData {
 }
 
 export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
+  const { data: goldPrice } = useGoldPrice()
   const [images, setImages] = useState<string[]>([])
   const [scanning, setScanning] = useState(false)
   const [scanComplete, setScanComplete] = useState(false)
@@ -41,6 +43,9 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
     purity?: number
     eval_id: string
   } | null>(null)
+
+  // Real gold price per gram in USD from backend API
+  const realGoldPriceUsd = goldPrice ? parseFloat(goldPrice.pricePerGramUsd) : null
   
   const form = useForm<JewelryFormData>({
     defaultValues: {
@@ -134,19 +139,27 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
       setScanning(false)
       setScanComplete(true)
       
-      // Calculate estimated value based on jewelry details
+      // Calculate estimated value based on jewelry details and real gold price
       let baseRate = 0
       if (jewelryType === "gold") {
-        if (karat === "24") baseRate = 250
-        else if (karat === "22") baseRate = 230
-        else if (karat === "18") baseRate = 190
+        // Use real gold price if available, otherwise fallback to estimates
+        if (realGoldPriceUsd) {
+          // Scale gold price by purity (karat/24)
+          const karatNum = Number(karat)
+          baseRate = realGoldPriceUsd * (karatNum / 24)
+        } else {
+          // Fallback estimates (USD per gram)
+          if (karat === "24") baseRate = 75
+          else if (karat === "22") baseRate = 69
+          else if (karat === "18") baseRate = 56
+        }
       } else if (jewelryType === "silver") {
-        baseRate = 3
+        baseRate = 0.85 // ~$0.85/gram for silver
       } else if (jewelryType === "diamond") {
-        baseRate = 1500 // Per carat for diamond
+        baseRate = 4500 // Per carat for diamond (USD)
       }
 
-      // Calculate estimated value
+      // Calculate estimated value in USD
       const value = weight * baseRate
       setEstimatedValue(value)
       
@@ -476,14 +489,22 @@ export function JewelrySubmission({ nextStep }: { nextStep: () => void }) {
                     <Check className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-primary">AI Assessment Complete</h3>
                   </div>
+                  {realGoldPriceUsd && (
+                    <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-primary/5">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <span className="text-xs text-primary font-medium">
+                        Live Gold Price: ${realGoldPriceUsd.toFixed(2)}/gram (24K)
+                      </span>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Estimated Value:</span>
-                      <span className="font-semibold">RM {estimatedValue.toLocaleString()}</span>
+                      <span className="font-semibold">${estimatedValue.toLocaleString()} USD</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">Potential Financing:</span>
-                      <span className="font-semibold">RM {Math.round(estimatedValue * 0.75).toLocaleString()}</span>
+                      <span className="text-sm">Potential Financing (75% LTV):</span>
+                      <span className="font-semibold">${Math.round(estimatedValue * 0.75).toLocaleString()} USD</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">LTV Ratio:</span>

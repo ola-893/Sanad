@@ -31,6 +31,7 @@ creditcoinRoutes.get('/compliance/status', (req, res) => controller.getComplianc
 
 // 8. Immutable audit logs (replaces Hedera HCS topics)
 creditcoinRoutes.get('/audit-logs', (req, res) => controller.getAuditLogs(req, res));
+creditcoinRoutes.post('/audit-logs', (req, res) => controller.createAuditLog(req, res));
 
 export { creditcoinRoutes };
 export default creditcoinRoutes;

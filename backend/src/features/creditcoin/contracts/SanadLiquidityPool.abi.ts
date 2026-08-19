@@ -28,6 +28,7 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   // Default & Liquidation
   "function checkDefaultStatus(uint256 tokenId) external view returns (bool isDefaulted, bool isLiquidationEligible)",
   "function triggerLiquidation(uint256 tokenId) external",
+  "function resetExpiredAuction(uint256 tokenId, uint256 discountedReservePriceUSD) external",
   "function getCurrentAuctionPrice(uint256 tokenId) external view returns (uint256)",
   "function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external returns (uint256)",
   "function auctions(uint256 tokenId) external view returns (tuple(uint256 tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 startTime, uint256 endTime, bool active))",

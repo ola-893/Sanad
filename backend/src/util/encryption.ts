@@ -21,7 +21,7 @@ const getMasterKey = (): Buffer => {
   }
   
   // Otherwise, derive a proper key using PBKDF2
-  const salt = 'hedera-master-key-salt'; // Use a fixed salt for master key derivation
+  const salt = 'sanad-cc3-master-key-salt'; // Fixed salt for Creditcoin master key derivation
   return crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, 'sha512');
 };
 
@@ -48,7 +48,7 @@ export function deriveKeyFromPassword(password: string, salt: string): Buffer {
 }
 
 /**
- * Encrypt a private key
+ * Encrypt an EVM private key
  */
 export function encryptPrivateKey(privateKey: string, masterKey?: string): string {
   try {
@@ -58,7 +58,7 @@ export function encryptPrivateKey(privateKey: string, masterKey?: string): strin
       if (masterKey.length === 64 && /^[0-9a-fA-F]+$/.test(masterKey)) {
         key = Buffer.from(masterKey, 'hex');
       } else {
-        const salt = 'hedera-master-key-salt';
+        const salt = 'sanad-cc3-master-key-salt';
         key = crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, 'sha512');
       }
     } else {
@@ -70,7 +70,7 @@ export function encryptPrivateKey(privateKey: string, masterKey?: string): strin
     
     // Create cipher
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    cipher.setAAD(Buffer.from('hedera-private-key', 'utf8'));
+    cipher.setAAD(Buffer.from('sanad-cc3-private-key', 'utf8'));
     
     // Encrypt the private key
     let encrypted = cipher.update(privateKey, 'utf8', 'hex');
@@ -89,7 +89,7 @@ export function encryptPrivateKey(privateKey: string, masterKey?: string): strin
 }
 
 /**
- * Decrypt a private key
+ * Decrypt an EVM private key
  */
 export function decryptPrivateKey(encryptedPrivateKey: string, masterKey?: string): string {
   try {
@@ -99,7 +99,7 @@ export function decryptPrivateKey(encryptedPrivateKey: string, masterKey?: strin
       if (masterKey.length === 64 && /^[0-9a-fA-F]+$/.test(masterKey)) {
         key = Buffer.from(masterKey, 'hex');
       } else {
-        const salt = 'hedera-master-key-salt';
+        const salt = 'sanad-cc3-master-key-salt';
         key = crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, 'sha512');
       }
     } else {
@@ -118,7 +118,7 @@ export function decryptPrivateKey(encryptedPrivateKey: string, masterKey?: strin
     
     // Create decipher
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAAD(Buffer.from('hedera-private-key', 'utf8'));
+    decipher.setAAD(Buffer.from('sanad-cc3-private-key', 'utf8'));
     decipher.setAuthTag(tag);
     
     // Decrypt the private key
@@ -162,7 +162,7 @@ export function encryptWithPassword(data: string, password: string): { encrypted
   
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  cipher.setAAD(Buffer.from('hedera-data', 'utf8'));
+  cipher.setAAD(Buffer.from('sanad-cc3-data', 'utf8'));
   
   let encrypted = cipher.update(data, 'utf8', 'hex');
   encrypted += cipher.final('hex');
@@ -192,7 +192,7 @@ export function decryptWithPassword(encryptedData: string, password: string, sal
   const encrypted = parts[2];
   
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAAD(Buffer.from('hedera-data', 'utf8'));
+  decipher.setAAD(Buffer.from('sanad-cc3-data', 'utf8'));
   decipher.setAuthTag(tag);
   
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');

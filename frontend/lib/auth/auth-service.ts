@@ -10,7 +10,7 @@ export interface User {
   permissions: string[]
   userInfo?: UserProfile
   profile?: UserProfile
-  hederaAccount?: HederaAccount
+  wallet?: CreditcoinWallet
 }
 
 export interface UserProfile {
@@ -39,27 +39,9 @@ export interface UserProfile {
   updatedBy: string
 }
 
-export interface HederaAccount {
-  hederaAccountId: string
-  accountInfo: {
-    accountId: string
-    key: string
-    balance: string
-    isReceiverSignatureRequired: boolean
-    expirationTime: string
-    autoRenewPeriod: any
-    memo: string
-    isDeleted: boolean
-    ethereumNonce: string
-    stakingInfo: {
-      declineStakingReward: boolean
-      stakePeriodStart: any
-      pendingReward: string
-      stakedToMe: string
-      stakedAccountId: any
-      stakedNodeId: any
-    }
-  }
+export interface CreditcoinWallet {
+  address: string
+  balanceCTC: string
   network: string
 }
 
@@ -113,7 +95,7 @@ export class AuthService {
               role: roleFromResponse as UserRole,
               permissions: this.getRolePermissions(roleFromResponse as UserRole),
               profile: undefined, // Will be fetched separately
-              hederaAccount: undefined // Will be fetched separately
+              wallet: undefined // Will be fetched separately
             },
             tokens: {
               accessToken: response.data.data.accessToken,
@@ -190,7 +172,7 @@ export class AuthService {
       
       if (response.data.success) {
         const userInfo = response.data.data.userInfo
-        const hederaAccount = response.data.data.hederaAccount
+        const wallet = response.data.data.wallet
         
         return {
           id: userInfo.userId,
@@ -223,11 +205,15 @@ export class AuthService {
             createdBy: userInfo.createdBy,
             updatedBy: userInfo.updatedBy
           },
-          hederaAccount: hederaAccount ? {
-            hederaAccountId: hederaAccount.hederaAccountId,
-            accountInfo: hederaAccount.accountInfo,
-            network: hederaAccount.network
-          } : undefined
+          wallet: wallet ? {
+            address: wallet.address || userInfo.accountId,
+            balanceCTC: wallet.balanceCTC || '0.0',
+            network: wallet.network || 'Creditcoin 3 Testnet'
+          } : {
+            address: userInfo.accountId,
+            balanceCTC: '0.0',
+            network: 'Creditcoin 3 Testnet'
+          }
         }
       } else {
         throw new Error('Failed to get user info')

@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { Wallet, RefreshCw, Copy, ExternalLink, ArrowUpRight, ArrowDownLeft, Shield, Activity } from "lucide-react"
+import { Wallet, RefreshCw, Copy, ExternalLink, ArrowUpRight, ArrowDownLeft, Shield, Activity, Wifi } from "lucide-react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 import { toast } from "sonner"
 import { TopUpDialog } from "@/components/dashboard/topup-dialog"
 import Link from "next/link"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
+import { useCreditcoinStatus } from "@/hooks/use-creditcoin-status"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -40,6 +41,7 @@ function CopyButton({ text }: { text: string }) {
 export default function DashboardWalletPage() {
   const queryClient = useQueryClient()
   const { data: nfts = [] } = useInvestorNfts()
+  const { data: networkStatus } = useCreditcoinStatus()
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["wallet-balance"],
@@ -176,12 +178,25 @@ export default function DashboardWalletPage() {
                     <p className="text-sm font-medium font-mono text-[#171414]">102031</p>
                   </div>
                   <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Currency</p>
-                    <p className="text-sm font-medium text-[#171414]">tCTC (Testnet Creditcoin)</p>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Network Status</p>
+                    <div className="flex items-center gap-1.5">
+                      <Wifi className={`h-3 w-3 ${networkStatus?.network?.isHealthy ? "text-success" : "text-destructive"}`} />
+                      <Badge variant="outline" className={`text-[10px] ${networkStatus?.network?.isHealthy ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                        {networkStatus?.network?.isHealthy ? "Healthy" : "Offline"}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">RPC</p>
-                    <p className="text-sm font-medium font-mono text-[#171414] truncate max-w-[180px]">rpc.cc3-testnet.creditcoin.network</p>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Latest Block</p>
+                    <p className="text-sm font-medium font-mono text-[#171414]">
+                      #{networkStatus?.network?.blockNumber?.toLocaleString() || "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Gas Price</p>
+                    <p className="text-sm font-medium font-mono text-[#171414]">
+                      {networkStatus?.network?.gasPrice || "—"}
+                    </p>
                   </div>
                 </div>
               </CardContent>

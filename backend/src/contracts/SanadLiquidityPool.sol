@@ -58,6 +58,7 @@ contract SanadLiquidityPool is Ownable {
     // Liquidation & Grace Period Parameters
     uint256 public gracePeriod = 14 days;        // Grace period post-maturity before auction eligibility
     uint256 public auctionDuration = 24 hours;   // Dutch auction decay duration
+    uint256 public constant MIN_DISTRESSED_RECOVERY_BPS = 5000; // Hard safety floor: 50% minimum of appraised fair market value
 
     // LP Capital Accounting
     mapping(address => uint256) public lpBalances;
@@ -79,6 +80,9 @@ contract SanadLiquidityPool is Ownable {
         bool active;             // Whether auction is open
     }
     mapping(uint256 => LiquidationAuction) public auctions;
+
+    // Track immutable write-once liquidation inception timestamp per token (for Shariah Ujrah fee freeze)
+    mapping(uint256 => uint256) public liquidationInceptionTimestamp;
 
     // Events
     event LiquidityDeposited(address indexed provider, uint256 amount, uint256 newTotalLiquidity);
@@ -252,6 +256,8 @@ contract SanadLiquidityPool is Ownable {
         uint256 startPrice = collateral.appraisedValueUSD;
         uint256 reservePrice = tokenLoanBalance[tokenId]; // Minimum recovery is principal owed
 
+        liquidationInceptionTimestamp[tokenId] = block.timestamp;
+
         auctions[tokenId] = LiquidationAuction({
             tokenId: tokenId,
             startPriceUSD: startPrice,
@@ -265,6 +271,63 @@ contract SanadLiquidityPool is Ownable {
 
         emit DefaultGracePeriodEntered(tokenId, collateral.maturityTimestamp, gracePeriodEnd);
         emit LiquidationAuctionStarted(tokenId, startPrice, reservePrice, block.timestamp + auctionDuration);
+    }
+
+    /**
+     * @notice Resets an expired, unsold Dutch auction with a discounted clearance floor
+     * @dev If a Dutch auction completes its 24-hour duration without finding any buyer at the
+     *      initial principal reserve floor (0 bids), this function permits restarting price discovery
+     *      with a lower clearance floor (distressed liquidation) so that the pool can recover
+     *      whatever liquidity the market will bear. Any resulting capital shortfall is absorbed
+     *      by the LP pool waterfall.
+     *      NOTE: liquidationInceptionTimestamp remains untouched so borrower Ujrah remains strictly frozen.
+     * @param tokenId SAG Token ID
+     * @param discountedReservePriceUSD New lower clearance floor in USD (must be < current reserve)
+     */
+    function resetExpiredAuction(uint256 tokenId, uint256 discountedReservePriceUSD) external onlyOwner {
+        LiquidationAuction storage auction = auctions[tokenId];
+        require(auction.active, "No active auction to reset");
+        require(block.timestamp > auction.endTime, "Primary auction has not yet expired");
+        require(discountedReservePriceUSD < auction.reservePriceUSD, "Discounted reserve must be below previous floor");
+
+        // Mathematical safety floor: Prevent insider or arbitrary distress dumps below 50% of appraised value
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        uint256 minAllowedFloor = (collateral.appraisedValueUSD * MIN_DISTRESSED_RECOVERY_BPS) / 10000;
+        require(
+            discountedReservePriceUSD >= minAllowedFloor,
+            "Discounted reserve below minimum allowable recovery floor (50% of appraisal)"
+        );
+
+        uint256 newStartPrice = auction.reservePriceUSD;
+
+        auction.startPriceUSD = newStartPrice;
+        auction.reservePriceUSD = discountedReservePriceUSD;
+        auction.startTime = block.timestamp;
+        auction.endTime = block.timestamp + auctionDuration;
+
+        emit LiquidationAuctionStarted(tokenId, newStartPrice, discountedReservePriceUSD, auction.endTime);
+    }
+
+    /**
+     * @notice Computes exact accrued Ujrah safekeeping fee based on elapsed physical vault custody time
+     * @dev Under AAOIFI Standard 39 and Bank Negara Malaysia Rahn Policy, Ujrah accrues on a linear
+     *      pro-rata basis for vault custody. Safekeeping fees permanently freeze when collateral enters
+     *      liquidation auction (liquidationInceptionTimestamp) so borrowers are never charged custody
+     *      fees during primary price discovery or subsequent reset rounds.
+     *      accruedUjrah = (monthlyUjrahUSD * elapsedSeconds) / (30 days)
+     */
+    function calculateAccruedUjrah(uint256 tokenId) public view returns (uint256) {
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        if (collateral.monthlyUjrahUSD == 0) return 0;
+        if (block.timestamp <= collateral.originationTimestamp) return 0;
+
+        // Permanently freeze custody fee calculation at the write-once liquidation inception timestamp
+        uint256 inception = liquidationInceptionTimestamp[tokenId];
+        uint256 custodyEnd = (inception > 0) ? inception : block.timestamp;
+
+        if (custodyEnd <= collateral.originationTimestamp) return 0;
+        uint256 elapsed = custodyEnd - collateral.originationTimestamp;
+        return (collateral.monthlyUjrahUSD * elapsed) / (30 days);
     }
 
     /**
@@ -308,7 +371,7 @@ contract SanadLiquidityPool is Ownable {
         );
 
         uint256 principalOwed = tokenLoanBalance[tokenId];
-        uint256 ujrahFee = collateral.monthlyUjrahUSD;
+        uint256 ujrahFee = calculateAccruedUjrah(tokenId);
         uint256 totalObligation = principalOwed + ujrahFee;
 
         uint256 surplus = 0;

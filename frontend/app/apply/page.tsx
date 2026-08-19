@@ -8,6 +8,7 @@ import { KYCVerification } from "@/components/apply/kyc-verification"
 import { WalletConnection } from "@/components/apply/wallet-connection"
 import { LoanOffer } from "@/components/apply/loan-offer"
 import { Stepper } from "@/components/apply/stepper"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 
 const steps = [
   "kyc",
@@ -16,8 +17,7 @@ const steps = [
   "offer",
 ]
 
-export default function ApplyPage() {
-
+function ApplyPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
 
   const nextStep = useCallback(() => {
@@ -57,13 +57,6 @@ export default function ApplyPage() {
       <Stepper currentStep={currentStep} />
 
       <Tabs defaultValue={`apply-step-${currentStep}`} className="mt-8" key={`apply-step-${currentStep}`}>
-        {/* <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="kyc">KYC Verification</TabsTrigger>
-          <TabsTrigger value="jewelry">Jewelry Submission</TabsTrigger>
-          <TabsTrigger value="wallet">Wallet Connection</TabsTrigger>
-          <TabsTrigger value="offer">Loan Offer</TabsTrigger>
-        </TabsList> */}
-
         <TabsContent value={`apply-step-1`} >
           <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
             <CardHeader>
@@ -115,5 +108,13 @@ export default function ApplyPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function ApplyPage() {
+  return (
+    <ProtectedRoute>
+      <ApplyPageContent />
+    </ProtectedRoute>
   )
 }

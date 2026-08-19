@@ -287,4 +287,31 @@ export class CreditcoinController {
       res.status(500).json({ success: false, error: error.message });
     }
   }
+
+  /**
+   * POST /api/v1/creditcoin/audit-logs
+   * Body: { eventType: string, details: any, tokenId?: string, contractAddress?: string, transactionHash?: string }
+   */
+  public async createAuditLog(req: Request, res: Response): Promise<void> {
+    try {
+      const { eventType, details, tokenId, contractAddress, transactionHash, blockNumber } = req.body;
+      if (!eventType || !details) {
+        res.status(400).json({ success: false, error: 'Missing eventType or details' });
+        return;
+      }
+
+      const log = await indexerService.recordAuditLog({
+        eventType,
+        details,
+        tokenId,
+        contractAddress,
+        transactionHash,
+        blockNumber,
+      });
+
+      res.status(201).json({ success: true, log });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }
