@@ -42,10 +42,10 @@ export function HeroIntro() {
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
             <Link
-              href="/apply"
+              href="/register"
               className="flux-pill inline-flex items-center justify-center gap-2 px-7 py-3.5 text-xs font-bold uppercase tracking-[0.16em]"
             >
-              Apply for Financing <ArrowRight className="h-3.5 w-3.5" />
+              Register & Apply <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
               href="/how-it-works"

@@ -273,10 +273,10 @@ export default function Home() {
                 Final valuation after physical assessment at the branch.
               </p>
               <Link
-                href="/apply"
-                className="flux-pill mt-8 inline-flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-[0.16em]"
+              href="/register"
+              className="flux-pill mt-8 inline-flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-[0.16em]"
               >
-                Apply Now <ArrowRight className="h-3.5 w-3.5" />
+                Register & Apply <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Reveal>
           </div>
@@ -386,7 +386,7 @@ export default function Home() {
                 href="/apply"
                 className="inline-flex items-center gap-2 rounded-full bg-[#E1BAC2] px-7 py-3.5 text-xs font-bold uppercase tracking-[0.16em] text-[#171414] transition-all hover:bg-white"
               >
-                Apply Now <ArrowRight className="h-3.5 w-3.5" />
+                Register & Apply <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 href="/investor/login"
