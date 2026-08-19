@@ -68,6 +68,17 @@ export async function runEndToEndDeployment() {
   console.log(`✅ SanadLiquidityPool deployed on CC3 at: ${poolAddress}`);
   console.log(`   Explorer: https://creditcoin-testnet.blockscout.com/address/${poolAddress}`);
 
+  // Configure AccessControl roles
+  console.log('\n[Role Setup] Configuring AccessControl Roles on Creditcoin CC3...');
+  const SETTLEMENT_ROLE = ethers.keccak256(ethers.toUtf8Bytes('SETTLEMENT_ROLE'));
+  const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes('MINTER_ROLE'));
+  const tx1 = await (sagContract as any).grantRole(SETTLEMENT_ROLE, poolAddress);
+  await tx1.wait();
+  console.log(`✅ Granted SETTLEMENT_ROLE to SanadLiquidityPool (Tx: ${tx1.hash})`);
+  const tx2 = await (sagContract as any).grantRole(MINTER_ROLE, creditcoinSigner.address);
+  await tx2.wait();
+  console.log(`✅ Granted MINTER_ROLE to Deployer (Tx: ${tx2.hash})`);
+
   // Update dynamic contract addresses in environment memory
   CREDITCOIN_CONFIG.contracts.sagTokenAddress = sagAddress;
   CREDITCOIN_CONFIG.contracts.liquidityPoolAddress = poolAddress;
