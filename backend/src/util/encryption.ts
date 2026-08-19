@@ -21,7 +21,10 @@ const getMasterKey = (): Buffer => {
   }
   
   // Otherwise, derive a proper key using PBKDF2
-  const salt = 'sanad-cc3-master-key-salt'; // Fixed salt for Creditcoin master key derivation
+  // CRITICAL: This salt ('sanad-cc3-master-key-salt') and the associated AAD strings
+  // ('sanad-cc3-private-key', 'sanad-cc3-data') are load-bearing for all encrypted ciphertext.
+  // DO NOT rename, modify, or rotate these constants without executing an explicit database migration script.
+  const salt = 'sanad-cc3-master-key-salt';
   return crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, 'sha512');
 };
 
