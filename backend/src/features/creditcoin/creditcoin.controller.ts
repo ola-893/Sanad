@@ -1,13 +1,10 @@
 import { Request, Response } from 'express';
 import { CreditcoinClient } from './creditcoin.client.js';
 import { SagTokenService, MintSagParams } from './sag-token.service.js';
-import { AttestcoinRelayerService } from './attestcoin-relayer.service.js';
 import { CreditcoinIndexerService } from './creditcoin-indexer.service.js';
 import { CREDITCOIN_CONFIG } from './creditcoin.config.js';
-import { queueAsyncAttestcoinRepayment, getRepaymentJobStatus } from '../../services/async-attestcoin-repayment.service.js';
 
 const sagService = new SagTokenService();
-const relayerService = new AttestcoinRelayerService();
 const indexerService = new CreditcoinIndexerService();
 
 // Start event listening
@@ -28,11 +25,7 @@ export class CreditcoinController {
           chainName: CREDITCOIN_CONFIG.chainName,
           rpcUrl: CREDITCOIN_CONFIG.rpcUrl,
           chainId: CREDITCOIN_CONFIG.chainId,
-          proverUrl: CREDITCOIN_CONFIG.proverUrl,
-          blockProverAddress: CREDITCOIN_CONFIG.blockProverAddress,
-          chainInfoAddress: CREDITCOIN_CONFIG.chainInfoAddress,
           contracts: CREDITCOIN_CONFIG.contracts,
-          sourceChain: CREDITCOIN_CONFIG.sourceChain,
         },
       });
     } catch (error: any) {
@@ -83,82 +76,6 @@ export class CreditcoinController {
       res.status(200).json({ success: true, data });
     } catch (error: any) {
       res.status(404).json({ success: false, error: error.message });
-    }
-  }
-
-  /**
-   * POST /api/v1/creditcoin/repayment/relay
-   */
-  public async queueRepaymentRelay(req: Request, res: Response): Promise<void> {
-    try {
-      const { tokenId, sourceTxHash, repaidAmountUSD, userId, sourceEvmChainId } = req.body;
-
-      if (!tokenId || !sourceTxHash || !repaidAmountUSD) {
-        res.status(400).json({ success: false, error: 'Missing tokenId, sourceTxHash, or repaidAmountUSD' });
-        return;
-      }
-
-      const job = await queueAsyncAttestcoinRepayment({
-        tokenId: tokenId.toString(),
-        sourceTxHash,
-        repaidAmountUSD: Number(repaidAmountUSD),
-        userId: userId || 'default-user',
-        sourceEvmChainId: sourceEvmChainId ? Number(sourceEvmChainId) : 11155111,
-      });
-
-      res.status(202).json({
-        success: true,
-        message: 'Cross-chain repayment attestation job queued on Creditcoin CC3',
-        jobId: job.jobId,
-      });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-
-  /**
-   * GET /api/v1/creditcoin/repayment/status/:jobId
-   */
-  public async getRepaymentStatus(req: Request, res: Response): Promise<void> {
-    try {
-      const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
-      const status = await getRepaymentJobStatus(String(jobId));
-      if (!status) {
-        res.status(404).json({ success: false, error: 'Job not found' });
-        return;
-      }
-      res.status(200).json({ success: true, data: status });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-
-  /**
-   * POST /api/v1/creditcoin/repayment/relay-sync
-   */
-  public async relayAndSettleSync(req: Request, res: Response): Promise<void> {
-    try {
-      const { tokenId, sourceTxHash, repaidAmountUSD, sourceEvmChainId } = req.body;
-
-      if (!tokenId || !sourceTxHash || !repaidAmountUSD) {
-        res.status(400).json({ success: false, error: 'Missing tokenId, sourceTxHash, or repaidAmountUSD' });
-        return;
-      }
-
-      const result = await relayerService.relayAndSettleRepayment({
-        tokenId: tokenId.toString(),
-        sourceTxHash,
-        repaidAmountUSD: Number(repaidAmountUSD),
-        sourceEvmChainId: sourceEvmChainId ? Number(sourceEvmChainId) : undefined,
-      });
-
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(500).json(result);
-      }
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
     }
   }
 

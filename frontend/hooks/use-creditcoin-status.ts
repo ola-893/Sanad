@@ -46,7 +46,7 @@ export function useCreditcoinStatus() {
       }
     },
     staleTime: 60 * 1000, // 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     retry: 2,
   })
 }

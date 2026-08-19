@@ -18,6 +18,62 @@ export function PaymentHistory() {
   const { data: logs = [], isLoading: logsLoading } = useAuditLogs()
 
   const ownTokens = useMemo(() => new Set(nfts.map((n) => String(n.tokenId))), [nfts])
+  const payments = [
+    {
+      id: "P-2025-001",
+      loanId: "L-2025-001",
+      date: "March 15, 2025",
+      amount: 1250,
+      method: "Creditcoin Wallet",
+      status: "completed",
+      transactionId: "TXN-123456",
+    },
+    {
+      id: "P-2025-002",
+      loanId: "L-2025-002",
+      date: "March 10, 2025",
+      amount: 833,
+      method: "Bank Transfer",
+      status: "completed",
+      transactionId: "TXN-123457",
+    },
+    {
+      id: "P-2025-003",
+      loanId: "L-2025-001",
+      date: "February 15, 2025",
+      amount: 1250,
+      method: "Creditcoin Wallet",
+      status: "completed",
+      transactionId: "TXN-123458",
+    },
+    {
+      id: "P-2025-004",
+      loanId: "L-2025-002",
+      date: "February 10, 2025",
+      amount: 833,
+      method: "Credit Card",
+      status: "completed",
+      transactionId: "TXN-123459",
+    },
+    {
+      id: "P-2025-005",
+      loanId: "L-2025-001",
+      date: "April 15, 2025",
+      amount: 1250,
+      method: "Pending",
+      status: "upcoming",
+      transactionId: "-",
+    },
+    {
+      id: "P-2025-006",
+      loanId: "L-2025-002",
+      date: "April 10, 2025",
+      amount: 833,
+      method: "Pending",
+      status: "upcoming",
+      transactionId: "-",
+    },
+  ]
 
   const repayments = useMemo(() => {
     return logs

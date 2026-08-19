@@ -32,6 +32,78 @@ export default function AdminLoginPage() {
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const adminRoles = {
+    admin: {
+      title: "Super Admin",
+      description: "Full platform control & access",
+      email: "admin@sanad.finance",
+      password: "admin123",
+      features: [
+        "🔐 Full Access & Security Control",
+        "🏛️ Complete SAG Management",
+        "🧮 Repayment & Extension Control",
+        "🧾 Investor Management",
+        "🏦 Wallet & Creditcoin Integration",
+        "🧑‍💼 Ar Rahnu Partner Management",
+        "⚠️ Compliance & Risk Management",
+        "📈 Reporting & Analytics",
+        "🔧 Platform Configuration",
+        "📣 Notification & Communication",
+        "💬 Support & Helpdesk Tools",
+        "🧪 Developer/Testing Tools",
+      ],
+    },
+    compliance: {
+      title: "Compliance Officer",
+      description: "KYC, AML & Risk Management",
+      email: "compliance@sanad.finance",
+      password: "compliance123",
+      features: [
+        "⚠️ Full Compliance & Risk Access",
+        "🧾 Investor KYC Management",
+        "🏛️ SAG Approval Workflow",
+        "📈 Risk Analytics & Reporting",
+        "💬 Compliance Support Tools",
+      ],
+    },
+    branch_ops: {
+      title: "Branch Operations",
+      description: "Ar Rahnu branch management",
+      email: "branchops@sanad.finance",
+      password: "branch123",
+      features: [
+        "🧑‍💼 Ar Rahnu Partner Management",
+        "🏛️ SAG Listing Management",
+        "🧮 Repayment Monitoring",
+        "📈 Branch Performance Analytics",
+      ],
+    },
+    support: {
+      title: "Customer Support",
+      description: "User support & helpdesk",
+      email: "support@sanad.finance",
+      password: "support123",
+      features: [
+        "💬 Full Support & Helpdesk Tools",
+        "🧾 Investor Account Management",
+        "📣 Communication Tools",
+        "🏛️ Basic SAG Information Access",
+      ],
+    },
+    ceo: {
+      title: "CEO Dashboard",
+      description: "Executive overview & reports",
+      email: "ceo@sanad.finance",
+      password: "ceo123",
+      features: [
+        "📈 Executive Reporting & Analytics",
+        "🏛️ Platform Overview",
+        "🧑‍💼 Partner Performance",
+        "⚠️ Risk Overview",
+        "🔧 Strategic Configuration",
+      ],
+    },
+  }
 
   const handleLogin = async (values: z.infer<typeof loginFormSchema>) => {
     setError("")
