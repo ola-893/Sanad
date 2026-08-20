@@ -34,9 +34,8 @@ export async function runAttestcoinOracleE2E() {
   console.log(`• CC3 RPC: ${cc3Rpc}`);
   console.log(`• Proof Gen API: ${proofApiUrl}`);
 
-  const cc3Provider = new ethers.JsonRpcProvider(cc3Rpc, {
-    chainId: 102031,
-    name: 'Creditcoin3Testnet',
+  const cc3Provider = new ethers.JsonRpcProvider(cc3Rpc, 102031, {
+    staticNetwork: ethers.Network.from(102031),
   });
   const relayerSigner = new ethers.Wallet(privateKey, cc3Provider);
   const balance = await cc3Provider.getBalance(relayerSigner.address);

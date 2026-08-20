@@ -50,7 +50,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x48159A8F5ba1AB2D9F7BD28585EB7dAc57274b7F';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xBB2Bf716AD1C99d0aED17C61234620Cca327eE0f';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://proof-gen-api.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }
@@ -153,7 +153,18 @@ export class AttestcoinOracleRelayerService {
       const profile = await contract.getCreditProfile(borrowerAddress);
       const provenEvents = await contract.getProvenEvents(borrowerAddress);
       const tiers = ['Unscored', 'HighRisk', 'Bronze', 'Silver', 'Gold'];
-      const protocols = ['Aave v3', 'Compound v3', 'Maple Finance', 'Goldfinch'];
+      const protocols = [
+        'Aave v3',
+        'Compound v3',
+        'Morpho Blue',
+        'Spark Protocol (Sky)',
+        'MakerDAO (Sky CDP)',
+        'Euler v2',
+        'Fluid (Instadapp)',
+        'Maple Finance',
+        'Goldfinch Protocol',
+        'Fraxlend'
+      ];
       const eventTypes = ['Clean Repayment', 'Overcollateralized Liquidation', 'Undercollateralized Default', 'Collateral Supply'];
 
       return {
