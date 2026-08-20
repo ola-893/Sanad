@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import { InvestorPageLayout } from "@/components/investor/page-layout"
 import { InvestorPageHeader } from "@/components/investor/page-header"
 import { investorStyles } from "@/components/investor/styles"
+import { useLiquidityPool } from "@/hooks/use-liquidity-pool"
+import { useCreditcoinWallet } from "@/hooks/use-creditcoin-wallet"
 
 interface SAGProperties {
   loan?: number

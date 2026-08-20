@@ -51,11 +51,11 @@ export function useLiquidityPool() {
     setError(null);
     try {
       const contract = getReadOnlyContract();
-      const rawTotal = await contract.totalPoolLiquidity().catch(() => 0n);
+      const rawTotal = await contract.totalPoolLiquidity().catch(() => BigInt(0));
       setTotalLiquidity(ethers.formatEther(rawTotal));
 
       if (address) {
-        const rawUserBal = await contract.lpBalances(address).catch(() => 0n);
+        const rawUserBal = await contract.lpBalances(address).catch(() => BigInt(0));
         setUserLpBalance(ethers.formatEther(rawUserBal));
       } else {
         setUserLpBalance('0.0');

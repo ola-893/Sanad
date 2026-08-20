@@ -86,13 +86,13 @@ async function runKycFlowVerification() {
     const userToken = generateAccessToken({
       username: testEmail,
       loginType: 'EMAIL',
-      sessionId: 'sess-test-001',
+      roleName: 'USER',
     });
 
     const complianceToken = generateAccessToken({
       username: 'compliance@sanad.finance',
       loginType: 'EMAIL',
-      sessionId: 'sess-compliance-001',
+      roleName: 'COMPLIANCE_OFFICER',
     });
 
     console.log(`✓ Test user created: ${testUserId} (${testEmail})`);

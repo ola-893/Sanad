@@ -16,7 +16,7 @@ export const createSagController = async (req: Request, res: Response) => {
     try {
         const userInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
 
-        if (userInfo) {
+        if (userInfo && userInfo.userId) {
             const kycCheck = await kycService.isUserApproved(userInfo.userId);
             if (!kycCheck.approved) {
                 return res.status(403).json({

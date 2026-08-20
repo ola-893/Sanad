@@ -14,6 +14,7 @@ import { creditcoinRoutes } from '@/features/creditcoin/index.js';
 import { kycRoutes } from '@/features/kyc/index.js';
 import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
+import creditOracleRoutes from '@/features/credit-oracle/credit-oracle.routes.js';
 
 const v1Router = express.Router();
 
@@ -29,6 +30,7 @@ v1Router.use('/gold-price', goldPriceRoutes);
 
 // Creditcoin & Attestcoin Protocol Routes
 v1Router.use('/creditcoin', creditcoinRoutes);
+v1Router.use('/credit-oracle', creditOracleRoutes);
 
 // RBAC & Admin routes
 v1Router.use('/rbac', rbacRoutes);

@@ -23,7 +23,7 @@ export function compileContracts() {
   const contractsDir = path.resolve(process.cwd(), 'src', 'contracts');
   const sources: Record<string, { content: string }> = {};
 
-  const files = ['SAGToken.sol', 'SanadLiquidityPool.sol'];
+  const files = ['SAGToken.sol', 'SanadLiquidityPool.sol', 'SanadCreditOracle.sol'];
   for (const file of files) {
     const filePath = path.join(contractsDir, file);
     if (fs.existsSync(filePath)) {
@@ -36,6 +36,7 @@ export function compileContracts() {
     sources,
     settings: {
       evmVersion: 'cancun',
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 200,
@@ -63,7 +64,7 @@ export function compileContracts() {
   const EIP170_LIMIT = 24576; // 24 KB max runtime bytecode
 
   console.log('\n--- CONTRACT SIZES & EIP-170 RUNTIME LIMIT (24,576 bytes) ---');
-  for (const file of ['SAGToken.sol', 'SanadLiquidityPool.sol']) {
+  for (const file of ['SAGToken.sol', 'SanadLiquidityPool.sol', 'SanadCreditOracle.sol']) {
     if (!output.contracts[file]) continue;
     for (const name of Object.keys(output.contracts[file])) {
       const contractData = output.contracts[file][name];

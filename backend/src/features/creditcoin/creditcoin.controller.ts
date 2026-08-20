@@ -56,7 +56,7 @@ export class CreditcoinController {
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
         const user = await getUserDataByToken(token);
-        if (user) {
+        if (user && user.userId) {
           const kycCheck = await kycService.isUserApproved(user.userId);
           if (!kycCheck.approved) {
             res.status(403).json({

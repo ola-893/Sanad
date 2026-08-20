@@ -41,6 +41,14 @@ export function Sidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === "/credit-bureau"} tooltip="Credit Bureau (Attestcoin)">
+              <Link href="/credit-bureau">
+                <FileText className="h-4 w-4 text-[#E5A93C]" />
+                <span className="font-semibold text-[#E5A93C]">Credit Bureau</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/loans"} tooltip="Loans">
               <Link href="/loans">
                 <Briefcase className="h-4 w-4" />

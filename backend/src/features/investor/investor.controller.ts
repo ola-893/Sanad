@@ -33,9 +33,11 @@ export class InvestorController {
         if (investorInfo.accountId) {
           userLpBalance = await this.poolService.getLpBalance(investorInfo.accountId);
         }
-        const kycCheck = await this.kycService.isUserApproved(investorInfo.userId);
-        kycStatus = kycCheck.status;
-        isKycApproved = kycCheck.approved;
+        if (investorInfo.userId) {
+          const kycCheck = await this.kycService.isUserApproved(investorInfo.userId);
+          kycStatus = kycCheck.status;
+          isKycApproved = kycCheck.approved;
+        }
       }
 
       res.status(200).json({

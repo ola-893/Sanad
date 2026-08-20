@@ -166,7 +166,7 @@ export class KycController {
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
         const user = await getUserDataByToken(token);
-        if (user) {
+        if (user && user.userId) {
           reviewerId = user.userId;
         }
       }
