@@ -1,18 +1,24 @@
-'use client';
+"use client"
 
-import { useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { RecentActivity } from "@/components/dashboard/recent-activity"
-import { PaymentSchedule } from "@/components/dashboard/payment-schedule"
-import { NFTCollateral } from "@/components/dashboard/nft-collateral"
 import { Overview } from "@/components/dashboard/overview"
-import { ArrowRight, Clock, CircleDollarSign, CreditCard, Gem, type LucideIcon } from "lucide-react"
+import {
+  CircleDollarSign,
+  Wallet,
+  Gem,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
+import apiInstance from "@/lib/axios-v1"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -35,14 +41,38 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
   )
 }
 
+async function getETHBalance(address: string): Promise<string> {
+  if (!window.ethereum) return "0"
+  const hex = await window.ethereum.request({
+    method: "eth_getBalance",
+    params: [address, "latest"],
+  })
+  return (parseInt(hex, 16) / 1e18).toFixed(4)
+}
+
 export default function DashboardPage() {
+  const { walletAddress } = useWalletAuth()
   const { data: nfts = [], isLoading: nftsLoading, isError: nftsError } = useInvestorNfts()
   const { data: logs = [], isLoading: logsLoading, isError: logsError } = useAuditLogs()
+
+  const [ethBalance, setEthBalance] = useState("0.0000")
+  const [poolData, setPoolData] = useState<{ totalLiquidity: string; userLpBalance: string } | null>(null)
+
+  useEffect(() => {
+    if (walletAddress) {
+      getETHBalance(walletAddress).then(setEthBalance).catch(() => setEthBalance("0"))
+    }
+  }, [walletAddress])
+
+  useEffect(() => {
+    apiInstance.get("/investor/pool/data")
+      .then((res) => setPoolData(res.data.data))
+      .catch(() => setPoolData({ totalLiquidity: "0.0000", userLpBalance: "0.0000" }))
+  }, [])
 
   const stats = useMemo(() => {
     const ownTokens = new Set(nfts.map((n) => String(n.tokenId)))
     const myLogs = logs.filter((log) => ownTokens.has(String(log.tokenId)))
-
     let totalFinanced = 0
     const funded = new Set<string>()
     const closed = new Set<string>()
@@ -54,8 +84,7 @@ export default function DashboardPage() {
         closed.add(String(log.tokenId))
       }
     }
-    const activeLoans = [...funded].filter((t) => !closed.has(t)).length
-    return { totalFinanced, activeLoans }
+    return { totalFinanced, nfts: nfts.length }
   }, [nfts, logs])
 
   const loading = nftsLoading || logsLoading
@@ -68,39 +97,41 @@ export default function DashboardPage() {
         <div className="mx-auto max-w-7xl space-y-6">
           <DashboardHeader />
 
+          {/* Stats Row */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Total Financed"
-              value={loading ? "—" : dataUnavailable ? "$0" : usd(stats.totalFinanced)}
-              sub="Verified on-chain (USD)"
-              icon={CircleDollarSign}
+              label="ETH Balance"
+              value={`${ethBalance} ETH`}
+              sub="Sepolia Testnet"
+              icon={Wallet}
             />
             <StatCard
-              label="Active Loans"
-              value={loading ? "—" : dataUnavailable ? "0" : String(stats.activeLoans)}
-              sub="Funded and not yet settled"
-              icon={CreditCard}
+              label="Pool Stake"
+              value={`${poolData?.userLpBalance || "0.0000"} CTC`}
+              sub="Bridged from ETH"
+              icon={TrendingUp}
             />
             <StatCard
-              label="NFT Collateral"
-              value={loading ? "—" : dataUnavailable ? "0" : String(nfts.length)}
+              label="NFT Holdings"
+              value={loading ? "\u2014" : dataUnavailable ? "0" : String(stats.nfts)}
               sub="Secured on Creditcoin"
               icon={Gem}
             />
             <StatCard
-              label="Next Payment"
-              value="—"
-              sub="No upcoming payments"
-              icon={Clock}
+              label="Total Financed"
+              value={loading ? "\u2014" : dataUnavailable ? "$0" : usd(stats.totalFinanced)}
+              sub="Verified on-chain (USD)"
+              icon={CircleDollarSign}
             />
           </div>
 
+          {/* Charts Row */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className={`${glass} lg:col-span-4`}>
               <CardHeader>
                 <p className="kicker-gold">Portfolio</p>
                 <CardTitle className="font-display">Cash Flow Overview</CardTitle>
-                <CardDescription>Financing vs repayments, last 8 months</CardDescription>
+                <CardDescription>Deposits vs returns, last 8 months</CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
                 <Overview />
@@ -118,42 +149,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className={`${glass} lg:col-span-4`}>
-              <CardHeader>
-                <p className="kicker-gold">Schedule</p>
-                <CardTitle className="font-display">Payment Schedule</CardTitle>
-                <CardDescription>Your upcoming and verified repayments</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PaymentSchedule />
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full rounded-full">
-                  <Link href="/dashboard/payments" className="flex items-center justify-center gap-2">
-                    View All Payments <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-            <Card className={`${glass} lg:col-span-3`}>
-              <CardHeader>
-                <p className="kicker-gold">Collateral</p>
-                <CardTitle className="font-display">NFT Collateral</CardTitle>
-                <CardDescription>Your gold secured as on-chain NFTs</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <NFTCollateral />
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full rounded-full">
-                  <Link href="/dashboard/nfts" className="flex items-center justify-center gap-2">
-                    View All NFTs <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+
         </div>
       </div>
     </ProtectedRoute>

@@ -668,15 +668,9 @@ export const getAccountBalance = async (req: Request, res: Response) => {
 }
 
 export const refreshToken = async (req: Request, res: Response) => {
-  // const cookies = req.headers.cookie;
-  // const refreshToken = cookies?.split('=')[1];
-  
   const body = req.body;
   console.log(body);
   const refreshToken = body.refreshToken;
-  // console.log(refreshToken);
-
-  // const refreshToken = '';
 
   if (!refreshToken) {
     return res.status(401).json({ message: Error.UNAUTHORIZED });
@@ -689,9 +683,6 @@ export const refreshToken = async (req: Request, res: Response) => {
     if ('statusCode' in verifiedToken) {
       return res.status(401).json({ message: Error.UNAUTHORIZED });
     }
-
-    let user: UserType | null = null;
-    let loginType = '';
 
     // Generate a new access token using the information from the refresh token
     const newAccessToken = generateAccessToken({
@@ -707,4 +698,3 @@ export const refreshToken = async (req: Request, res: Response) => {
     res.status(500).json({ message: Error.INTERNAL_SERVER_ERROR });
   }
 }
-

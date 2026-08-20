@@ -233,7 +233,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" defaultValue="+60 12 345 6789" placeholder="+60 12 345 6789" />
+              <Input id="phone" placeholder="+234 801 234 5678" />
             </div>
           </div>
 

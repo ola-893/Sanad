@@ -1,188 +1,109 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Wallet, UserIcon, StoreIcon, BriefcaseIcon, ArrowRight, ShieldCheck } from 'lucide-react';
+import { AuthShell } from '@/components/auth/auth-shell';
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { EyeIcon, EyeOffIcon, Loader2, LockIcon, MailIcon, UserIcon } from "lucide-react"
-import { AuthShell } from "@/components/auth/auth-shell"
+type LoginRole = 'borrower' | 'investor' | 'pawnshop';
 
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { toast } from "sonner"
-import { useAuth } from "@/hooks/use-auth"
-
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(2, 'Password must be at least 2 characters'),
-})
-
-type LoginFormData = z.infer<typeof loginSchema>
+const roles: Array<{
+  id: LoginRole;
+  title: string;
+  description: string;
+  icon: typeof UserIcon;
+  href: string;
+  color: string;
+}> = [
+  {
+    id: 'borrower',
+    title: 'Borrower',
+    description: 'Apply for Shariah-compliant gold financing',
+    icon: BriefcaseIcon,
+    href: '/login/borrower',
+    color: 'bg-blue-50 text-blue-600',
+  },
+  {
+    id: 'investor',
+    title: 'Investor',
+    description: 'Browse and invest in SAG tokens for yield',
+    icon: UserIcon,
+    href: '/login/investor',
+    color: 'bg-amber-50 text-amber-600',
+  },
+  {
+    id: 'pawnshop',
+    title: 'Pawnshop Owner',
+    description: 'Manage your Ar-Rahnu branch and create SAG tokens',
+    icon: StoreIcon,
+    href: '/login/pawnshop',
+    color: 'bg-emerald-50 text-emerald-600',
+  },
+];
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
-  const { authenticateUser } = useAuth()
-
-  const form = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    mode: 'onChange',
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  })
-
-  const isSubmitting = form.formState.isSubmitting
-
-  const onSubmit = async (data: LoginFormData) => {
-    const promise = authenticateUser({
-      email: data.email,
-      password: data.password,
-    })
-
-    toast.promise(promise, {
-      loading: 'Signing in...',
-      success: (response: any) => {
-        if (!response.success) {
-          throw new Error('Invalid email or password. Please try again.')
-        }
-
-        router.push('/dashboard');
-        return 'Login Successful!';
-      },
-      error: 'Invalid email or password. Please try again.',
-    })
-
-    await promise
-  }
+  const router = useRouter();
 
   return (
     <AuthShell
-      kicker="Investor Portal"
-      title="Investor Login"
-      subtitle="Sign in to your investor account to continue"
-      auditNote="Secure access with encrypted authentication"
+      kicker="Welcome Back"
+      title="Sign In to Sanad"
+      subtitle="Choose your role to continue with wallet-based authentication"
+      auditNote="Secure wallet-based authentication · No password required"
       footerLinks={[
-        { href: "/admin/login", label: "Admin / Ar Rahnu Login" },
-        { href: "/", label: "Return to Homepage" },
+        { href: '/register', label: "Don't have an account? Register" },
+        { href: '/', label: 'Return to Homepage' },
       ]}
     >
       <Card className="glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader className="rounded-t-3xl border-b border-[#171414]/10">
-              <CardTitle className="flex items-center gap-2">
-                <UserIcon className="h-5 w-5" />
-                Investor Login
-              </CardTitle>
-              <CardDescription className="text-[#4A4A4A]">Enter your credentials to access your investor account</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <MailIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="name@example.com"
-                          autoComplete="email"
-                          className="pl-10"
-                          disabled={isSubmitting}
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center justify-between">
-                      Password
-                      <Link
-                        href="/forgot-password"
-                        className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-                      >
-                        Forgot password?
-                      </Link>
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <LockIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="current-password"
-                          placeholder="Enter your password"
-                          className="pl-10 pr-10"
-                          disabled={isSubmitting}
-                          {...field}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 h-4 w-4 text-muted-foreground disabled:opacity-50"
-                          disabled={isSubmitting}
-                        >
-                          {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4 p-6">
-              <Button
-                type="submit"
-                className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black disabled:opacity-50"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
-                    Sign In
-                  </div>
-                )}
-              </Button>
+        <CardContent className="space-y-4 p-6">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A4A4A]">
+            Select Your Role
+          </p>
 
-              <p className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Register
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        </Form>
+          <div className="space-y-2">
+            {roles.map((role) => {
+              const Icon = role.icon;
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => router.push(role.href)}
+                  className="w-full rounded-xl border border-[#171414]/10 bg-white/40 p-4 text-left transition-all hover:bg-white/60 hover:border-[#E1BAC2] hover:shadow-md group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full ${role.color} transition-transform group-hover:scale-110`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-display text-sm font-bold text-[#171414]">
+                        {role.title}
+                      </p>
+                      <p className="text-xs text-[#4A4A4A]">{role.description}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-[#4A4A4A] group-hover:text-[#E1BAC2] transition-colors" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Admin — subtle, not a card */}
+          <div className="pt-2 border-t border-[#171414]/5">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/login')}
+              className="flex items-center justify-center gap-1.5 w-full py-2 text-[11px] text-[#4A4A4A]/60 hover:text-[#4A4A4A] transition-colors"
+            >
+              <ShieldCheck className="h-3 w-3" />
+              Admin Access
+            </button>
+          </div>
+        </CardContent>
       </Card>
     </AuthShell>
-  )
+  );
 }

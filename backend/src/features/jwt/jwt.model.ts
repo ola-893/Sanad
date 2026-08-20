@@ -1,5 +1,5 @@
 export type UserTokenInfo = {
   username: string;
-  loginType: 'EMAIL' | 'CONTACT_NO';
+  loginType: 'EMAIL' | 'CONTACT_NO' | 'WALLET';
   roleName: string;
 }

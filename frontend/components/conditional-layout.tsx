@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { ExternalHeader } from "@/components/external-header"
-import { InternalHeader } from "@/components/internal-header"
+import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useState, useEffect } from 'react'
 import { BrandedLoader } from "@/components/branded-loader"
@@ -14,7 +14,7 @@ interface ConditionalLayoutProps {
 /**
  * Routes that have their own layout with header/sidebar — no global header/footer.
  */
-const fullLayoutRoutes = ['/investor', '/pawnshop', '/admin', '/login']
+const fullLayoutRoutes = ['/pawnshop', '/admin', '/login']
 
 /**
  * Public pages that always show the external (marketing) header + footer,
@@ -80,7 +80,7 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   if (authed) {
     return (
       <div className="flex flex-col min-h-screen">
-        <InternalHeader />
+        <Header />
         <main className="flex-1">{children}</main>
       </div>
     )

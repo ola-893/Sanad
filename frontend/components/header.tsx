@@ -13,7 +13,7 @@ import { UserNav } from "@/components/user-nav"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import { UserRole } from "@/hooks/use-user-role"
-import { Menu, X, LayoutDashboard, Wallet, CreditCard, Briefcase, LogOut } from "lucide-react"
+import { Menu, X, LayoutDashboard, Wallet, LogOut, User, Search } from "lucide-react"
 
 // Marketing nav — shown to visitors
 const marketingNavItems = [
@@ -25,12 +25,12 @@ const marketingNavItems = [
   { href: "/contact", key: "nav.contact" },
 ]
 
-// Portal nav — shown to logged-in users (all roles)
+// Portal nav — shown to logged-in users
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
-  { href: "/payments", label: "Payments", icon: CreditCard },
-  { href: "/nft-collateral", label: "NFT Collateral", icon: Briefcase },
+  { href: "/dashboard/browse", label: "Browse", icon: Search },
+  { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
+  { href: "/dashboard/profile", label: "Profile", icon: User },
 ]
 
 export function Header() {
@@ -46,7 +46,7 @@ export function Header() {
   return (
     <header className="site-header sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between rounded-full border border-white/45 bg-white/55 px-2 shadow-[0_18px_50px_rgba(30,30,30,0.08)] backdrop-blur-xl sm:px-3">
-        {/* Logo — dark ink pill */}
+        {/* Logo */}
         <Link
           href="/"
           className="hidden items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-5 text-[#F5F5F3] transition-colors hover:bg-black sm:flex"
@@ -62,7 +62,7 @@ export function Header() {
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        {/* Pill nav — marketing or portal depending on auth state */}
+        {/* Pill nav */}
         <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
           {loggedIn
             ? portalNav.map((item) => {

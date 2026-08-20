@@ -12,7 +12,7 @@ export default function InvestorLoginPage() {
       subtitle="Connect your wallet to browse and invest in SAG tokens"
       auditNote="Secure wallet-based authentication"
       footerLinks={[
-        { href: '/login', label: '\u2190 Back to role selection' },
+        { href: '/login', label: '← Back to role selection' },
         { href: '/register/investor', label: "Don't have an account? Register" },
         { href: '/', label: 'Return to Homepage' },
       ]}

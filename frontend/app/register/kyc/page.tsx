@@ -43,7 +43,7 @@ import {
 import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset } from "@/core/credit-bureau/types"
 
 const idTypes = {
-  nin: { label: "NIN / National ID Number", placeholder: "e.g., 920505106666" },
+  nin: { label: "NIN / National ID Number", placeholder: "e.g., 12345678901" },
   passport: { label: "Passport Number", placeholder: "e.g., A01234567" },
   license: { label: "License Number", placeholder: "e.g., ABC1234567" },
 } as const
@@ -91,16 +91,16 @@ export default function KycVerificationPage() {
 
   // 1. Personal Information
   const [personalInfo, setPersonalInfo] = useState({
-    firstName: "Ahmad",
-    lastName: "Al-Mansoor",
-    email: "ahmad.mansoor@example.com",
-    phone: "+60 12 345 6789",
-    address: "Level 28, Menara Islamic Finance",
-    city: "Kuala Lumpur",
-    state: "Wilayah Persekutuan",
-    postalCode: "50450",
+    firstName: "Deon",
+    lastName: "Olanrewaju",
+    email: "deon@example.com",
+    phone: "+234 801 234 5678",
+    address: "12 Admiralty Way, Lekki Phase 1",
+    city: "Lagos",
+    state: "Lagos",
+    postalCode: "106101",
     dateOfBirth: "1990-05-15",
-    nationality: "Malaysia",
+    nationality: "Nigeria",
   })
 
   // 2. On-Chain Credit Bureau Vetting (Core KYC Screening)
@@ -116,7 +116,7 @@ export default function KycVerificationPage() {
 
   // 3. ID Verification
   const [idType, setIdType] = useState<IdType>("nin")
-  const [idNumber, setIdNumber] = useState("900515145892")
+  const [idNumber, setIdNumber] = useState("12345678901")
   const [idFrontUploaded, setIdFrontUploaded] = useState(true)
   const [idBackUploaded, setIdBackUploaded] = useState(true)
 

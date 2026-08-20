@@ -1,284 +1,170 @@
-'use client';
+"use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { Wallet, RefreshCw, Copy, ExternalLink, ArrowUpRight, ArrowDownLeft, Shield, Activity, Wifi } from "lucide-react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import apiInstance from "@/lib/axios-v1"
+import {
+  Copy,
+  Check,
+  ExternalLink,
+  WalletIcon,
+  RefreshCw,
+  Shield,
+} from "lucide-react"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { toast } from "sonner"
 
-import Link from "next/link"
-import { useInvestorNfts } from "@/hooks/use-investor-nfts"
-import { useCreditcoinStatus } from "@/hooks/use-creditcoin-status"
-import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
-
-const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
-
-interface WalletData {
-  address: string
-  balanceCTC: string
-  network: string
-}
-
-function CopyButton({ text }: { text: string }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 shrink-0"
-      onClick={() => {
-        navigator.clipboard.writeText(text)
-        toast.success("Address copied")
-      }}
-    >
-      <Copy className="h-3.5 w-3.5" />
-    </Button>
-  )
-}
-
-export default function DashboardWalletPage() {
-  const queryClient = useQueryClient()
-  const { data: nfts = [] } = useInvestorNfts()
-  const { data: networkStatus } = useCreditcoinStatus()
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["wallet-balance"],
-    queryFn: async (): Promise<{ success: boolean; data: WalletData }> => {
-      const response = await apiInstance.get("/investor/wallet/balance")
-      return response.data
-    },
-    retry: 1,
+async function getETHBalance(address: string): Promise<string> {
+  if (!window.ethereum) return "0"
+  const hex = await window.ethereum.request({
+    method: "eth_getBalance",
+    params: [address, "latest"],
   })
+  return (parseInt(hex, 16) / 1e18).toFixed(6)
+}
 
-  const wallet = data?.data
-  const balance = wallet ? parseFloat(wallet.balanceCTC) || 0 : 0
-  const address = wallet?.address || ""
-  const network = wallet?.network || "Creditcoin 3 Testnet"
-  const { data: ctcPrice } = useCtcPrice()
-  const usdRate = ctcPrice?.ctcUsd || 0.10
-  const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
-  const subscanBase = process.env.NEXT_PUBLIC_SUBSCAN_URL || "https://creditcoin3-testnet.subscan.io"
+export default function WalletPage() {
+  const { walletAddress, isConnected, truncateAddress } = useWalletAuth()
+  const [copied, setCopied] = useState(false)
+  const [ethBalance, setEthBalance] = useState("0.000000")
+  const [isLoading, setIsLoading] = useState(false)
+  const [networkName, setNetworkName] = useState("")
 
-  return (
-    <ProtectedRoute requiredRole="investor">
+  const fetchBalance = async () => {
+    if (!walletAddress) return
+    setIsLoading(true)
+    try {
+      const bal = await getETHBalance(walletAddress)
+      setEthBalance(bal)
+      if (window.ethereum) {
+        const chainIdHex = await window.ethereum.request({ method: "eth_chainId" })
+        const chainId = parseInt(chainIdHex, 16)
+        if (chainId === 11155111) setNetworkName("ETH Sepolia Testnet")
+        else if (chainId === 1) setNetworkName("Ethereum Mainnet")
+        else setNetworkName(`Chain ${chainId}`)
+      }
+    } catch {
+      setEthBalance("0")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchBalance() }, [walletAddress])
+
+  const handleCopy = async () => {
+    if (!walletAddress) return
+    await navigator.clipboard.writeText(walletAddress)
+    setCopied(true)
+    toast.success("Address copied to clipboard")
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (!isConnected || !walletAddress) {
+    return (
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-        <div className="mx-auto max-w-4xl space-y-6">
-
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="kicker-gold">Wallet</p>
-              <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
-                Wallet Balance
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your Creditcoin (CTC) wallet balance and available funds
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                refetch()
-                toast.success("Balance refreshed")
-              }}
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              disabled={isLoading}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-
-          {/* Hero Balance Card */}
-          <Card className={`${glass} overflow-hidden`}>
-            <div className="relative bg-gradient-to-br from-[#171414] via-[#2a2520] to-[#171414] p-8 md:p-10">
-              <div className="absolute inset-0 bg-[url('/gold-pattern.svg')] opacity-5" />
-              <div className="relative space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
-                    <Wallet className="h-4 w-4 text-white" />
-                  </span>
-                  <Badge variant="outline" className="border-white/20 bg-white/10 text-white font-mono text-[10px]">
-                    {network}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/50">
-                    Available Balance
-                  </p>
-                  <div className="mt-1 font-display text-5xl md:text-6xl font-extrabold tabular-nums text-white">
-                    {isLoading ? "—" : balance.toLocaleString("en-US", { maximumFractionDigits: 4 })}
-                    <span className="ml-3 font-mono text-xl font-bold uppercase text-white/60">CTC</span>
-                  </div>
-                  <p className="mt-1 font-mono text-sm text-white/40">
-                    ≈ {isLoading ? "—" : formatUsd(ctcToUsd(balance, usdRate))} USD
-                  </p>
-                </div>
-                {address && (
-                  <div className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 max-w-lg">
-                    <p className="flex-1 truncate font-mono text-xs text-white/80">{address}</p>
-                    <CopyButton text={address} />
-                    <a href={`${subscanBase}/account/${address}`} target="_blank" rel="noopener noreferrer" title="View on Subscan (Official)">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:text-white">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-
-          {/* Quick Actions */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className={`${glass} cursor-pointer transition-all hover:bg-white/80`}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
-                  <ArrowDownLeft className="h-4 w-4 text-[#171414]" />
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[#171414]">Receive CTC</p>
-                  <p className="text-[10px] text-muted-foreground">Copy your wallet address</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    if (address) {
-                      navigator.clipboard.writeText(address)
-                      toast.success("Address copied", { description: "Share this address to receive CTC tokens" })
-                    }
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className={`${glass} opacity-60`}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
-                  <ArrowUpRight className="h-4 w-4 text-[#171414]" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-[#171414]">Send CTC</p>
-                  <p className="text-[10px] text-muted-foreground">Transfer to another wallet</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Link href="/dashboard/nfts" className="flex-1">
-              <Card className={`${glass} cursor-pointer transition-all hover:bg-white/80 h-full`}>
-                <CardContent className="flex items-center gap-3 p-4 h-full">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25 shrink-0">
-                    <Shield className="h-4 w-4 text-[#171414]" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-[#171414]">NFT Collateral</p>
-                    <p className="text-[10px] text-muted-foreground">{nfts.length} active</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          {/* Wallet Info Grid */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className={glass}>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
-                    <Activity className="h-4 w-4 text-[#171414]" />
-                  </span>
-                  <p className="font-display text-sm font-bold text-[#171414]">Network Details</p>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Chain</p>
-                    <p className="text-sm font-medium text-[#171414]">{network}</p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Chain ID</p>
-                    <p className="text-sm font-medium font-mono text-[#171414]">102031</p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Network Status</p>
-                    <div className="flex items-center gap-1.5">
-                      <Wifi className={`h-3 w-3 ${networkStatus?.network?.isHealthy ? "text-success" : "text-destructive"}`} />
-                      <Badge variant="outline" className={`text-[10px] ${networkStatus?.network?.isHealthy ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
-                        {networkStatus?.network?.isHealthy ? "Healthy" : "Offline"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Latest Block</p>
-                    <p className="text-sm font-medium font-mono text-[#171414]">
-                      #{networkStatus?.network?.blockNumber?.toLocaleString() || "—"}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Gas Price</p>
-                    <p className="text-sm font-medium font-mono text-[#171414]">
-                      {networkStatus?.network?.gasPrice || "—"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className={glass}>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25">
-                    <Wallet className="h-4 w-4 text-[#171414]" />
-                  </span>
-                  <p className="font-display text-sm font-bold text-[#171414]">Wallet Security</p>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Key Storage</p>
-                    <Badge variant="outline" className="border-success/30 bg-success/10 text-success text-[10px]">
-                      Encrypted
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Wallet Type</p>
-                    <p className="text-sm font-medium text-[#171414]">Server-managed EVM</p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Collateral NFTs</p>
-                    <p className="text-sm font-bold text-[#171414]">{nfts.length}</p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Explorer</p>
-                    <div className="flex items-center gap-3">
-                      <a
-                        href={`${subscanBase}/account/${address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[#171414] hover:underline"
-                      >
-                        Subscan <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <a
-                        href={`${explorerBase}/address/${address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:underline"
-                      >
-                        Blockscout <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="mx-auto max-w-3xl">
+          <p className="kicker-gold">Wallet</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171414] mt-1">Wallet</h1>
+          <div className="glass-panel rounded-2xl border border-[#171414]/10 p-8 text-center shadow-soft-editorial mt-6">
+            <WalletIcon className="h-10 w-10 text-[#E1BAC2] mx-auto mb-3" />
+            <p className="font-display text-lg font-bold text-[#171414]">No Wallet Connected</p>
+            <p className="text-sm text-[#4A4A4A] mt-1">
+              <a href="/login" className="underline font-medium text-[#171414]">Log in with MetaMask</a> to view your wallet
+            </p>
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    )
+  }
+
+  return (
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+      <div className="mx-auto max-w-3xl space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="kicker-gold">Wallet</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171414] mt-1">My Wallet</h1>
+          </div>
+          <Button onClick={fetchBalance} disabled={isLoading} variant="outline"
+            className="rounded-full border-[#171414]/15 text-[#171414] hover:bg-[#171414]/5 self-start">
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
+
+        {/* Address Card */}
+        <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E1BAC2]/20">
+              <WalletIcon className="h-5 w-5 text-[#E1BAC2]" />
+            </div>
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A]">Wallet Address</p>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] mt-1">Connected</Badge>
+            </div>
+          </div>
+          <div className="bg-[#F5F5F3] rounded-xl border border-[#171414]/10 p-4">
+            <p className="text-xs text-[#4A4A4A] mb-1">Your Address</p>
+            <p className="font-mono text-sm sm:text-base font-bold text-[#171414] break-all">{walletAddress}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <Button onClick={handleCopy} variant="outline" className="flex-1 rounded-xl border-[#171414]/15 text-[#171414] hover:bg-[#171414]/5">
+              {copied ? <Check className="h-4 w-4 mr-2 text-emerald-600" /> : <Copy className="h-4 w-4 mr-2" />}
+              {copied ? "Copied!" : "Copy Address"}
+            </Button>
+            <Button variant="outline" className="flex-1 rounded-xl border-[#171414]/15 text-[#171414] hover:bg-[#171414]/5"
+              onClick={() => window.open(`https://sepolia.etherscan.io/address/${walletAddress}`, "_blank")}>
+              <ExternalLink className="h-4 w-4 mr-2" /> View on Etherscan
+            </Button>
+          </div>
+        </div>
+
+        {/* Balance */}
+        <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
+          <p className="kicker-gold mb-4">Balance</p>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-3xl sm:text-4xl font-extrabold text-[#171414]">{ethBalance}</span>
+            <span className="text-lg font-mono font-bold text-[#4A4A4A]">ETH</span>
+          </div>
+          <p className="text-xs text-[#4A4A4A] mt-2">{networkName}</p>
+        </div>
+
+        {/* Network Info */}
+        <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
+          <p className="kicker-gold mb-4">Network Details</p>
+          <div className="space-y-3">
+            {[
+              { label: "Network", value: networkName || "—" },
+              { label: "Chain ID", value: "11155111", mono: true },
+              { label: "Currency", value: "ETH (Sepolia Testnet)" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#171414]/5">
+                <span className="text-sm text-[#4A4A4A]">{row.label}</span>
+                <span className={`text-sm font-bold text-[#171414] ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-[#4A4A4A]">Explorer</span>
+              <a href="https://sepolia.etherscan.io" target="_blank" rel="noopener noreferrer"
+                className="text-sm font-bold text-[#171414] flex items-center gap-1 hover:underline">
+                sepolia.etherscan.io <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Security */}
+        <div className="glass-panel rounded-2xl border border-[#E1BAC2]/30 p-4 sm:p-5 shadow-soft-editorial bg-[#E1BAC2]/[0.04]">
+          <div className="flex items-start gap-3">
+            <Shield className="h-5 w-5 text-[#E1BAC2] mt-0.5 shrink-0" />
+            <div>
+              <p className="font-display text-sm font-bold text-[#171414]">Wallet Security</p>
+              <p className="text-xs text-[#4A4A4A] mt-1">Your wallet is your identity on Sanad. Never share your private keys or seed phrase. Sanad will never ask for them.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -8,11 +8,11 @@ export default function PawnshopLoginPage() {
   return (
     <AuthShell
       kicker="Partner Portal"
-      title="Pawnshop Portal"
+      title="Pawnshop Login"
       subtitle="Connect your wallet to manage your Ar-Rahnu branch"
       auditNote="Secure wallet-based authentication"
       footerLinks={[
-        { href: '/login', label: '\u2190 Back to role selection' },
+        { href: '/login', label: '← Back to role selection' },
         { href: '/register/pawnshop', label: "Don't have an account? Register" },
         { href: '/', label: 'Return to Homepage' },
       ]}
@@ -20,7 +20,7 @@ export default function PawnshopLoginPage() {
       <WalletConnectCard
         role="pawnshop"
         title="Pawnshop Sign In"
-        description="Connect your MetaMask wallet to manage borrowers, verify gold, and create SAG tokens"
+        description="Connect your MetaMask wallet to access your pawnshop dashboard"
         icon={<StoreIcon className="h-5 w-5" />}
         registerHref="/register/pawnshop"
         dashboardPath="/pawnshop/dashboard"

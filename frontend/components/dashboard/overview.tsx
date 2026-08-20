@@ -31,8 +31,8 @@ export function Overview() {
       const d = new Date(now.getFullYear(), now.getMonth() - (7 - i), 1)
       return {
         name: d.toLocaleDateString("en-US", { month: "short" }),
-        Financing: 0,
-        Repayments: 0,
+        Deposits: 0,
+        Returns: 0,
       }
     })
 
@@ -44,22 +44,22 @@ export function Overview() {
       if (diff < 0 || diff > 7) continue
       const amount = amountOf(log) ?? 0
       if (log.eventType === EVENT_TYPES.LOAN_FUNDED) {
-        months[7 - diff].Financing += amount
+        months[7 - diff].Deposits += amount
       } else if (log.eventType === EVENT_TYPES.REPAYMENT_VERIFIED) {
-        months[7 - diff].Repayments += amount
+        months[7 - diff].Returns += amount
       }
     }
     return months
   }, [nfts, logs])
 
-  const hasEvents = data.some((m) => m.Financing > 0 || m.Repayments > 0)
+  const hasEvents = data.some((m) => m.Deposits > 0 || m.Returns > 0)
 
   if (!hasEvents) {
     return (
       <div className="flex h-[350px] w-full flex-col items-center justify-center rounded-2xl border border-[#171414]/10 bg-white/50 text-center">
-        <p className="text-sm font-medium text-[#171414]">No cash flow recorded yet</p>
+        <p className="text-sm font-medium text-[#171414]">No deposits yet</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Financing and repayment events appear here once they are verified on-chain for your account.
+          Your ETH deposits and returns will appear here once verified on-chain.
         </p>
       </div>
     )
@@ -99,15 +99,15 @@ export function Overview() {
           />
           <ChartLegend content={<ChartLegendContent className="font-mono text-xs pt-2" />} />
           <Bar
-            dataKey="Financing"
-            name="Financing"
+            dataKey="Deposits"
+            name="Deposits"
             fill="hsl(var(--chart-1))"
             radius={[6, 6, 0, 0]}
             maxBarSize={28}
           />
           <Bar
-            dataKey="Repayments"
-            name="Repayments"
+            dataKey="Returns"
+            name="Returns"
             fill="hsl(var(--chart-3))"
             radius={[6, 6, 0, 0]}
             maxBarSize={28}

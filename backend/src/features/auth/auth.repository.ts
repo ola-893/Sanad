@@ -22,14 +22,10 @@ export const getUserDataByToken = async (token: string): Promise<UserType | null
 
     if (loginType === 'EMAIL') {
       user = await getUserByEmail(decodedToken.username);
-      if (!user) {
-        throw new Error('User not found');
-      }
     } else if (loginType === 'CONTACT_NO') {
       user = await getUserByContactNo(decodedToken.username);
-      if (!user) {
-        throw new Error('User not found');
-      }
+    } else if (loginType === 'WALLET') {
+      user = await getUserByWalletAddress(decodedToken.username);
     }
 
     return user ? user : null;
@@ -228,6 +224,32 @@ export const getRolePermissionByRoleId = async (roleId: string): Promise<string 
     console.error('Error in getRolePermissionByRoleId:', error);
     throw error;
   }
+};
+
+// ============================================================
+// Wallet Auth — lookup users by wallet address (accountId)
+// ============================================================
+
+export const getUserByWalletAddress = async (walletAddress: string): Promise<UserType | null> => {
+  const lowerAddress = walletAddress.toLowerCase();
+  const users = await db.select().from(User).limit(100);
+  const match = users.find((u) => u.accountId?.toLowerCase() === lowerAddress);
+  return match ? { ...match, balance: 0 } as UserType : null;
+};
+
+export const getCompanyAdminByWalletAddress = async (walletAddress: string): Promise<CompanyAdminType | null> => {
+  const lowerAddress = walletAddress.toLowerCase();
+  const admins = await db.select().from(CompanyAdmin).limit(100);
+  return admins.find((a) => {
+    // CompanyAdmin doesn't have accountId directly — check companyId field
+    return false; // Company admins are not wallet-based yet
+  }) || null;
+};
+
+export const getSuperAdminByWalletAddress = async (walletAddress: string): Promise<SuperAdminType | null> => {
+  const lowerAddress = walletAddress.toLowerCase();
+  const admins = await db.select().from(SuperAdmin).limit(100);
+  return null; // Super admins are not wallet-based yet
 };
 
 
