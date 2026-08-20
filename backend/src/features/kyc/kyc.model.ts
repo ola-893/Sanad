@@ -21,6 +21,11 @@ export const KycSubmission = MainSchema.table('kyc_submission', {
   eddSourceOfFunds: text('edd_source_of_funds'), // Required for approved_with_edd
   eddApprovedBy: varchar('edd_approved_by', { length: 40 }), // Named senior approver per BNM requirement
   nextReviewDate: timestamp('next_review_date'), // Review cadence (e.g. 2 years for EDD)
+  // Attestcoin Protocol — On-Chain Credit Bureau fields
+  ethereumWalletAddress: varchar('ethereum_wallet_address', { length: 46 }), // 0x + 40 hex chars
+  creditScore: integer('credit_score'), // 0-1000 from Attestcoin proof
+  creditTier: varchar('credit_tier', { length: 20 }), // Gold | Silver | Bronze | HighRisk | Unscored
+  attestcoinProofTx: varchar('attestcoin_proof_tx', { length: 66 }), // Creditcoin CC3 transaction hash
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

@@ -41,6 +41,11 @@ export class KycController {
         postalCode,
         dateOfBirth,
         nationality,
+        // Attestcoin Protocol — Credit Bureau fields
+        ethereumWalletAddress,
+        creditScore,
+        creditTier,
+        attestcoinProofTx,
       } = req.body;
 
       const targetUserId = authenticatedUserId || userId;
@@ -71,6 +76,11 @@ export class KycController {
         postalCode,
         dateOfBirth,
         nationality,
+        // Attestcoin Protocol — Credit Bureau
+        ethereumWalletAddress,
+        creditScore: creditScore !== undefined ? Number(creditScore) : undefined,
+        creditTier,
+        attestcoinProofTx,
       };
 
       const result = await this.kycService.submitKyc(params);

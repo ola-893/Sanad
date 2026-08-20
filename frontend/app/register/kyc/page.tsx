@@ -32,6 +32,7 @@ import {
   CheckCircle2,
 } from "lucide-react"
 import apiInstance from "@/lib/axios-v1"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import {
   SANAD_CREDIT_ORACLE_ADDRESS,
   ATTESTCOIN_PRECOMPILES,
@@ -110,11 +111,14 @@ export default function KycVerificationPage() {
     nationality: "",
   })
 
-  // 2. On-Chain Credit Bureau
-  const [walletAddress, setWalletAddress] = useState<string>(PRESET_KYC_PROFILES[0].address)
+  // 2. On-Chain Credit Bureau — use user's connected wallet from login
+  const [walletAddress, setWalletAddress] = useState<string>('')
   const [activePreset, setActivePreset] = useState<string>("prime-cross-chain")
   const [isScanningDeFi, setIsScanningDeFi] = useState<boolean>(false)
   const [isProvingOnCC3, setIsProvingOnCC3] = useState<boolean>(false)
+  const [scanStep, setScanStep] = useState<number>(0)
+  const [proofStep, setProofStep] = useState<number>(0)
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false)
   const [discoveredEvents, setDiscoveredEvents] = useState<DeFiEvent[]>([])
   const [discoverySummary, setDiscoverySummary] = useState<DiscoverySummary | null>(null)
   const [onChainProfile, setOnChainProfile] = useState<OnChainCreditProfile | null>(null)
@@ -131,11 +135,27 @@ export default function KycVerificationPage() {
   const [selfieUploaded, setSelfieUploaded] = useState(false)
   const [verificationComplete, setVerificationComplete] = useState(false)
 
+  // Populate wallet address from connected MetaMask on mount
+  const { walletAddress: connectedWallet } = useWalletAuth()
   useEffect(() => {
-    if (step === 2 && discoveredEvents.length === 0) {
+    if (connectedWallet && !walletAddress) {
+      setWalletAddress(connectedWallet)
+    }
+  }, [connectedWallet])
+
+  // Auto-scan + auto-prove when reaching step 2
+  useEffect(() => {
+    if (step === 2 && walletAddress && discoveredEvents.length === 0 && !isScanningDeFi) {
       handleScanDeFiHistory(walletAddress)
     }
-  }, [step])
+  }, [step, walletAddress])
+
+  // Auto-generate proof after scan completes
+  useEffect(() => {
+    if (step === 2 && discoveredEvents.length > 0 && !creditVerified && !isProvingOnCC3 && !isScanningDeFi) {
+      handleProveCreditScore()
+    }
+  }, [discoveredEvents, step, creditVerified, isProvingOnCC3, isScanningDeFi])
 
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -155,17 +175,30 @@ export default function KycVerificationPage() {
     if (!addressToScan || !addressToScan.startsWith("0x")) return
     setIsScanningDeFi(true)
     setErrorMessage(null)
+    setScanStep(1)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      // Simulate progress steps while waiting for backend
+      const progressTimer = setInterval(() => {
+        setScanStep((prev) => (prev < 4 ? prev + 1 : prev))
+      }, 2000)
+
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: addressToScan }),
       })
+      clearInterval(progressTimer)
       if (!res.ok) throw new Error(`Failed to discover Ethereum history (${res.status})`)
       const json = await res.json()
       setDiscoveredEvents(json.data.selectedTopEvents || [])
       setDiscoverySummary(json.data.summary || null)
+      // Check if this is demo/curated data (same tx hash as known demos)
+      const isDemo = json.data.selectedTopEvents?.some((e: any) =>
+        e.sourceTxHash === '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079'
+      )
+      setIsDemoMode(isDemo)
+      setScanStep(5)
     } catch (e: any) {
       console.warn("DeFi scan notice:", e.message)
     } finally {
@@ -177,9 +210,12 @@ export default function KycVerificationPage() {
     if (discoveredEvents.length === 0) return
     setIsProvingOnCC3(true)
     setErrorMessage(null)
+    setProofStep(1)
     const topEvent = discoveredEvents[0]
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
     try {
+      // Step 1: Request wallet signature
+      setProofStep(1)
       let signature = "0x"
       if (typeof window !== "undefined" && (window as any).ethereum) {
         try {
@@ -190,17 +226,29 @@ export default function KycVerificationPage() {
           }
         } catch (sigErr: any) { console.warn("Signature skipped:", sigErr.message) }
       }
+
+      // Step 2: Submit proof to backend (generates Merkle proof + submits to CC3)
+      setProofStep(2)
+      const progressTimer = setInterval(() => {
+        setProofStep((prev) => (prev < 4 ? prev + 1 : prev))
+      }, 5000)
+
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/prove-event`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: walletAddress, event: topEvent, signature: signature.length === 132 ? signature : undefined }),
       })
+      clearInterval(progressTimer)
+
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
         throw new Error(errJson.message || `Proof submission failed (${res.status})`)
       }
       const json = await res.json()
       setProofTxHash(json.data.transactionHash)
+
+      // Step 3: Fetch on-chain profile
+      setProofStep(4)
       const profileRes = await fetch(`${apiUrl}/api/v1/credit-oracle/profile/${walletAddress}`)
       if (profileRes.ok) {
         const profileJson = await profileRes.json()
@@ -383,186 +431,138 @@ export default function KycVerificationPage() {
               </div>
             )}
 
-            {/* STEP 2: Attestcoin Protocol Credit Screening */}
+            {/* STEP 2: On-Chain Credit Screening (Auto-flow) */}
             {step === 2 && (
               <div className="space-y-5">
-                {/* Attestcoin Protocol Banner */}
-                <div className="rounded-2xl border border-[#171414]/15 bg-gradient-to-br from-[#F5F5F3] to-white p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#171414]">
-                      <Cpu className="h-5 w-5 text-[#E1BAC2]" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-display text-sm font-bold text-[#171414]">Attestcoin Protocol — Core KYC Pillar</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Sanad verifies real historical lending activity across <strong>10 Ethereum DeFi protocols</strong> (Aave, Compound, Morpho, Spark, MakerDAO, Euler, Fluid, Maple, Goldfinch, Fraxlend) using <strong>Creditcoin CC3 BlockProver precompiles</strong> for cryptographic proof of repayment behavior.
-                      </p>
-                    </div>
+                {/* Wallet being scanned */}
+                <div className="flex items-center gap-3 rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#171414]/10">
+                    <Cpu className="h-5 w-5 text-[#171414]" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Scanning wallet</p>
+                    <p className="font-mono text-sm font-bold text-[#171414] truncate">{walletAddress || 'Not connected'}</p>
+                  </div>
+                  {walletAddress && (
+                    <Badge variant="outline" className="text-[9px] font-mono shrink-0">10 Protocols</Badge>
+                  )}
                 </div>
 
-                {/* CC3 Precompile Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] px-3 py-2.5">
-                    <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <div>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">CC3 BlockProver</p>
-                      <p className="text-[11px] font-bold font-mono text-[#171414]">{ATTESTCOIN_PRECOMPILES.BLOCK_PROVER.slice(0, 10)}...</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] px-3 py-2.5">
-                    <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                    <div>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">CC3 ChainInfo</p>
-                      <p className="text-[11px] font-bold font-mono text-[#171414]">{ATTESTCOIN_PRECOMPILES.CHAIN_INFO.slice(0, 10)}...</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] px-3 py-2.5">
-                    <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-                    <div>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Credit Oracle</p>
-                      <p className="text-[11px] font-bold font-mono text-[#171414]">{SANAD_CREDIT_ORACLE_ADDRESS.slice(0, 10)}...</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Supported Protocols Grid */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
-                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">10 Verified Ethereum Lending Sources</p>
-                    </div>
-                    <Badge variant="outline" className="text-[9px] font-mono">10/10 Live</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                    {SUPPORTED_ETHEREUM_PROTOCOLS.map((p) => (
-                      <div key={p.id} className="rounded-xl border border-[#171414]/8 bg-[#FAFAF8] p-2 hover:border-[#171414]/15 transition-all">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-semibold text-[#171414] truncate">{p.name}</span>
-                          <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                        </div>
-                        <p className="text-[9px] text-muted-foreground truncate mt-0.5">{p.category}</p>
+                {/* Auto-scan in progress */}
+                {isScanningDeFi && !creditVerified && (
+                  <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#171414]">Scanning DeFi history...</p>
+                        <p className="text-xs text-muted-foreground">Querying Ethereum Mainnet for lending activity</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Cryptographic Pipeline Info */}
-                <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-3">Proof Pipeline (Executed on Creditcoin CC3)</p>
-                  <div className="space-y-2">
-                    {[
-                      "Scan Ethereum Mainnet lending calldata across 10 protocols",
-                      "Generate Merkle inclusion proof & continuity roots via Attestcoin",
-                      "Execute BlockProver precompile (0xFD2) on Creditcoin CC3",
-                      "Update SanadCreditOracle on-chain Trust Score & Tier",
-                    ].map((step_desc, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#171414]/15 bg-white text-[9px] font-bold text-[#171414]">
-                          {i + 1}
-                        </div>
-                        {step_desc}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Preset Archetypes */}
-                <div>
-                  <Label className="text-xs font-mono uppercase tracking-[0.15em] text-muted-foreground mb-2 block">
-                    Select Borrower Profile for Verification
-                  </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {PRESET_KYC_PROFILES.map((preset) => (
-                      <button key={preset.id} type="button" onClick={() => handleSelectPreset(preset)}
-                        className={`p-3 rounded-2xl text-left transition-all border ${
-                          activePreset === preset.id
-                            ? "border-[#171414]/25 bg-white/80 shadow-soft-editorial"
-                            : "border-[#171414]/10 bg-white/40 hover:bg-white/60"
-                        }`}
-                      >
-                        <div className="font-display text-xs font-bold text-[#171414] truncate">{preset.label}</div>
-                        <Badge variant="outline" className={`text-[9px] font-mono mt-1 ${
-                          tierConfig[preset.targetTier] ? `${tierConfig[preset.targetTier].bg} ${tierConfig[preset.targetTier].color} ${tierConfig[preset.targetTier].border}` : ""
-                        }`}>{preset.tag}</Badge>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{preset.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Wallet Input */}
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)}
-                      placeholder="Enter Ethereum wallet address (0x...)" className="pl-10 rounded-xl font-mono text-xs" />
-                  </div>
-                  <Button type="button" onClick={() => handleScanDeFiHistory(walletAddress)} disabled={isScanningDeFi}
-                    variant="outline" className="rounded-xl text-xs">
-                    {isScanningDeFi ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Scan"}
-                  </Button>
-                </div>
-
-                {/* Discovered Records */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-display font-bold text-[#171414]">Discovered DeFi Records ({discoveredEvents.length})</span>
-                    <span className="font-mono text-muted-foreground">10 Protocols Scanned</span>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {discoveredEvents.map((ev, idx) => (
-                      <div key={idx} className="rounded-2xl border border-[#171414]/8 bg-[#FAFAF8] p-3 flex items-center justify-between text-xs">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={`text-[9px] font-mono ${
-                              ev.eventType === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : ev.eventType === 1 ? "border-red-200 bg-red-50 text-red-700"
-                              : "border-primary/20 bg-primary/5 text-primary"
-                            }`}>{ev.eventTypeName}</Badge>
-                            <span className="font-semibold text-[#171414]">{ev.protocolName}</span>
+                    </div>
+                    <div className="space-y-2.5">
+                      {[
+                        "Connecting to Ethereum Mainnet RPC",
+                        "Scanning Aave v3, Compound v3, Morpho Blue",
+                        "Scanning Spark, MakerDAO, Euler, Fluid",
+                        "Scanning Maple, Goldfinch, Fraxlend",
+                        "Decoding calldata & ranking events",
+                      ].map((msg, i) => {
+                        const isDone = scanStep > i + 1
+                        const isActive = scanStep === i + 1
+                        return (
+                          <div key={i} className="flex items-center gap-2.5 text-xs">
+                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all ${
+                              isDone ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                              : isActive ? "bg-[#171414]/10 text-[#171414] border border-[#171414]/20"
+                              : "bg-[#F5F5F3] text-muted-foreground/50 border border-[#171414]/10"
+                            }`}
+                            >{isDone ? <Check className="h-3 w-3" /> : i + 1}</div>
+                            <span className={isDone ? "text-emerald-600" : isActive ? "text-[#171414] font-medium" : "text-muted-foreground/50"}>{msg}</span>
                           </div>
-                          <p className="text-[11px] text-muted-foreground">{ev.description}</p>
-                          <p className="text-[10px] font-mono text-muted-foreground/60">Block #{ev.blockHeight}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-mono font-bold text-[#171414]">${ev.volumeUSD.toLocaleString()}</div>
-                          <a href={ev.etherscanUrl} target="_blank" rel="noreferrer"
-                            className="text-[10px] text-primary hover:underline flex items-center gap-0.5 justify-end">
-                            Tx <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Proof Button / Verified State */}
-                {!creditVerified ? (
-                  <Button type="button" onClick={handleProveCreditScore}
-                    disabled={isProvingOnCC3 || discoveredEvents.length === 0} className="w-full flux-pill">
-                    {isProvingOnCC3 ? (
-                      <span className="flex items-center gap-2"><RefreshCw className="h-4 w-4 animate-spin" /> Generating Attestcoin Proof on CC3...</span>
-                    ) : (
-                      <span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Generate Attestcoin Proof & Score on Creditcoin CC3</span>
-                    )}
-                  </Button>
-                ) : (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                {/* Proof generation in progress */}
+                {isProvingOnCC3 && (
+                  <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#171414]">Generating Attestcoin proof...</p>
+                        <p className="text-xs text-muted-foreground">Cryptographic verification on Creditcoin CC3</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      {[
+                        "Requesting EIP-191 wallet signature",
+                        "Generating Merkle inclusion proof via Attestcoin",
+                        "Executing BlockProver precompile (0xFD2) on CC3",
+                        "Reading on-chain credit profile from SanadCreditOracle",
+                      ].map((msg, i) => {
+                        const isDone = proofStep > i + 1
+                        const isActive = proofStep === i + 1
+                        return (
+                          <div key={i} className="flex items-center gap-2.5 text-xs">
+                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all ${
+                              isDone ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                              : isActive ? "bg-[#171414]/10 text-[#171414] border border-[#171414]/20"
+                              : "bg-[#F5F5F3] text-muted-foreground/50 border border-[#171414]/10"
+                            }`}
+                            >{isDone ? <Check className="h-3 w-3" /> : i + 1}</div>
+                            <span className={isDone ? "text-emerald-600" : isActive ? "text-[#171414] font-medium" : "text-muted-foreground/50"}>{msg}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Discovered records (compact) */}
+                {!isScanningDeFi && discoveredEvents.length > 0 && !creditVerified && (
+                  <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-[#171414]">Found {discoveredEvents.length} lending record{discoveredEvents.length !== 1 ? 's' : ''}</p>
+                      <div className="flex items-center gap-2">
+                        {isDemoMode && (
+                          <Badge variant="outline" className="text-[8px] font-mono text-amber-600 border-amber-200 bg-amber-50">Demo Profile</Badge>
+                        )}
+                        <span className="font-mono text-[9px] text-muted-foreground">10 protocols scanned</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {discoveredEvents.slice(0, 3).map((ev, idx) => (
+                        <div key={idx} className="flex items-center justify-between rounded-xl bg-white p-2.5 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={`text-[8px] font-mono ${
+                              ev.eventType === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-red-200 bg-red-50 text-red-700"
+                            }`}>{ev.eventTypeName}</Badge>
+                            <span className="text-[#171414]">{ev.protocolName}</span>
+                          </div>
+                          <span className="font-mono font-bold text-[#171414]">${ev.volumeUSD.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Verified result */}
+                {creditVerified && (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs">
-                        <ShieldCheck className="h-4 w-4" /> Attestcoin Proof Verified on CC3
+                      <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
+                        <ShieldCheck className="h-5 w-5" /> Credit Verified
                       </div>
                       <Badge variant="outline" className={`${tierStyle.bg} ${tierStyle.color} ${tierStyle.border} text-xs font-mono`}>
-                        {onChainProfile?.score || 845} / 1000 ({tier} Tier)
+                        {onChainProfile?.score || 845} / 1000 ({tier})
                       </Badge>
                     </div>
 
-                    {/* On-chain profile stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Verified Repaid</p>
+                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Repaid</p>
                         <p className="text-sm font-bold tabular-nums text-[#171414]">${Number(onChainProfile?.totalRepaidUSD || 37500).toLocaleString()}</p>
                       </div>
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
@@ -579,23 +579,21 @@ export default function KycVerificationPage() {
                       </div>
                     </div>
 
-                    {/* Unlocked Terms */}
                     <div className="rounded-xl border border-[#E1BAC2]/30 bg-[#E1BAC2]/5 p-3">
                       <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#171414] mb-2 flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3" /> Unlocked Shariah Gold Lending Terms
+                        <Sparkles className="h-3 w-3" /> Unlocked Terms
                       </p>
                       <div className="grid grid-cols-3 gap-2 text-[11px]">
-                        <div><span className="text-muted-foreground">Max LTV:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : "50%"}</span></div>
+                        <div><span className="text-muted-foreground">LTV:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : "50%"}</span></div>
                         <div><span className="text-muted-foreground">Ujrah:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "0.60%" : tier === "Silver" ? "0.85%" : "1.25%"}</span></div>
                         <div><span className="text-muted-foreground">Approval:</span> <span className="font-bold text-[#171414]">Automated</span></div>
                       </div>
                     </div>
 
-                    {/* Explorer link */}
                     {proofTxHash && (
                       <a href={`${CREDITCOIN_EXPLORER_URL}/tx/${proofTxHash}`} target="_blank" rel="noreferrer"
                         className="flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline">
-                        View on Creditcoin Blockscout Explorer <ExternalLink className="h-3 w-3" />
+                        View proof on Blockscout <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
                   </div>
@@ -707,11 +705,16 @@ export default function KycVerificationPage() {
                 Go to Dashboard
               </Button>
             ) : (
-              <Button onClick={handleNextStep} className="rounded-full bg-[#171414] text-[#E1BAC2] font-mono text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-black px-6" disabled={isLoading}>
-                {isLoading ? (
-                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Submitting KYC...</span>
-                ) : step === 4 ? "Complete KYC" : "Next Step"}
-              </Button>
+              /* Step 2: only show Next after credit verification completes */
+              step === 2 && !creditVerified ? (
+                <div />
+              ) : (
+                <Button onClick={handleNextStep} className="rounded-full bg-[#171414] text-[#E1BAC2] font-mono text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-black px-6" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Submitting KYC...</span>
+                  ) : step === 4 ? "Complete KYC" : "Next Step"}
+                </Button>
+              )
             )}
           </CardFooter>
         </Card>

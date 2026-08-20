@@ -23,6 +23,11 @@ export interface SubmitKycParams {
   riskScore?: number;
   amlStatus?: string;
   flags?: string[];
+  // Attestcoin Protocol — On-Chain Credit Bureau
+  ethereumWalletAddress?: string;
+  creditScore?: number;
+  creditTier?: string;
+  attestcoinProofTx?: string;
 }
 
 export interface ReviewKycParams {
@@ -73,30 +78,44 @@ export class KycService {
     let submission: KycSubmissionType;
 
     if (existing.length > 0) {
-      const [updated] = await db
-        .update(KycSubmission)
-        .set({
+      const updateData: any = {
           status: 'submitted',
           documentType: documentType,
           riskScore: params.riskScore !== undefined ? params.riskScore : 0,
           amlStatus: params.amlStatus || 'unscreened',
           flags: params.flags || [],
           updatedAt: new Date(),
-        })
+        };
+      // Store Attestcoin credit bureau data if provided
+      if (params.ethereumWalletAddress) updateData.ethereumWalletAddress = params.ethereumWalletAddress;
+      if (params.creditScore !== undefined) updateData.creditScore = params.creditScore;
+      if (params.creditTier) updateData.creditTier = params.creditTier;
+      if (params.attestcoinProofTx) updateData.attestcoinProofTx = params.attestcoinProofTx;
+
+      const [updated] = await db
+        .update(KycSubmission)
+        .set(updateData)
         .where(eq(KycSubmission.id, existing[0].id))
         .returning();
       submission = updated;
     } else {
-      const [created] = await db
-        .insert(KycSubmission)
-        .values({
+      const insertData: any = {
           userId: params.userId,
           status: 'submitted',
           documentType: documentType,
           riskScore: params.riskScore !== undefined ? params.riskScore : 0,
           amlStatus: params.amlStatus || 'unscreened',
           flags: params.flags || [],
-        })
+        };
+      // Store Attestcoin credit bureau data if provided
+      if (params.ethereumWalletAddress) insertData.ethereumWalletAddress = params.ethereumWalletAddress;
+      if (params.creditScore !== undefined) insertData.creditScore = params.creditScore;
+      if (params.creditTier) insertData.creditTier = params.creditTier;
+      if (params.attestcoinProofTx) insertData.attestcoinProofTx = params.attestcoinProofTx;
+
+      const [created] = await db
+        .insert(KycSubmission)
+        .values(insertData)
         .returning();
       submission = created;
     }
