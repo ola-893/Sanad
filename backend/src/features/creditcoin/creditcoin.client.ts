@@ -8,13 +8,12 @@ export class CreditcoinClient {
 
   private constructor() {
     // 1. Creditcoin CC3 Testnet Provider
-    this.creditcoinProvider = new ethers.JsonRpcProvider(CREDITCOIN_CONFIG.rpcUrl, {
-      chainId: CREDITCOIN_CONFIG.chainId,
-      name: CREDITCOIN_CONFIG.chainName,
+    this.creditcoinProvider = new ethers.JsonRpcProvider(CREDITCOIN_CONFIG.rpcUrl, CREDITCOIN_CONFIG.chainId, {
+      staticNetwork: ethers.Network.from(CREDITCOIN_CONFIG.chainId),
     });
 
     // 2. Admin Signer for CC3 state-changing transactions
-    const privateKey = process.env.CREDITCOIN_ADMIN_PRIVATE_KEY || process.env.PRIVATE_KEY;
+    const privateKey = process.env.CREDITCOIN_ADMIN_PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY || process.env.PRIVATE_KEY;
     if (privateKey) {
       this.adminWallet = new ethers.Wallet(privateKey, this.creditcoinProvider);
     }

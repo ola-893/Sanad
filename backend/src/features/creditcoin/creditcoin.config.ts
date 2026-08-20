@@ -50,8 +50,8 @@ export const CREDITCOIN_CONFIG: CreditcoinNetworkConfig = {
 
   // Deployed Contract Addresses on Creditcoin 3 Testnet
   contracts: {
-    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0xb663dc20bab958780b5F28E5b59A192Bbb5f8f2e',
-    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0x02D4F85301A2d1b3Bcc40BfD7937e6Fb2F5224a7',
+    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0xf42849633719B421Bae3cad1e8315A6a8E31128D',
+    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0xA82dB197C5D31c639Ef6615ecDCEa5e23b050d5B',
     creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xBB2Bf716AD1C99d0aED17C61234620Cca327eE0f',
   },
 };
