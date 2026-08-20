@@ -64,15 +64,17 @@ export async function runComplianceControlsTestSuite() {
 
   // 2. Mint Token #1
   console.log('\n[Step 2/6] Minting Test Collateral Token #1...');
-  const mintTx1 = await (sagContract as any).mintCollateral(
-    signer.address,
-    receiverWallet.address,
-    2500, // 25.00g (916 gold)
-    22,   // 22k
-    ethers.parseUnits('1925', 6), // $1,925
-    ethers.parseUnits('1200', 6), // $1,200
-    'ipfs://QmSanadTestGoldCustody001'
-  );
+  const mintTx1 = await (sagContract as any).mintCollateral({
+    pawnshop: signer.address,
+    borrower: receiverWallet.address,
+    weightGrams: 2500, // 25.00g (916 gold)
+    karat: 22,   // 22k
+    appraisedValueUSD: ethers.parseUnits('1925', 6), // $1,925
+    loanAmount: ethers.parseUnits('1200', 6), // $1,200
+    tenureDays: 30,
+    monthlyUjrahUSD: ethers.parseUnits('20', 6),
+    ipfsUri: 'ipfs://QmSanadTestGoldCustody001'
+  });
   const mintRec1 = await mintTx1.wait();
   console.log(`✅ Token #1 Minted in tx: ${mintRec1.hash}`);
 
@@ -113,15 +115,17 @@ export async function runComplianceControlsTestSuite() {
 
   // 5. Mint Token #2 and Test Administrative Wipe
   console.log('\n[Step 5/6] Minting Token #2 & Testing Administrative Wipe (Forced Burn)...');
-  const mintTx2 = await (sagContract as any).mintCollateral(
-    signer.address,
-    receiverWallet.address,
-    5000, // 50.00g
-    24,   // 24k
-    ethers.parseUnits('4100', 6),
-    ethers.parseUnits('2800', 6),
-    'ipfs://QmSanadTestGoldCustody002'
-  );
+  const mintTx2 = await (sagContract as any).mintCollateral({
+    pawnshop: signer.address,
+    borrower: receiverWallet.address,
+    weightGrams: 5000, // 50.00g
+    karat: 24,   // 24k
+    appraisedValueUSD: ethers.parseUnits('4100', 6),
+    loanAmount: ethers.parseUnits('2800', 6),
+    tenureDays: 30,
+    monthlyUjrahUSD: ethers.parseUnits('25', 6),
+    ipfsUri: 'ipfs://QmSanadTestGoldCustody002'
+  });
   await mintTx2.wait();
   console.log(`   Token #2 Minted.`);
 

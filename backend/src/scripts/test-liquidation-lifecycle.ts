@@ -24,7 +24,7 @@ function compileAll() {
   const contractsDir = path.resolve(process.cwd(), 'src', 'contracts');
   const sources: Record<string, { content: string }> = {};
 
-  const files = ['MockUSDC.sol', 'SAGToken.sol', 'SanadLiquidityPool.sol', 'RepaymentGateway.sol'];
+  const files = ['SAGToken.sol', 'SanadLiquidityPool.sol'];
   for (const file of files) {
     const filePath = path.join(contractsDir, file);
     if (fs.existsSync(filePath)) {
@@ -75,7 +75,7 @@ export async function runLiquidationLifecycleSimulation() {
   // Report exact runtime sizes
   const EIP170_LIMIT = 24576;
   console.log('\n--- DEPLOYED RUNTIME SIZES (EIP-170 CEILING: 24,576 bytes) ---');
-  for (const name of ['SAGToken', 'SanadLiquidityPool', 'RepaymentGateway', 'MockUSDC']) {
+  for (const name of ['SAGToken', 'SanadLiquidityPool']) {
     const runtimeBytes = compiled[name].deployedBytecode.length / 2;
     const pct = ((runtimeBytes / EIP170_LIMIT) * 100).toFixed(2);
     console.log(`• ${name.padEnd(20)}: ${runtimeBytes.toString().padStart(5)} bytes (${pct}% of limit)`);
@@ -111,9 +111,9 @@ export async function runLiquidationLifecycleSimulation() {
   const lp1Deposit = 5000.0;
   const lp2Deposit = 5000.0;
   poolLiquidity += lp1Deposit + lp2Deposit;
-  console.log(`  • LP 1 Deposits: $${lp1Deposit.toFixed(2)} USDC`);
-  console.log(`  • LP 2 Deposits: $${lp2Deposit.toFixed(2)} USDC`);
-  console.log(`  • Total Pool Liquidity: $${poolLiquidity.toFixed(2)} USDC`);
+  console.log(`  • LP 1 Deposits: $${lp1Deposit.toFixed(2)} CTC`);
+  console.log(`  • LP 2 Deposits: $${lp2Deposit.toFixed(2)} CTC`);
+  console.log(`  • Total Pool Liquidity: $${poolLiquidity.toFixed(2)} CTC`);
 
   // Collateral 1 Specs
   const goldWeightGrams = 25.0; // 25g 916 gold
@@ -138,7 +138,7 @@ export async function runLiquidationLifecycleSimulation() {
 
   // Disburse loan
   poolLiquidity -= loanPrincipalUSD;
-  console.log(`  • Loan Funded to Pawnshop. Remaining Pool Liquidity: $${poolLiquidity.toFixed(2)} USDC`);
+  console.log(`  • Loan Funded to Pawnshop. Remaining Pool Liquidity: $${poolLiquidity.toFixed(2)} CTC`);
 
   // TIME WARP 1: T + 31 Days (Past Maturity, in Grace Period)
   simTimestamp = originationTimestamp + (31 * 86400);
@@ -192,7 +192,7 @@ export async function runLiquidationLifecycleSimulation() {
   console.log(`  -------------------------------------------------------------`);
   console.log(`  5. ⭐️ 100% SURPLUS REFUND TO BORROWER: $${surplusToBorrower.toFixed(2)} USD (Transferred to ${borrowerAddress})`);
   console.log(`  6. Shortfall to Pool:              $0.00 USD`);
-  console.log(`  7. Restored Total Pool Liquidity:  $${poolLiquidity.toFixed(2)} USD`);
+  console.log(`  7. Restored Total Pool Liquidity:  $${poolLiquidity.toFixed(2)} CTC`);
 
   console.log('\n========================================================================');
   console.log('SCENARIO 2: MULTI-ROUND LIQUIDATION WITH WRITE-ONCE UJRAH FREEZE AUDIT');
@@ -206,7 +206,7 @@ export async function runLiquidationLifecycleSimulation() {
 
   console.log(`\n[Token #2 Inception] Principal Loan = $${loanPrincipalUSD2.toFixed(2)} USD | Appraisal = $${appraisedValueUSD2.toFixed(2)} USD`);
   poolLiquidity -= loanPrincipalUSD2;
-  console.log(`  • Pool Disburses $${loanPrincipalUSD2.toFixed(2)} USD. Pool Liquidity: $${poolLiquidity.toFixed(2)} USDC`);
+  console.log(`  • Pool Disburses $${loanPrincipalUSD2.toFixed(2)} USD. Pool Liquidity: $${poolLiquidity.toFixed(2)} CTC`);
 
   // Fast forward past 14d grace period to primary auction inception (T = 44 days)
   simTimestamp += (44 * 86400);
@@ -254,7 +254,7 @@ export async function runLiquidationLifecycleSimulation() {
   console.log(`  4. 🔻 TOTAL CAPITAL LOSS WATERFALL:   $${shortfall2B.toFixed(2)} USD`);
   console.log(`  5. LP 1 Loss Share (50%):             -$${lp1DistressShare.toFixed(2)} USD (LP1 Equity: $${(lp1Deposit - lp1DistressShare).toFixed(2)})`);
   console.log(`  6. LP 2 Loss Share (50%):             -$${lp2DistressShare.toFixed(2)} USD (LP2 Equity: $${(lp2Deposit - lp2DistressShare).toFixed(2)})`);
-  console.log(`  7. Final Total Pool Capital:          $${finalPoolCapital2B.toFixed(2)} USDC`);
+  console.log(`  7. Final Total Pool Capital:          $${finalPoolCapital2B.toFixed(2)} CTC`);
 
   console.log('\n========================================================================');
   console.log('✅ ALL CONTRACT FORMULAS & ARITHMETIC RECONCILED WITH COMPLETE PROOFS');

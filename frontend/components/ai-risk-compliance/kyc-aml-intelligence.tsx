@@ -16,17 +16,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { FileText, Eye, Shield, AlertTriangle, Clock, Search, Filter, Brain, Scan, Users } from "lucide-react"
+import { FileText, Eye, Shield, AlertTriangle, Clock, Search, Filter, Brain, Scan, Users, Loader2 } from "lucide-react"
 import { useLanguage } from "@/hooks/use-language"
+import apiInstance from "@/lib/axios-v1"
 
 interface KycRecord {
   id: string
   userId: string
   userName: string
   documentType: string
-  status: "pending" | "approved" | "rejected" | "under_review"
+  status: "pending" | "approved" | "rejected" | "under_review" | "approved_with_edd" | "submitted"
   riskScore: number
-  amlStatus: "clear" | "flagged" | "watchlist"
+  amlStatus: "clear" | "flagged" | "watchlist" | "unscreened"
   lastScan: string
   nextReview: string
   confidence: number
@@ -36,55 +37,45 @@ interface KycRecord {
 export function KycAmlIntelligence() {
   const { t } = useLanguage()
   const [kycRecords, setKycRecords] = useState<KycRecord[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedRecord, setSelectedRecord] = useState<KycRecord | null>(null)
   const [isScanning, setIsScanning] = useState(false)
 
+  const fetchRecords = async () => {
+    setLoading(true)
+    try {
+      const res = await apiInstance.get("/kyc/all")
+      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setKycRecords(
+          res.data.data.map((r: any) => ({
+            id: r.id,
+            userId: r.userId,
+            userName: r.name || r.userName || "User " + r.userId,
+            documentType: r.documentType || "MyKad",
+            status: r.status,
+            riskScore: Number(r.riskScore) || 0,
+            amlStatus: r.amlStatus || "clear",
+            lastScan: r.lastScan || new Date().toISOString().replace("T", " ").substring(0, 19),
+            nextReview: r.nextReview || "",
+            confidence: r.confidence || (r.status === "approved" ? 98.5 : 75.0),
+            flags: Array.isArray(r.flags) ? r.flags : [],
+          }))
+        )
+      } else {
+        // Fallback
+        setKycRecords([])
+      }
+    } catch (err) {
+      console.warn("Could not fetch KYC intelligence records:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // Mock KYC data
-    const mockData: KycRecord[] = [
-      {
-        id: "KYC-001",
-        userId: "USR-10293",
-        userName: "Ahmad Bin Abdullah",
-        documentType: "Malaysian IC",
-        status: "approved",
-        riskScore: 15,
-        amlStatus: "clear",
-        lastScan: "2024-01-15 10:30:00",
-        nextReview: "2024-04-15",
-        confidence: 98.5,
-        flags: [],
-      },
-      {
-        id: "KYC-002",
-        userId: "USR-10294",
-        userName: "Siti Nurhaliza",
-        documentType: "Passport",
-        status: "under_review",
-        riskScore: 45,
-        amlStatus: "flagged",
-        lastScan: "2024-01-16 14:20:00",
-        nextReview: "2024-01-20",
-        confidence: 76.2,
-        flags: ["Document quality low", "Face match below threshold"],
-      },
-      {
-        id: "KYC-003",
-        userId: "USR-10295",
-        userName: "Raj Kumar",
-        documentType: "Malaysian IC",
-        status: "pending",
-        riskScore: 85,
-        amlStatus: "watchlist",
-        lastScan: "2024-01-17 09:15:00",
-        nextReview: "2024-01-18",
-        confidence: 45.8,
-        flags: ["PEP match found", "High-risk jurisdiction", "Suspicious transaction pattern"],
-      },
-    ]
-    setKycRecords(mockData)
+    fetchRecords()
   }, [])
 
   const filteredRecords = kycRecords.filter((record) => {

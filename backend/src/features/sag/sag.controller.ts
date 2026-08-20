@@ -8,11 +8,27 @@ import { uploadJsonToIpfs } from '@/util/ipfs-upload.js';
 import { callGoldEvaluator, GoldEvaluatorOutput } from '@/util/gold-evaluator.js';
 import { sagCreationQueue, JOB_TYPES } from '../../bullmq/scheduler.js';
 import { SagTokenService } from '../creditcoin/sag-token.service.js';
+import { KycService } from '../kyc/kyc.service.js';
+
+const kycService = new KycService();
 
 export const createSagController = async (req: Request, res: Response) => {
     try {
         const sagData = SagSchema.parse(req.body);
         const userInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
+
+        if (userInfo) {
+            const kycCheck = await kycService.isUserApproved(userInfo.userId);
+            if (!kycCheck.approved) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'KYC_NOT_APPROVED',
+                    kycStatus: kycCheck.status,
+                    message: `KYC verification required for loan origination. Current status: '${kycCheck.status}'.`,
+                });
+            }
+        }
+
         const goldEvaluateJson = {
             "principal_myr": sagData.sagProperties.loan,
             "gold_weight_g": sagData.sagProperties.weightG,

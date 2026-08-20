@@ -3,10 +3,17 @@ import { PurchaseTokenSchema } from './investor.model.js';
 import { getUserDataByToken } from '../auth/auth.repository.js';
 import { CreditcoinWalletService } from '../creditcoin/creditcoin-wallet.service.js';
 import { SagModel } from '../sag/sag.model.js';
+import { KycService } from '../kyc/kyc.service.js';
 import { db } from '@/db/index.js';
 import { eq } from 'drizzle-orm';
 
 export class InvestorController {
+  private kycService: KycService;
+
+  constructor() {
+    this.kycService = new KycService();
+  }
+
   async purchaseTokenAsync(req: Request, res: Response): Promise<void> {
     try {
       const validatedData = PurchaseTokenSchema.parse(req.body);
@@ -14,6 +21,18 @@ export class InvestorController {
       
       if (!investorInfo) {
         res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
+      // KYC Enforcement: approved or approved_with_edd required
+      const kycCheck = await this.kycService.isUserApproved(investorInfo.userId);
+      if (!kycCheck.approved) {
+        res.status(403).json({
+          success: false,
+          error: 'KYC_NOT_APPROVED',
+          kycStatus: kycCheck.status,
+          message: `KYC verification required to invest. Current status: '${kycCheck.status}'. Please complete identity verification.`,
+        });
         return;
       }
 
@@ -69,11 +88,29 @@ export class InvestorController {
   }
 
   async topUpToken(req: Request, res: Response): Promise<void> {
-    res.status(200).json({
-      success: true,
-      message: 'Wallet funded on Creditcoin CC3',
-      data: { amount: req.body.amount || 100 }
-    });
+    try {
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
+      if (investorInfo) {
+        const kycCheck = await this.kycService.isUserApproved(investorInfo.userId);
+        if (!kycCheck.approved) {
+          res.status(403).json({
+            success: false,
+            error: 'KYC_NOT_APPROVED',
+            kycStatus: kycCheck.status,
+            message: `KYC verification required to top up funds. Current status: '${kycCheck.status}'.`,
+          });
+          return;
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Wallet funded on Creditcoin CC3',
+        data: { amount: req.body.amount || 100 }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to process top up' });
+    }
   }
 
   async getInvestorWalletBalance(req: Request, res: Response): Promise<void> {

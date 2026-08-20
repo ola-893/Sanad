@@ -112,11 +112,39 @@ async function seed() {
         timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS main.kyc_submission (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(40) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'submitted',
+        risk_score INTEGER NOT NULL DEFAULT 0,
+        aml_status VARCHAR(20) NOT NULL DEFAULT 'unscreened',
+        document_type VARCHAR(40) NOT NULL DEFAULT 'MyKad',
+        flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+        screened_at TIMESTAMP,
+        reviewed_by VARCHAR(40),
+        reviewed_at TIMESTAMP,
+        reviewer_notes TEXT,
+        edd_source_of_funds TEXT,
+        edd_approved_by VARCHAR(40),
+        next_review_date TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS main.compliance_audit_log (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(40) NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        actor VARCHAR(40) NOT NULL,
+        details JSONB NOT NULL,
+        timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     console.log('✓ Tables & schemas verified.');
 
     console.log('\n[2/4] Seeding default roles...');
-    const roles = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'PAWNSHOP', 'BORROWER', 'INVESTOR'];
+    const roles = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'PAWNSHOP', 'BORROWER', 'INVESTOR', 'COMPLIANCE'];
     for (const r of roles) {
       await client.query(`
         INSERT INTO main.role (role_name, status, created_by, updated_by)
@@ -197,9 +225,47 @@ async function seed() {
         'INVESTOR', 'ACTIVE', 'seeder', 'seeder'
       ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
     `, [passwordHash]);
-    console.log('✓ All 5 role accounts created/updated.');
 
-    console.log('\n[4/4] Seeding initial Creditcoin CC3 on-chain audit log samples...');
+    // 6. Compliance Officer User
+    await client.query(`
+      INSERT INTO main.user (
+        user_id, user_email, user_contact_no, user_password,
+        ic_no, user_first_name, user_last_name, gender,
+        account_id, wallet_id, role_id, status, created_by, updated_by
+      ) VALUES (
+        'USR_COMPLIANCE_001', 'compliance@sanad.finance', '+60120000006', $1,
+        '800101108888', 'Nadia', 'Compliance', 'FEMALE',
+        '0x7777777777777777777777777777777777777777', '0x7777777777777777777777777777777777777777',
+        'COMPLIANCE', 'ACTIVE', 'seeder', 'seeder'
+      ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
+    `, [passwordHash]);
+
+    console.log('✓ All 6 role accounts created/updated.');
+
+    console.log('\n[4/4] Seeding initial KYC submissions and compliance audit log samples...');
+    // Seed approved KYC for borrower, investor, and pawnshop
+    await client.query(`
+      INSERT INTO main.kyc_submission (
+        user_id, status, risk_score, aml_status, document_type, flags,
+        screened_at, reviewed_by, reviewed_at, reviewer_notes,
+        edd_source_of_funds, edd_approved_by, next_review_date
+      ) VALUES
+      ('USR_BORROWER_001', 'approved', 15, 'clear', 'MyKad', '[]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'Verified against MyKad front/back. Identity confirmed.', NULL, NULL, NULL),
+      ('USR_INVESTOR_001', 'approved_with_edd', 45, 'flagged', 'MyKad', '["High-value investor", "PEP association tier 2"]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'EDD completed. Source of wealth confirmed via tax filings.', 'Verified personal business equity and audited dividends', 'Head of Compliance - Dato Rahman', NOW() + INTERVAL '2 years'),
+      ('USR_PAWNSHOP_001', 'approved', 10, 'clear', 'MyKad', '[]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'Ar-Rahnu operator license verified.', NULL, NULL, NULL)
+      ON CONFLICT DO NOTHING;
+
+      INSERT INTO main.compliance_audit_log (
+        user_id, event_type, actor, details, timestamp
+      ) VALUES
+      ('USR_BORROWER_001', 'submitted', 'USR_BORROWER_001', '{"documentType": "MyKad", "icNo": "920505106666"}'::jsonb, NOW() - INTERVAL '2 days'),
+      ('USR_BORROWER_001', 'approved', 'USR_COMPLIANCE_001', '{"riskScore": 15, "amlStatus": "clear", "notes": "Standard CDD approved"}'::jsonb, NOW() - INTERVAL '1 day'),
+      ('USR_INVESTOR_001', 'submitted', 'USR_INVESTOR_001', '{"documentType": "MyKad", "icNo": "850303107777"}'::jsonb, NOW() - INTERVAL '3 days'),
+      ('USR_INVESTOR_001', 'edd_triggered', 'system:kyc-agent', '{"flags": ["High-value investor", "PEP association tier 2"], "riskScore": 45}'::jsonb, NOW() - INTERVAL '2 days'),
+      ('USR_INVESTOR_001', 'approved_with_edd', 'USR_COMPLIANCE_001', '{"eddSourceOfFunds": "Verified personal business equity and audited dividends", "eddApprovedBy": "Head of Compliance - Dato Rahman", "nextReviewDate": "2028-08-20"}'::jsonb, NOW() - INTERVAL '1 day')
+      ON CONFLICT DO NOTHING;
+    `);
+    console.log('✓ KYC submissions and compliance audit logs seeded.');
     await client.query(`
       INSERT INTO main.creditcoin_audit_log (
         event_type, contract_address, transaction_hash, block_number, token_id, details

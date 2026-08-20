@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./SAGToken.sol";
 
 /**
@@ -45,22 +45,21 @@ interface IBlockProver {
  * @title SanadLiquidityPool
  * @notice Shariah-compliant gold financing liquidity pool on Creditcoin 3 (CC3).
  *         Accepts cross-chain repayment proofs verified directly via native BlockProver precompile,
- *         manages multi-LP capital accounting, and executes Dutch auction liquidations with strict
+ *         manages multi-LP capital accounting in native CTC, and executes Dutch auction liquidations with strict
  *         Shariah surplus refunds to borrowers.
  */
-contract SanadLiquidityPool is Ownable {
+contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     // Creditcoin 3 Native Precompile Address for BlockProver
     address public constant BLOCK_PROVER_PRECOMPILE = address(0x0000000000000000000000000000000000000FD2);
 
     SAGToken public immutable sagToken;
-    IERC20 public immutable liquidityCurrency; // e.g. CTC or stablecoin (USDC)
 
     // Liquidation & Grace Period Parameters
     uint256 public gracePeriod = 14 days;        // Grace period post-maturity before auction eligibility
     uint256 public auctionDuration = 24 hours;   // Dutch auction decay duration
     uint256 public constant MIN_DISTRESSED_RECOVERY_BPS = 5000; // Hard safety floor: 50% minimum of appraised fair market value
 
-    // LP Capital Accounting
+    // LP Capital Accounting (Native CTC)
     mapping(address => uint256) public lpBalances;
     uint256 public totalPoolLiquidity;
 
@@ -117,33 +116,43 @@ contract SanadLiquidityPool is Ownable {
     event SurplusReturnedToBorrower(uint256 indexed tokenId, address indexed borrower, uint256 amountUSD);
     event ShortfallDistributedToPool(uint256 indexed tokenId, uint256 shortfallUSD, uint256 newTotalLiquidity);
 
-    constructor(address _sagToken, address _liquidityCurrency) Ownable(msg.sender) {
+    constructor(address _sagToken) Ownable(msg.sender) {
         require(_sagToken != address(0), "Invalid SAG token address");
         sagToken = SAGToken(_sagToken);
-        liquidityCurrency = IERC20(_liquidityCurrency);
     }
 
     // =========================================================================
-    // LP CAPITAL ACCOUNTING (DEPOSITS & WITHDRAWALS)
+    // LP CAPITAL ACCOUNTING (DEPOSITS & WITHDRAWALS - NATIVE CTC)
     // =========================================================================
 
     /**
-     * @notice Deposit liquidity into the pool
+     * @notice Deposit native CTC liquidity into the pool
      */
-    function depositLiquidity(uint256 amount) external {
-        require(amount > 0, "Amount must be greater than 0");
-        require(liquidityCurrency.transferFrom(msg.sender, address(this), amount), "Deposit transfer failed");
+    function depositLiquidity() external payable {
+        require(msg.value > 0, "Amount must be greater than 0");
 
-        lpBalances[msg.sender] += amount;
-        totalPoolLiquidity += amount;
+        lpBalances[msg.sender] += msg.value;
+        totalPoolLiquidity += msg.value;
 
-        emit LiquidityDeposited(msg.sender, amount, totalPoolLiquidity);
+        emit LiquidityDeposited(msg.sender, msg.value, totalPoolLiquidity);
     }
 
     /**
-     * @notice Withdraw liquidity from the pool
+     * @notice Direct native CTC receive fallback to deposit liquidity
      */
-    function withdrawLiquidity(uint256 amount) external {
+    receive() external payable {
+        require(msg.value > 0, "Amount must be greater than 0");
+
+        lpBalances[msg.sender] += msg.value;
+        totalPoolLiquidity += msg.value;
+
+        emit LiquidityDeposited(msg.sender, msg.value, totalPoolLiquidity);
+    }
+
+    /**
+     * @notice Withdraw native CTC liquidity from the pool
+     */
+    function withdrawLiquidity(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than 0");
         require(lpBalances[msg.sender] >= amount, "Insufficient LP balance");
         require(totalPoolLiquidity >= amount, "Insufficient pool liquidity");
@@ -151,7 +160,8 @@ contract SanadLiquidityPool is Ownable {
         lpBalances[msg.sender] -= amount;
         totalPoolLiquidity -= amount;
 
-        require(liquidityCurrency.transfer(msg.sender, amount), "Withdrawal transfer failed");
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "Transfer failed");
 
         emit LiquidityWithdrawn(msg.sender, amount, totalPoolLiquidity);
     }
@@ -161,9 +171,9 @@ contract SanadLiquidityPool is Ownable {
     // =========================================================================
 
     /**
-     * @notice Fund a pawnshop's tokenized gold collateral note
+     * @notice Fund a pawnshop's tokenized gold collateral note with native CTC
      */
-    function fundLoan(uint256 tokenId, uint256 amount) external onlyOwner {
+    function fundLoan(uint256 tokenId, uint256 amount) external onlyOwner nonReentrant {
         require(tokenLoanBalance[tokenId] == 0, "Loan already funded");
         
         // Explicit compliance checks to prevent funding frozen collateral or frozen pawnshops
@@ -174,8 +184,9 @@ contract SanadLiquidityPool is Ownable {
 
         tokenLoanBalance[tokenId] = amount;
 
-        // Disburse liquidity to pawnshop
-        require(liquidityCurrency.transfer(pawnshop, amount), "Funding transfer failed");
+        // Disburse native CTC liquidity to pawnshop
+        (bool ok, ) = pawnshop.call{value: amount}("");
+        require(ok, "Transfer failed");
 
         emit LoanFunded(tokenId, pawnshop, amount);
     }
@@ -351,7 +362,7 @@ contract SanadLiquidityPool is Ownable {
     /**
      * @notice Executes purchase of defaulted collateral via Dutch auction with Shariah surplus return
      */
-    function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external returns (uint256) {
+    function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external payable nonReentrant returns (uint256) {
         LiquidationAuction storage auction = auctions[tokenId];
         require(auction.active, "Auction is not active");
 
@@ -363,12 +374,7 @@ contract SanadLiquidityPool is Ownable {
 
         uint256 purchasePriceUSD = getCurrentAuctionPrice(tokenId);
         require(purchasePriceUSD <= maxPaymentUSD, "Purchase price exceeds maximum slippage payment");
-
-        // Collect payment from buyer
-        require(
-            liquidityCurrency.transferFrom(msg.sender, address(this), purchasePriceUSD),
-            "Payment transfer failed"
-        );
+        require(msg.value >= purchasePriceUSD, "Insufficient payment sent");
 
         uint256 principalOwed = tokenLoanBalance[tokenId];
         uint256 ujrahFee = calculateAccruedUjrah(tokenId);
@@ -385,14 +391,16 @@ contract SanadLiquidityPool is Ownable {
             // Restores pool principal
             totalPoolLiquidity += principalOwed;
 
-            // Pay pawnshop custodian accrued safekeeping/ujrah fee
+            // Pay pawnshop custodian accrued safekeeping/ujrah fee in native CTC
             if (ujrahFee > 0) {
-                liquidityCurrency.transfer(collateral.pawnshop, ujrahFee);
+                (bool ok, ) = collateral.pawnshop.call{value: ujrahFee}("");
+                require(ok, "Transfer failed");
             }
 
-            // Return surplus directly to borrower
+            // Return surplus directly to borrower in native CTC
             if (surplus > 0) {
-                require(liquidityCurrency.transfer(collateral.borrower, surplus), "Surplus refund failed");
+                (bool ok, ) = collateral.borrower.call{value: surplus}("");
+                require(ok, "Transfer failed");
                 emit SurplusReturnedToBorrower(tokenId, collateral.borrower, surplus);
             }
         } else {
@@ -404,7 +412,8 @@ contract SanadLiquidityPool is Ownable {
                 uint256 principalRecovered = purchasePriceUSD - ujrahFee;
                 totalPoolLiquidity += principalRecovered;
                 if (ujrahFee > 0) {
-                    liquidityCurrency.transfer(collateral.pawnshop, ujrahFee);
+                    (bool ok, ) = collateral.pawnshop.call{value: ujrahFee}("");
+                    require(ok, "Transfer failed");
                 }
             }
 
@@ -416,6 +425,12 @@ contract SanadLiquidityPool is Ownable {
             }
 
             emit ShortfallDistributedToPool(tokenId, shortfall, totalPoolLiquidity);
+        }
+
+        // Refund excess payment to buyer if any
+        if (msg.value > purchasePriceUSD) {
+            (bool ok, ) = msg.sender.call{value: msg.value - purchasePriceUSD}("");
+            require(ok, "Transfer failed");
         }
 
         // Close auction and update collateral status

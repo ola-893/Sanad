@@ -3,9 +3,15 @@ import { CreditcoinClient } from './creditcoin.client.js';
 import { SagTokenService, MintSagParams } from './sag-token.service.js';
 import { CreditcoinIndexerService } from './creditcoin-indexer.service.js';
 import { CREDITCOIN_CONFIG } from './creditcoin.config.js';
+import { getUserDataByToken } from '../auth/auth.repository.js';
+import { KycService } from '../kyc/kyc.service.js';
+import { User } from '../auth/auth.model.js';
+import { db } from '@/db/index.js';
+import { eq } from 'drizzle-orm';
 
 const sagService = new SagTokenService();
 const indexerService = new CreditcoinIndexerService();
+const kycService = new KycService();
 
 // Start event listening
 indexerService.startListening();
@@ -43,6 +49,40 @@ export class CreditcoinController {
       if (!pawnshopAddress || !borrowerAddress || !weightGrams || !karat || !appraisedValueUSD || !loanAmount) {
         res.status(400).json({ success: false, error: 'Missing required collateral parameters' });
         return;
+      }
+
+      // 1. Check authenticated user KYC if available
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const user = await getUserDataByToken(token);
+        if (user) {
+          const kycCheck = await kycService.isUserApproved(user.userId);
+          if (!kycCheck.approved) {
+            res.status(403).json({
+              success: false,
+              error: 'KYC_NOT_APPROVED',
+              kycStatus: kycCheck.status,
+              message: `KYC verification required for loan origination. Current status: '${kycCheck.status}'.`,
+            });
+            return;
+          }
+        }
+      }
+
+      // 2. Check borrower KYC in DB if registered
+      const borrowerUsers = await db.select().from(User).where(eq(User.accountId, borrowerAddress)).limit(1);
+      if (borrowerUsers.length > 0) {
+        const borrowerKyc = await kycService.isUserApproved(borrowerUsers[0].userId);
+        if (!borrowerKyc.approved) {
+          res.status(403).json({
+            success: false,
+            error: 'KYC_NOT_APPROVED',
+            kycStatus: borrowerKyc.status,
+            message: `Borrower (${borrowerAddress}) KYC verification required for loan origination. Current status: '${borrowerKyc.status}'.`,
+          });
+          return;
+        }
       }
 
       const params: MintSagParams = {
@@ -232,3 +272,6 @@ export class CreditcoinController {
     }
   }
 }
+
+export const creditcoinController = new CreditcoinController();
+

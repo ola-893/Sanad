@@ -61,7 +61,7 @@ export async function runEndToEndDeployment() {
     compiled.SanadLiquidityPool.bytecode,
     creditcoinSigner
   );
-  const poolContract = await poolFactory.deploy(sagAddress, ethers.ZeroAddress);
+  const poolContract = await poolFactory.deploy(sagAddress);
   console.log(`Deploy tx broadcast to CC3: ${poolContract.deploymentTransaction()?.hash}`);
   await poolContract.waitForDeployment();
   const poolAddress = await poolContract.getAddress();

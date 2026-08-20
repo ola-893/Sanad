@@ -5,7 +5,7 @@ import axios, { AxiosError } from 'axios'
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const apiInstance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api/v1`,
+  baseURL: `${apiUrl}/api/v1`,
   timeout: 300000,
 });
 

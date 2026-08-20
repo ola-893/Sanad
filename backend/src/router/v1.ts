@@ -11,6 +11,7 @@ import { goldPriceRoutes } from '@/features/gold-price/index.js';
 import authenticateJWT from '@/middleware/authenticate-jwt.js';
 import uploadRoutes from '@/features/upload/upload.routes.js';
 import { creditcoinRoutes } from '@/features/creditcoin/index.js';
+import { kycRoutes } from '@/features/kyc/index.js';
 import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
 
@@ -20,6 +21,7 @@ const v1Router = express.Router();
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
 v1Router.use('/upload', uploadRoutes);
+v1Router.use('/kyc', kycRoutes);
 v1Router.use('/sag', sagRoutes);
 v1Router.use('/investor', authenticateJWT, investorRoutes);
 v1Router.use('/pawnshop', authenticateJWT, pawnshopRoutes);

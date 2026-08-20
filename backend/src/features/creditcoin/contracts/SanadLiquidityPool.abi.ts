@@ -1,5 +1,5 @@
 export const SANAD_LIQUIDITY_POOL_ABI = [
-  "constructor(address _sagToken, address _liquidityCurrency)",
+  "constructor(address _sagToken)",
 
   // Events
   "event LiquidityDeposited(address indexed provider, uint256 amount, uint256 newTotalLiquidity)",
@@ -13,8 +13,8 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "event SurplusReturnedToBorrower(uint256 indexed tokenId, address indexed borrower, uint256 amountUSD)",
   "event ShortfallDistributedToPool(uint256 indexed tokenId, uint256 shortfallUSD, uint256 newTotalLiquidity)",
 
-  // LP Capital Accounting
-  "function depositLiquidity(uint256 amount) external",
+  // LP Capital Accounting (Native CTC)
+  "function depositLiquidity() external payable",
   "function withdrawLiquidity(uint256 amount) external",
   "function lpBalances(address provider) external view returns (uint256)",
   "function totalPoolLiquidity() external view returns (uint256)",
@@ -30,7 +30,7 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function triggerLiquidation(uint256 tokenId) external",
   "function resetExpiredAuction(uint256 tokenId, uint256 discountedReservePriceUSD) external",
   "function getCurrentAuctionPrice(uint256 tokenId) external view returns (uint256)",
-  "function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external returns (uint256)",
+  "function buyLiquidatedCollateral(uint256 tokenId, uint256 maxPaymentUSD) external payable returns (uint256)",
   "function auctions(uint256 tokenId) external view returns (tuple(uint256 tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 startTime, uint256 endTime, bool active))",
   "function gracePeriod() external view returns (uint256)",
   "function auctionDuration() external view returns (uint256)",
