@@ -14,7 +14,6 @@ const kycService = new KycService();
 
 export const createSagController = async (req: Request, res: Response) => {
     try {
-        const sagData = SagSchema.parse(req.body);
         const userInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
 
         if (userInfo) {
@@ -28,6 +27,8 @@ export const createSagController = async (req: Request, res: Response) => {
                 });
             }
         }
+
+        const sagData = SagSchema.parse(req.body);
 
         const goldEvaluateJson = {
             "principal_myr": sagData.sagProperties.loan,

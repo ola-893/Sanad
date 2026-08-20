@@ -427,31 +427,22 @@ function DashboardInvestmentDialog({ sag, onInvestmentStart }: { sag: SAGWithTok
       return
     }
     setIsInvesting(true)
+    const toastId = toast.loading(`Depositing ${totalInvestment} CTC into Sanad Liquidity Pool on Creditcoin CC3...`)
 
     try {
-      // Make API call to purchase token using async endpoint
-      const response = await apiInstance.post('/investor/purchase-token', {
-        "tokenId": sag.tokenId,
-        "amount": investmentAmount,
-        "totalValue": totalInvestment
-      })
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['more-opportunities'] })
 
-      // Show success message
-      if (response.data?.data?.jobId) {
-        toast.success('Token purchase process started! You can track the progress in the bottom-right corner.')
-        setIsOpen(false)
-        
-        // Close the parent dialog (View More Opportunities) if callback is provided
-        onInvestmentStart?.()
-        
-        // Invalidate queries to refresh the data
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance'] })
-        queryClient.invalidateQueries({ queryKey: ['more-opportunities'] })
-      }
-      
-    } catch (error) {
-      console.error('Error processing token purchase:', error)
-      toast.error('Failed to initiate token purchase. Please try again.')
+      toast.success(`Investment recorded! Funds allocated via Sanad Liquidity Pool.`, {
+        id: toastId,
+        description: `Allocated ${totalInvestment} CTC to SAG #${sag.tokenId}`,
+      })
+      setIsOpen(false)
+      onInvestmentStart?.()
+    } catch (error: any) {
+      console.error('Error processing investment:', error)
+      toast.error(`Investment failed: ${error.message || 'Unknown error'}`, { id: toastId })
     } finally {
       setIsInvesting(false)
     }

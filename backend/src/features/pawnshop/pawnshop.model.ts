@@ -3,67 +3,30 @@ import { z } from 'zod';
 // Repayment process parameters
 export interface RepaymentParams {
   tokenId: string;
-  pawnshopAccountId: string;
-  pawnshopPrivateKey: string;
-  freezeKey?: string;
-  supplyKey?: string;
-}
-
-// Repayment result
-export interface RepaymentResult {
-  tokenId: string;
-  totalHolders: number;
-  totalTokensProcessed: number;
-  unfreezeTransactions: Array<{
-    accountId: string;
-    transactionId: string;
-    receipt: any;
-  }>;
-  transferTransactions: Array<{
-    accountId: string;
-    serialNumbers: number[];
-    transactionId: string;
-    receipt: any;
-  }>;
-  burnTransaction: {
-    transactionId: string;
-    receipt: any;
-    totalBurned: number;
-  };
-  success: boolean;
-  error?: string;
+  pawnshopAccountId?: string;
+  amountCTC?: string;
 }
 
 // Request schema for repayment API
 export const RepaymentRequestSchema = z.object({
   tokenId: z.string().min(1, 'Token ID is required'),
-  sagId: z.string().min(1, 'SAG ID is required'),
-  pawnshopAccountId: z.string().min(1, 'Pawnshop account ID is required').optional(),
+  sagId: z.string().optional(),
+  amountCTC: z.union([z.string(), z.number()]).optional(),
+  pawnshopAccountId: z.string().optional(),
 });
 
 // Response schema for repayment API
 export const RepaymentResponseSchema = z.object({
   success: z.boolean(),
+  message: z.string().optional(),
   data: z.object({
+    jobId: z.string(),
+    status: z.string(),
     tokenId: z.string(),
-    totalHolders: z.number(),
-    totalTokensProcessed: z.number(),
-    unfreezeTransactions: z.array(z.object({
-      accountId: z.string(),
-      transactionId: z.string(),
-      receipt: z.any(),
-    })),
-    transferTransactions: z.array(z.object({
-      accountId: z.string(),
-      serialNumbers: z.array(z.number()),
-      transactionId: z.string(),
-      receipt: z.any(),
-    })),
-    burnTransaction: z.object({
-      transactionId: z.string(),
-      receipt: z.any(),
-      totalBurned: z.number(),
-    }),
+    transactionHash: z.string().optional(),
+    blockNumber: z.number().optional(),
+    repaidAmountCTC: z.string().optional(),
+    timestamp: z.string(),
   }).optional(),
   error: z.string().optional(),
 });

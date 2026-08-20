@@ -12,6 +12,8 @@ import { toast } from "sonner"
 import { useQuery } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
+import { useLiquidityPool } from "@/hooks/use-liquidity-pool"
+import { useCreditcoinWallet } from "@/hooks/use-creditcoin-wallet"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -22,10 +24,15 @@ interface WalletData {
 }
 
 export function PaymentMethods() {
-  const [loanId, setLoanId] = useState("")
-  const [amountCTC, setAmountCTC] = useState("")
+  const [loanId, setLoanId] = useState("1")
+  const [amountCTC, setAmountCTC] = useState("5.0")
   const [paymentComplete, setPaymentComplete] = useState(false)
+  const [completedTxHash, setCompletedTxHash] = useState<string | null>(null)
+  const [completedBlock, setCompletedBlock] = useState<number | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+
+  const { isConnected, balance: walletBalanceStr } = useCreditcoinWallet()
+  const { repayLoanDirect } = useLiquidityPool()
 
   const { data: walletData } = useQuery({
     queryKey: ["wallet-balance"],
@@ -38,23 +45,65 @@ export function PaymentMethods() {
   })
 
   const wallet = walletData?.data
-  const balance = wallet ? parseFloat(wallet.balanceCTC) || 0 : 0
+  const availableBalance = isConnected ? parseFloat(walletBalanceStr) : (wallet ? parseFloat(wallet.balanceCTC) || 0 : 0)
   const { data: ctcPrice } = useCtcPrice()
   const usdRate = ctcPrice?.ctcUsd || 0.10
-  const hasInsufficientBalance = amountCTC ? parseFloat(amountCTC) > balance : false
+  const hasInsufficientBalance = amountCTC ? parseFloat(amountCTC) > availableBalance : false
+  const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
 
   const handlePayment = async () => {
     if (!loanId || !amountCTC || parseFloat(amountCTC) <= 0) {
-      toast.error("Please select a loan and enter a valid amount")
+      toast.error("Please select a loan and enter a valid repayment amount")
       return
     }
+
     setIsProcessing(true)
-    // Simulate on-chain repayment
-    setTimeout(() => {
+    const toastId = toast.loading(`Broadcasting repayment of ${amountCTC} tCTC for SAG #${loanId} to Creditcoin 3...`)
+
+    try {
+      if (isConnected) {
+        // Direct Web3 wallet repayment against SanadLiquidityPool.sol
+        const res = await repayLoanDirect(loanId, amountCTC)
+        if (res.success && res.transactionHash) {
+          setCompletedTxHash(res.transactionHash)
+          setCompletedBlock(res.blockNumber || null)
+          setPaymentComplete(true)
+          toast.success("Repayment confirmed on-chain!", {
+            id: toastId,
+            description: `Tx: ${res.transactionHash.slice(0, 10)}... (Block #${res.blockNumber})`,
+            action: {
+              label: "Explorer",
+              onClick: () => window.open(`${explorerBase}/tx/${res.transactionHash}`, "_blank"),
+            },
+          })
+        } else {
+          toast.error(`Repayment failed: ${res.error}`, { id: toastId })
+        }
+      } else {
+        // Relay via backend API
+        const response = await apiInstance.post("/pawnshop/repayment/process", {
+          tokenId: loanId,
+          amountCTC: parseFloat(amountCTC),
+        })
+
+        if (response.data?.success) {
+          const txHash = response.data.data?.transactionHash
+          setCompletedTxHash(txHash || null)
+          setPaymentComplete(true)
+          toast.success("Repayment processed on Creditcoin 3!", {
+            id: toastId,
+            description: txHash ? `Tx: ${txHash.slice(0, 10)}...` : "Confirmed on-chain",
+          })
+        } else {
+          toast.error(response.data?.error || "Failed to process repayment", { id: toastId })
+        }
+      }
+    } catch (err: any) {
+      console.error("Repayment error:", err)
+      toast.error(err.response?.data?.error || err.message || "Failed to process repayment", { id: toastId })
+    } finally {
       setIsProcessing(false)
-      setPaymentComplete(true)
-      toast.success("Repayment submitted for on-chain verification")
-    }, 2000)
+    }
   }
 
   if (paymentComplete) {
@@ -62,44 +111,70 @@ export function PaymentMethods() {
       <Card className={glass}>
         <CardContent className="p-8">
           <div className="flex flex-col items-center space-y-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
-              <CheckCircle2 className="h-8 w-8 text-success" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-8 w-8 text-emerald-700" />
             </div>
             <div className="text-center">
-              <p className="font-display text-lg font-bold text-[#171414]">Repayment Submitted</p>
+              <p className="font-display text-lg font-bold text-[#171414]">Repayment Confirmed on Creditcoin 3</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Your CTC repayment has been submitted to the Creditcoin network for verification.
+                Your native CTC repayment was settled on-chain against SanadLiquidityPool.sol.
               </p>
             </div>
             <div className="w-full rounded-2xl border border-[#171414]/10 bg-white/50 p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Amount</span>
+                <span className="text-sm text-muted-foreground">Token ID / Loan</span>
+                <span className="font-mono text-sm font-bold text-[#171414]">SAG #{loanId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Amount Repaid</span>
                 <div className="text-right">
-                  <span className="font-mono text-sm font-bold text-[#171414]">{amountCTC} CTC</span>
-                  <p className="font-mono text-[10px] text-muted-foreground">≈ {formatUsd(ctcToUsd(parseFloat(amountCTC) || 0, usdRate))} USD</p>
+                  <span className="font-mono text-sm font-bold text-emerald-700">{amountCTC} tCTC</span>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    ≈ {formatUsd(ctcToUsd(parseFloat(amountCTC) || 0, usdRate))} USD
+                  </p>
                 </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Network</span>
-                <span className="text-sm text-[#171414]">Creditcoin 3 Testnet</span>
+                <span className="text-sm text-[#171414]">Creditcoin 3 Testnet (Chain ID 102031)</span>
               </div>
+              {completedTxHash && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Transaction</span>
+                  <a
+                    href={`${explorerBase}/tx/${completedTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
+                  >
+                    {completedTxHash.slice(0, 10)}...{completedTxHash.slice(-8)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {completedBlock && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Block Number</span>
+                  <span className="font-mono text-xs text-[#171414]">#{completedBlock}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge variant="outline" className="border-success/30 bg-success/10 text-success text-[10px]">
-                  Pending Verification
+                <span className="text-sm text-muted-foreground">Collateral Status</span>
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+                  Repaid & Unlocked
                 </Badge>
               </div>
             </div>
             <Button
               variant="outline"
-              className="rounded-full"
+              className="rounded-full font-bold"
               onClick={() => {
                 setPaymentComplete(false)
-                setAmountCTC("")
-                setLoanId("")
+                setAmountCTC("5.0")
+                setCompletedTxHash(null)
               }}
             >
-              Make Another Payment
+              Make Another Repayment
             </Button>
           </div>
         </CardContent>
@@ -117,11 +192,12 @@ export function PaymentMethods() {
             <SelectValue placeholder="Choose a loan to repay" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="demo-loan-1">Gold Collateral Loan — SAG #1</SelectItem>
+            <SelectItem value="1">SAG #1 — 50.5g 22K Gold Note (5.0 tCTC Principal)</SelectItem>
+            <SelectItem value="2">SAG #2 — 100.0g 24K Gold Note (10.0 tCTC Principal)</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Select from your active loans funded on-chain. Repayment amount is denominated in CTC.
+          Select an active loan funded on Creditcoin CC3. Repayment is settled in native CTC against SanadLiquidityPool.sol.
         </p>
       </div>
 
@@ -132,20 +208,20 @@ export function PaymentMethods() {
           <Input
             id="amount-ctc"
             type="number"
-            placeholder="0.00"
+            placeholder="5.0"
             value={amountCTC}
             onChange={(e) => setAmountCTC(e.target.value)}
             min="0"
-            step="0.01"
-            className="pr-16 font-mono"
+            step="0.1"
+            className="pr-16 font-mono text-base"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted-foreground">
-            CTC
+            tCTC
           </span>
         </div>
         {hasInsufficientBalance && (
           <p className="text-xs text-destructive">
-            Insufficient balance. You have {balance.toFixed(4)} CTC available.
+            Insufficient balance. You have {availableBalance.toFixed(4)} tCTC available.
           </p>
         )}
       </div>
@@ -155,56 +231,32 @@ export function PaymentMethods() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Wallet className="h-4 w-4" />
-            Creditcoin Wallet
+            Creditcoin CC3 Payer Wallet
           </CardTitle>
-          <CardDescription>Repayment will be sent from your connected wallet</CardDescription>
+          <CardDescription>
+            {isConnected ? "Connected via Browser EVM Wallet" : "Using server-managed testnet wallet"}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-white/50 px-4 py-3">
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Balance</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">Available Balance</p>
               <p className="font-mono text-sm font-bold text-[#171414]">
-                {balance.toFixed(4)} CTC
+                {availableBalance.toFixed(4)} tCTC
               </p>
               <p className="font-mono text-[10px] text-muted-foreground">
-                ≈ {formatUsd(ctcToUsd(balance, usdRate))} USD
+                ≈ {formatUsd(ctcToUsd(availableBalance, usdRate))} USD
               </p>
             </div>
             <Badge variant="outline" className="font-mono text-[10px]">
-              {wallet?.network || "CC3 Testnet"}
+              Creditcoin 3 Testnet
             </Badge>
           </div>
-
-          {wallet?.address && (
-            <div className="flex items-center gap-2 rounded-xl border border-[#171414]/10 bg-white/50 px-3 py-2">
-              <p className="flex-1 truncate font-mono text-xs text-muted-foreground">{wallet.address}</p>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => {
-                  navigator.clipboard.writeText(wallet.address)
-                  toast.success("Address copied")
-                }}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-              <a
-                href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"}/address/${wallet.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              </a>
-            </div>
-          )}
 
           <div className="flex items-center gap-2 rounded-xl bg-accent/10 px-4 py-2.5">
             <Shield className="h-4 w-4 text-primary" />
             <p className="text-xs text-muted-foreground">
-              Payments are verified on-chain via the Repayment Gateway contract
+              Direct same-chain settlement restores pool liquidity and releases physical gold collateral
             </p>
           </div>
         </CardContent>
@@ -219,10 +271,10 @@ export function PaymentMethods() {
         {isProcessing ? (
           <span className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Submitting to Network...
+            Settling on Creditcoin 3...
           </span>
         ) : (
-          `Repay ${amountCTC ? `${amountCTC} CTC` : ""}`
+          `Repay ${amountCTC ? `${amountCTC} tCTC` : ""}`
         )}
       </Button>
     </div>

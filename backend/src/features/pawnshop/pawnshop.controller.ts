@@ -2,8 +2,15 @@ import { Request, Response } from 'express';
 import { RepaymentRequestSchema } from './pawnshop.model.js';
 import { getUserDataByToken } from '../auth/auth.repository.js';
 import { getSocketService } from '../../services/socket.service.js';
+import { LiquidityPoolService } from '../creditcoin/liquidity-pool.service.js';
 
 export class PawnshopController {
+  private poolService: LiquidityPoolService;
+
+  constructor() {
+    this.poolService = new LiquidityPoolService();
+  }
+
   /**
    * Process repayment directly on Creditcoin 3
    */
@@ -19,6 +26,40 @@ export class PawnshopController {
 
       const jobId = `repay-${Date.now()}-${validatedData.tokenId}`;
       const socket = getSocketService();
+      
+      if (socket?.io) {
+        socket.io.emit('repayment:progress', {
+          jobId,
+          tokenId: validatedData.tokenId,
+          step: 'submitting',
+          progress: 30,
+          status: 'processing',
+          message: 'Submitting native CTC direct repayment to Creditcoin 3...',
+        });
+      }
+
+      // Execute on-chain direct repayment against SanadLiquidityPool.sol
+      const amountCTCStr = validatedData.amountCTC !== undefined ? validatedData.amountCTC.toString() : undefined;
+      const result = await this.poolService.repayLoanDirect(
+        validatedData.tokenId,
+        amountCTCStr
+      );
+
+      if (!result.success) {
+        if (socket?.io) {
+          socket.io.emit('repayment:error', {
+            jobId,
+            tokenId: validatedData.tokenId,
+            error: result.error || 'On-chain repayment execution failed',
+          });
+        }
+        res.status(400).json({
+          success: false,
+          error: result.error || 'Failed to process on-chain repayment on Creditcoin 3',
+        });
+        return;
+      }
+
       if (socket?.io) {
         socket.io.emit('repayment:progress', {
           jobId,
@@ -26,7 +67,9 @@ export class PawnshopController {
           step: 'settling',
           progress: 100,
           status: 'completed',
-          message: 'Direct repayment processed successfully on Creditcoin 3',
+          transactionHash: result.transactionHash,
+          blockNumber: result.blockNumber,
+          message: `Direct repayment confirmed on Creditcoin 3 (Tx: ${result.transactionHash})`,
         });
       }
 
@@ -37,7 +80,9 @@ export class PawnshopController {
           jobId,
           status: 'completed',
           tokenId: validatedData.tokenId,
-          amountUSD: Number(req.body.amountUSD) || 1000,
+          transactionHash: result.transactionHash,
+          blockNumber: result.blockNumber,
+          repaidAmountCTC: result.repaidAmountCTC,
           timestamp: new Date().toISOString()
         }
       });

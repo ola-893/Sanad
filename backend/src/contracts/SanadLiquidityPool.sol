@@ -95,6 +95,13 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         uint256 timestamp
     );
     event CollateralUnlocked(uint256 indexed tokenId, address indexed pawnshop, uint256 timestamp);
+    event LoanRepaid(
+        uint256 indexed tokenId,
+        address indexed payer,
+        uint256 principalRepaid,
+        uint256 ujrahFeePaid,
+        uint256 timestamp
+    );
 
     // Default & Liquidation Audit Events
     event DefaultGracePeriodEntered(uint256 indexed tokenId, uint256 maturityTimestamp, uint256 gracePeriodEnd);
@@ -231,6 +238,53 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         emit CrossChainRepaymentVerified(tokenId, chainKey, sourceTxHash, repaidAmountUSD, block.timestamp);
 
         return true;
+    }
+
+    /**
+     * @notice Directly repays an active loan in native CTC on Creditcoin CC3 (Same-Chain Settlement)
+     * @dev Follows nonReentrant + checks-effects-interactions pattern.
+     *      Calculates principal + accrued Ujrah safekeeping fee.
+     *      Restores principal to totalPoolLiquidity, transfers accrued Ujrah to pawnshop custodian,
+     *      unlocks SAG collateral note, and refunds any excess CTC payment.
+     * @param tokenId SAG Token ID
+     */
+    function repayLoanDirect(uint256 tokenId) external payable nonReentrant {
+        require(tokenLoanBalance[tokenId] > 0, "Loan is not active");
+        
+        // Compliance check: Disputed or frozen tokens/borrowers cannot settle
+        require(!sagToken.frozenToken(tokenId), "Compliance: Token is frozen");
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        require(!sagToken.frozenAddress(collateral.borrower), "Compliance: Borrower address is frozen");
+
+        uint256 principalOwed = tokenLoanBalance[tokenId];
+        uint256 ujrahFee = calculateAccruedUjrah(tokenId);
+        uint256 totalRequired = principalOwed + ujrahFee;
+
+        require(msg.value >= totalRequired, "Insufficient CTC repayment amount sent");
+
+        // Effects
+        tokenLoanBalance[tokenId] = 0;
+        totalPoolLiquidity += principalOwed;
+
+        // Settle loan status on SAGToken
+        sagToken.settleLoan(tokenId);
+
+        // Interactions
+        // 1. Pay pawnshop custodian accrued safekeeping/ujrah fee in native CTC
+        if (ujrahFee > 0) {
+            (bool okPawnshop, ) = collateral.pawnshop.call{value: ujrahFee}("");
+            require(okPawnshop, "Ujrah payment to pawnshop failed");
+        }
+
+        // 2. Refund excess payment to sender if any
+        if (msg.value > totalRequired) {
+            uint256 excess = msg.value - totalRequired;
+            (bool okRefund, ) = msg.sender.call{value: excess}("");
+            require(okRefund, "Excess refund to sender failed");
+        }
+
+        emit CollateralUnlocked(tokenId, collateral.borrower, block.timestamp);
+        emit LoanRepaid(tokenId, msg.sender, principalOwed, ujrahFee, block.timestamp);
     }
 
     // =========================================================================

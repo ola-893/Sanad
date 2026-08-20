@@ -10,6 +10,7 @@ import { generateAccessToken } from '../features/jwt/jwt.controller.js';
 import { investorController } from '../features/investor/investor.controller.js';
 import { creditcoinController } from '../features/creditcoin/creditcoin.controller.js';
 import { kycController } from '../features/kyc/kyc.controller.js';
+import { createSagController } from '../features/sag/sag.controller.js';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 
@@ -97,19 +98,35 @@ async function runKycFlowVerification() {
     console.log(`✓ Test user created: ${testUserId} (${testEmail})`);
     console.log(`✓ Generated auth tokens for user & compliance officer.\n`);
 
-    // 2. Test Enforcement Gate 1: Unverified user attempts investor deposit
-    console.log('[TEST 2] Verifying Enforcement Gate: Unverified user attempts investment...');
-    const { req: invReq1, res: invRes1 } = createMockReqRes(
-      { tokenId: '1', amount: 10, totalValue: 500 },
+    // 2. Test Enforcement Gate 1: Unverified borrower attempts SAG note creation
+    console.log('[TEST 2] Verifying Enforcement Gate: Unverified borrower attempts SAG creation...');
+    const { req: sagReq1, res: sagRes1 } = createMockReqRes(
+      {
+        sagName: 'Test Note',
+        sagDescription: 'Test Desc',
+        sagType: 'GOLD',
+        sagProperties: {
+          assetType: 'GOLD',
+          currency: 'MYR',
+          valuation: 5000,
+          karat: 22,
+          weightG: 50,
+          tenorM: 6,
+          investorRoiPercentage: 6,
+          investorFinancingType: 'MUDARABAH',
+          mintShare: 100,
+          enableMinting: true,
+        }
+      },
       { authorization: `Bearer ${userToken}` }
     );
 
-    await investorController.purchaseTokenAsync(invReq1, invRes1);
-    console.log(`  -> Response Status: ${invRes1.getStatusCode()}`);
-    console.log(`  -> Response Body:`, JSON.stringify(invRes1.getData(), null, 2));
+    await createSagController(sagReq1, sagRes1);
+    console.log(`  -> Response Status: ${sagRes1.getStatusCode()}`);
+    console.log(`  -> Response Body:`, JSON.stringify(sagRes1.getData(), null, 2));
 
-    if (invRes1.getStatusCode() !== 403 || invRes1.getData()?.error !== 'KYC_NOT_APPROVED') {
-      throw new Error(`Enforcement gate failed! Expected 403 KYC_NOT_APPROVED, got ${invRes1.getStatusCode()}`);
+    if (sagRes1.getStatusCode() !== 403 || sagRes1.getData()?.error !== 'KYC_NOT_APPROVED') {
+      throw new Error(`Enforcement gate failed! Expected 403 KYC_NOT_APPROVED, got ${sagRes1.getStatusCode()}`);
     }
     console.log('✓ PASS: Unverified user successfully BLOCKED with HTTP 403 KYC_NOT_APPROVED.\n');
 
@@ -253,21 +270,21 @@ async function runKycFlowVerification() {
     }
     console.log('✓ PASS: Immutable compliance audit trail verified.\n');
 
-    // 10. Test Enforcement Gate 3: Approved user can now perform investment
-    console.log('[TEST 10] Testing access with approved KYC user (investor deposit)...');
+    // 10. Test Enforcement Gate 3: Approved user can now access pool stats & loan origination
+    console.log('[TEST 10] Testing access with approved KYC user (pool stats & eligibility)...');
     const { req: invReq2, res: invRes2 } = createMockReqRes(
-      { tokenId: '1', amount: 10, totalValue: 500 },
+      {},
       { authorization: `Bearer ${userToken}` }
     );
 
-    await investorController.purchaseTokenAsync(invReq2, invRes2);
+    await investorController.getPoolStats(invReq2, invRes2);
     console.log(`  -> Response Status: ${invRes2.getStatusCode()}`);
     console.log(`  -> Response Body:`, JSON.stringify(invRes2.getData(), null, 2));
 
-    if (invRes2.getStatusCode() !== 202 || invRes2.getData()?.success !== true) {
-      throw new Error(`Expected 202 Accepted for approved KYC user, got ${invRes2.getStatusCode()}`);
+    if (invRes2.getStatusCode() !== 200 || invRes2.getData()?.data?.isKycApproved !== true) {
+      throw new Error(`Expected 200 with isKycApproved=true, got ${invRes2.getStatusCode()}`);
     }
-    console.log('✓ PASS: KYC-approved user permitted to invest successfully!\n');
+    console.log('✓ PASS: KYC-approved user permitted and verified successfully!\n');
 
     console.log('========================================================================');
     console.log('🎉 ALL KYC/AML PIPELINE VERIFICATION TESTS PASSED!');

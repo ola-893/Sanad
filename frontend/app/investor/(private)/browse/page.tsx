@@ -92,37 +92,35 @@ function InvestmentDialog({ sag }: { sag: SAG }) {
   const totalExpectedReturn = totalReturn * investmentAmount
   const totalProfit = totalExpectedReturn - totalInvestment
 
+  const { depositLiquidity, isTransacting } = useLiquidityPool()
+  const { isConnected, connectWallet } = useCreditcoinWallet()
+
   const handleInvest = async () => {
+    if (!isConnected) {
+      toast.error('Please connect your Creditcoin wallet first')
+      await connectWallet()
+      return
+    }
+
     setIsInvesting(true)
-    // try {
-    //   // TODO: Implement investment API call
-    //   toast.success(`Successfully invested in ${investmentAmount} shares of ${sag.sagName}!`)
-    //   setIsOpen(false)
-    // } catch (error) {
-    //   toast.error('Failed to process investment. Please try again.')
-    // } finally {
-    //   setIsInvesting(false)
-    // }
-
-    const investShare = apiInstance.post('/investor/purchase-token', {
-      "tokenId": sag.tokenId,
-      "amount": investmentAmount,
-      "totalValue": totalInvestment.toFixed(2)
-    });
-
-    toast.promise(investShare, {
-      loading: 'Investing...',
-      success: () => {
-        return `Successfully invested in ${investmentAmount} shares of ${sag.sagName}!`
-      },
-      error: 'Failed to process investment. Please try again.',
-      finally: () => {
-        setIsInvesting(false)
+    const toastId = toast.loading(`Depositing ${totalInvestment.toFixed(2)} CTC into Sanad Liquidity Pool...`)
+    
+    try {
+      const res = await depositLiquidity(totalInvestment.toFixed(2))
+      if (res.success) {
+        toast.success(`Successfully invested ${totalInvestment.toFixed(2)} CTC in pool!`, {
+          id: toastId,
+          description: `Tx: ${res.transactionHash?.slice(0, 10)}... (Block #${res.blockNumber})`,
+        })
         setIsOpen(false)
+      } else {
+        toast.error(`Investment failed: ${res.error}`, { id: toastId })
       }
-    })
-
-
+    } catch (err: any) {
+      toast.error(`Investment error: ${err.message}`, { id: toastId })
+    } finally {
+      setIsInvesting(false)
+    }
   }
 
   const remainingShares = tokenInfo?.data ? parseInt(tokenInfo.data.remainingSupply) : 0
