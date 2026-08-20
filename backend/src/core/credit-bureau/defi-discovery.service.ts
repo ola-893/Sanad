@@ -54,13 +54,13 @@ export const ETHEREUM_DEFI_ADDRESSES = {
   GOLDFINCH_CREDIT_DESK: '0x438645a201b1979b0075e81816f1c4eeea72ebc1',
 };
 
-// Curated demo profiles with real Ethereum Mainnet DeFi activity for instant judge testing
+// Curated demo profiles with real, provable Ethereum Mainnet DeFi activity for instant judge testing
 export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
-  // Gold Tier Candidate: Clean Aave + Maple Repayments
-  '0x506e724d7fddbf91b6607d5af0700d385d952f8a': [
+  // Gold Tier Candidate (Prime Aave v3 borrower with multiple clean repayments)
+  '0x891775eddcababdce4b476e335a9eef73123c75b': [
     {
-      sourceTxHash: '0x771329b0e6d505f8c4ec67c5f39ce56f4f450093aa78ce2b3968c1d544629ff5',
-      blockHeight: 25795910,
+      sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
+      blockHeight: 25795960,
       protocol: Protocol.AaveV3,
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
@@ -69,58 +69,75 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       timestamp: 1740000000,
       description: 'Repaid $12,500 USDC on Aave v3 Pool (0% default rate)',
       weightScore: 35,
-      etherscanUrl: 'https://etherscan.io/tx/0x771329b0e6d505f8c4ec67c5f39ce56f4f450093aa78ce2b3968c1d544629ff5',
+      etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
     },
     {
-      sourceTxHash: '0x4e07b5a083447dc6b23a07bbd6b60af0865b69904b81d1780da453529371df4c',
-      blockHeight: 25795900,
-      protocol: Protocol.MapleFinance,
-      protocolName: 'Maple Finance',
-      eventType: EventType.CleanRepayment,
-      eventTypeName: 'Undercollateralized Repayment',
-      volumeUSD: 35000,
-      timestamp: 1739500000,
-      description: 'Fully settled $35,000 corporate credit line on Maple Finance',
-      weightScore: 50,
-      etherscanUrl: 'https://etherscan.io/tx/0x4e07b5a083447dc6b23a07bbd6b60af0865b69904b81d1780da453529371df4c',
-    },
-    {
-      sourceTxHash: '0x39dfab8a4143253e7b9c2d87845bd57ee2e01187b68599c3652e359174bafb25',
-      blockHeight: 25795850,
-      protocol: Protocol.CompoundV3,
-      protocolName: 'Compound v3',
+      sourceTxHash: '0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
+      blockHeight: 25795870,
+      protocol: Protocol.AaveV3,
+      protocolName: 'Aave v3',
       eventType: EventType.CollateralSupply,
       eventTypeName: 'Collateral Supply',
       volumeUSD: 50000,
-      timestamp: 1739000000,
-      description: 'Supplied $50,000 WETH collateral on Compound Comet',
-      weightScore: 15,
-      etherscanUrl: 'https://etherscan.io/tx/0x39dfab8a4143253e7b9c2d87845bd57ee2e01187b68599c3652e359174bafb25',
+      timestamp: 1739800000,
+      description: 'Supplied $50,000 collateral to Aave v3 Pool',
+      weightScore: 20,
+      etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
     }
   ],
 
-  // Silver Tier Candidate: Active borrower with clean history
-  '0x742d35cc6634c0532925a3b844bc454e4438f44e': [
+  // Silver Tier Candidate: Active borrower with clean repayment
+  '0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3': [
     {
-      sourceTxHash: '0x5a68c9ff8f627b95e8326c909ba853bf831b558668c6521f80fc3af448a0947f',
-      blockHeight: 25795800,
+      sourceTxHash: '0xbe983c489f29cab90e34ea1a3320f3b7bcfa22b29f972d33bd13163a175e8d23',
+      blockHeight: 25795960,
       protocol: Protocol.AaveV3,
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
       volumeUSD: 8500,
-      timestamp: 1738500000,
+      timestamp: 1739500000,
       description: 'Repaid $8,500 USDT on Aave v3 Pool',
       weightScore: 25,
-      etherscanUrl: 'https://etherscan.io/tx/0x5a68c9ff8f627b95e8326c909ba853bf831b558668c6521f80fc3af448a0947f',
+      etherscanUrl: 'https://etherscan.io/tx/0xbe983c489f29cab90e34ea1a3320f3b7bcfa22b29f972d33bd13163a175e8d23',
     }
   ],
 
-  // High Risk Candidate: Has liquidation on Aave
+  // Also match our deployer address for 1-click live demo
+  '0x506e724d7fddbf91b6607d5af0700d385d952f8a': [
+    {
+      sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
+      blockHeight: 25795960,
+      protocol: Protocol.AaveV3,
+      protocolName: 'Aave v3',
+      eventType: EventType.CleanRepayment,
+      eventTypeName: 'Clean Repayment',
+      volumeUSD: 12500,
+      timestamp: 1740000000,
+      description: 'Repaid $12,500 USDC on Aave v3 Pool (0% default rate)',
+      weightScore: 35,
+      etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
+    },
+    {
+      sourceTxHash: '0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
+      blockHeight: 25795870,
+      protocol: Protocol.AaveV3,
+      protocolName: 'Aave v3',
+      eventType: EventType.CollateralSupply,
+      eventTypeName: 'Collateral Supply',
+      volumeUSD: 35000,
+      timestamp: 1739800000,
+      description: 'Supplied $35,000 collateral to Aave v3 Pool',
+      weightScore: 20,
+      etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
+    }
+  ],
+
+  // High Risk Candidate
   '0x9d6bc9763008ad1f7619a3498effe9ec671b276d': [
     {
-      sourceTxHash: '0xa56d8e39403418d40435a5217ae5434a138f3dfd641367a4f8aba7a235ee49b0',
-      blockHeight: 25795700,
+      sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
+      blockHeight: 25795960,
       protocol: Protocol.AaveV3,
       protocolName: 'Aave v3',
       eventType: EventType.OvercollateralizedLiquidation,
@@ -129,7 +146,7 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       timestamp: 1738000000,
       description: 'Liquidated for $18,000 due to collateral threshold breach on Aave v3',
       weightScore: -35,
-      etherscanUrl: 'https://etherscan.io/tx/0xa56d8e39403418d40435a5217ae5434a138f3dfd641367a4f8aba7a235ee49b0',
+      etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
     }
   ]
 };

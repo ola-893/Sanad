@@ -43,11 +43,14 @@ export class AttestcoinOracleRelayerService {
       name: 'Creditcoin3Testnet',
     });
 
-    const privateKey = process.env.PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY || '0xce44c9cf317f66b5e3ea12ee1c92bb77a6dd2d02265b086eba66f8f338d5d7dc';
+    const privateKey = process.env.PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error('PRIVATE_KEY or CREDITCOIN_PRIVATE_KEY environment variable is required');
+    }
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xCf53eD8DdA72D2E65ADa72c26916647d9E437Eea';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x48159A8F5ba1AB2D9F7BD28585EB7dAc57274b7F';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://proof-gen-api.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }

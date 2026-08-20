@@ -9,9 +9,10 @@ import "./interfaces/IChainInfo.sol";
 
 /**
  * @title SanadCreditOracle
- * @notice On-chain decentralized credit bureau on Creditcoin CC3 powered by the Attestcoin Protocol.
- * @dev Cryptographically verifies real historical DeFi lending events (Aave, Compound, Maple, Goldfinch)
- *      from Ethereum Mainnet via native BlockProver precompile (0xFD2).
+ * @notice Cryptographic On-Chain Credit Bureau on Creditcoin CC3 powered by the Attestcoin Protocol.
+ * @dev Verifies real historical DeFi lending events (Aave, Compound, Maple, Goldfinch) from Ethereum Mainnet
+ *      via native BlockProver precompile (0xFD2), decodes transaction calldata, and ensures claimed
+ *      credit signals strictly match the proven Ethereum transaction payload.
  */
 contract SanadCreditOracle is Ownable {
     using ECDSA for bytes32;
@@ -35,14 +36,14 @@ contract SanadCreditOracle is Ownable {
     }
 
     enum EventType {
-        CleanRepayment,                  // 0: Positive credit signal
-        OvercollateralizedLiquidation,  // 1: Risk signal (market/collateral distress)
-        UndercollateralizedDefault,     // 2: Severe default signal
-        CollateralSupply                // 3: Capital capacity signal
+        CleanRepayment,                  // 0: Positive credit signal (+25 to +175 pts)
+        OvercollateralizedLiquidation,  // 1: Risk penalty signal (-35 pts)
+        UndercollateralizedDefault,     // 2: Severe default penalty signal (-150 pts)
+        CollateralSupply                // 3: Capital capacity signal (+15 pts)
     }
 
     enum CreditTier {
-        Unscored,  // 0: Neutral (no verified history)
+        Unscored,  // 0: Neutral / Base (500 pts)
         HighRisk,  // 1: Score < 350
         Bronze,    // 2: Score 350 - 549
         Silver,    // 3: Score 550 - 749
@@ -80,6 +81,9 @@ contract SanadCreditOracle is Ownable {
         uint64 timestamp;
     }
 
+    // Protocol Contract Registry on Source Chain (Ethereum Mainnet)
+    mapping(Protocol => address) public protocolAddresses;
+
     // Storage
     mapping(address => CreditProfile) private _creditProfiles;
     mapping(address => ProvenEvent[]) private _borrowerEvents;
@@ -104,11 +108,27 @@ contract SanadCreditOracle is Ownable {
         uint64 blockHeight
     );
 
+    event ProtocolAddressUpdated(Protocol indexed protocol, address indexed oldAddress, address indexed newAddress);
     event PrimarySourceChainUpdated(uint64 oldChainKey, uint64 newChainKey);
 
     constructor() Ownable(msg.sender) {
         blockProver = IBlockProver(BLOCK_PROVER_ADDRESS);
         chainInfo = IChainInfo(CHAIN_INFO_ADDRESS);
+
+        // Initialize default Ethereum Mainnet lending protocol addresses
+        protocolAddresses[Protocol.AaveV3] = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;       // Aave v3 Pool
+        protocolAddresses[Protocol.CompoundV3] = 0xc3d688B66703497DAA19211EEdff47f25384cdc3;   // Compound Comet USDC
+        protocolAddresses[Protocol.MapleFinance] = 0x9950eb7A27bE4fb75fEae9903b41E39B2efd492d; // Maple Pool
+        protocolAddresses[Protocol.Goldfinch] = 0x438645A201b1979B0075E81816f1c4EEea72Ebc1;    // Goldfinch Credit Desk
+    }
+
+    /**
+     * @notice Set or update the known contract address for a supported lending protocol
+     */
+    function setProtocolAddress(Protocol protocol, address protocolContract) external onlyOwner {
+        address old = protocolAddresses[protocol];
+        protocolAddresses[protocol] = protocolContract;
+        emit ProtocolAddressUpdated(protocol, old, protocolContract);
     }
 
     /**
@@ -121,7 +141,11 @@ contract SanadCreditOracle is Ownable {
 
     /**
      * @notice Cryptographically verify a single historical Ethereum transaction and update credit profile.
-     * @dev Gated by borrower wallet signature if caller is not the borrower itself.
+     * @dev Validates:
+     *      1. Cryptographic proof via BlockProver precompile (0xFD2).
+     *      2. Decodes transaction calldata to verify target contract and borrower involvement.
+     *      3. Validates function selector against claimed eventType.
+     *      4. Enforces EIP-191 borrower authorization.
      */
     function submitSingleProof(
         uint64 chainKey,
@@ -134,13 +158,32 @@ contract SanadCreditOracle is Ownable {
         bytes calldata borrowerSignature
     ) external returns (bool) {
         require(borrower != address(0), "Invalid borrower address");
+        require(chainKey == primarySourceChainKey, "Unsupported source chain key");
         _validateBorrowerAuthorization(borrower, borrowerSignature);
-        _processSingleProof(chainKey, height, encodedTransaction, merkleProof, continuityProof, borrower, eventData);
+
+        // 1. Verify cryptographic proof via native BlockProver precompile at 0xFD2
+        bool verified = blockProver.verify(
+            chainKey,
+            height,
+            encodedTransaction,
+            merkleProof,
+            continuityProof
+        );
+        require(verified, "Attestcoin BlockProver verification failed");
+
+        // 2. Decode and validate that transaction payload matches claimed eventData
+        _validateTransactionClaims(encodedTransaction, borrower, eventData);
+
+        // 3. Record event
+        _recordVerifiedEvent(borrower, height, eventData);
+
+        // 4. Recalculate credit score
+        _recalculateScore(borrower, eventData.sourceTxHash);
         return true;
     }
 
     /**
-     * @notice Cryptographically verify a batch of historical Ethereum transactions (up to 10) sharing a continuity proof.
+     * @notice Cryptographically verify a batch of historical Ethereum transactions (up to 10).
      */
     function submitBatchProof(
         uint64 chainKey,
@@ -153,6 +196,7 @@ contract SanadCreditOracle is Ownable {
         bytes calldata borrowerSignature
     ) external returns (bool) {
         require(borrower != address(0), "Invalid borrower address");
+        require(chainKey == primarySourceChainKey, "Unsupported source chain key");
         require(heights.length == encodedTransactions.length, "Array length mismatch: heights/encodedTx");
         require(heights.length == merkleProofs.length, "Array length mismatch: heights/merkleProofs");
         require(heights.length == eventsData.length, "Array length mismatch: heights/eventsData");
@@ -170,8 +214,9 @@ contract SanadCreditOracle is Ownable {
         );
         require(verified, "Attestcoin BlockProver batch verification failed");
 
-        // 2. Process each verified event
+        // 2. Validate and process each transaction
         for (uint256 i = 0; i < eventsData.length; i++) {
+            _validateTransactionClaims(encodedTransactions[i], borrower, eventsData[i]);
             _recordVerifiedEvent(borrower, heights[i], eventsData[i]);
         }
 
@@ -181,32 +226,105 @@ contract SanadCreditOracle is Ownable {
     }
 
     /**
-     * @notice Internal helper to verify and process a single proof
+     * @notice Decodes the proven EVM transaction chunks and cryptographically binds them to the claimed eventData.
      */
-    function _processSingleProof(
-        uint64 chainKey,
-        uint64 height,
+    function _validateTransactionClaims(
         bytes calldata encodedTransaction,
-        IBlockProver.MerkleProof calldata merkleProof,
-        IBlockProver.ContinuityProof calldata continuityProof,
         address borrower,
         EventPayloadInput calldata eventData
-    ) internal {
-        // 1. Verify cryptographic proof via native BlockProver precompile at 0xFD2
-        bool verified = blockProver.verify(
-            chainKey,
-            height,
-            encodedTransaction,
-            merkleProof,
-            continuityProof
-        );
-        require(verified, "Attestcoin BlockProver verification failed");
+    ) internal view {
+        // Step A: Decode outer ABI structure (uint8 txType, bytes[] chunks)
+        (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length > 0, "Malformed encodedTransaction: empty chunks");
+        require(txType <= 4, "Invalid EVM transaction type");
 
-        // 2. Record event
-        _recordVerifiedEvent(borrower, height, eventData);
+        // Step B: Decode Chunk 0 (Common EVM transaction fields)
+        (
+            /* uint64 nonce */,
+            /* uint64 gasLimit */,
+            address from,
+            bool toIsNull,
+            address to,
+            /* uint256 value */,
+            bytes memory data
+        ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
 
-        // 3. Recalculate credit score
-        _recalculateScore(borrower, eventData.sourceTxHash);
+        require(!toIsNull, "Target contract address cannot be null");
+
+        // Step C: Verify Target Protocol Contract
+        address expectedProtocolContract = protocolAddresses[eventData.protocol];
+        if (expectedProtocolContract != address(0)) {
+            require(to == expectedProtocolContract, "Target contract does not match claimed protocol");
+        }
+
+        // Step D: Verify Borrower Involvement
+        // Either:
+        //  1. The transaction was broadcast directly by the borrower (from == borrower)
+        //  2. The borrower's address is present in the calldata parameters (e.g. onBehalfOf, user, borrower)
+        bool borrowerMatched = (from == borrower);
+        if (!borrowerMatched && data.length >= 36) {
+            borrowerMatched = _containsAddress(data, borrower);
+        }
+        require(borrowerMatched, "Borrower is neither sender nor recipient in proven transaction");
+
+        // Step E: Verify Function Selector against claimed EventType
+        if (data.length >= 4) {
+            bytes4 selector = bytes4(data);
+            _validateFunctionSelector(eventData.protocol, eventData.eventType, selector);
+        }
+    }
+
+    /**
+     * @notice Checks known function selectors for lending protocols
+     */
+    function _validateFunctionSelector(
+        Protocol protocol,
+        EventType eventType,
+        bytes4 selector
+    ) internal pure {
+        if (protocol == Protocol.AaveV3) {
+            if (eventType == EventType.CleanRepayment) {
+                // Aave v3 repay: 0x573ade81, repayWithATokens: 0xee3e210b, repayWithPermit: 0x89c4b5f0
+                require(
+                    selector == 0x573ade81 || selector == 0xee3e210b || selector == 0x89c4b5f0,
+                    "Invalid function selector for Aave v3 Repayment"
+                );
+            } else if (eventType == EventType.OvercollateralizedLiquidation) {
+                // Aave v3 liquidationCall: 0x00a718a9
+                require(selector == 0x00a718a9, "Invalid function selector for Aave v3 Liquidation");
+            } else if (eventType == EventType.CollateralSupply) {
+                // Aave v3 supply: 0x617ba037, supplyWithPermit: 0xe8aec7da
+                require(selector == 0x617ba037 || selector == 0xe8aec7da, "Invalid function selector for Aave v3 Supply");
+            }
+        } else if (protocol == Protocol.CompoundV3) {
+            if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply) {
+                // Compound v3 supply: 0xf2b9fdb8, supplyTo: 0x474cf53d
+                require(selector == 0xf2b9fdb8 || selector == 0x474cf53d, "Invalid function selector for Compound v3");
+            } else if (eventType == EventType.OvercollateralizedLiquidation) {
+                // Compound v3 absorb: 0x4515cef3
+                require(selector == 0x4515cef3, "Invalid function selector for Compound v3 Liquidation");
+            }
+        }
+    }
+
+    /**
+     * @notice Scans calldata for a 20-byte address (ABI encoded word)
+     */
+    function _containsAddress(bytes memory data, address target) internal pure returns (bool) {
+        bytes32 targetWord = bytes32(uint256(uint160(target)));
+        uint256 len = data.length;
+        if (len < 36) return false;
+
+        for (uint256 i = 4; i + 32 <= len; i += 32) {
+            bytes32 word;
+            assembly {
+                word := mload(add(add(data, 32), i))
+            }
+            if (word == targetWord) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -283,9 +401,7 @@ contract SanadCreditOracle is Ownable {
         int256 computedScore = 500;
 
         // 1. Positive points for clean repayments
-        // Undercollateralized (Maple/Goldfinch) has higher signal (+40 pts/repay), overcollateralized (+15 pts/repay)
         int256 cleanRepayBonus = int256(uint256(profile.cleanRepaymentCount)) * 25;
-        // Volume scale: +10 pts per $5,000 repaid (capped at +150)
         int256 volumeBonus = int256(profile.totalRepaidUSD / (5000 * 1e6)) * 10;
         if (volumeBonus > 150) volumeBonus = 150;
         cleanRepayBonus += volumeBonus;
