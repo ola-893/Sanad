@@ -13,7 +13,7 @@ import { UserNav } from "@/components/user-nav"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import { UserRole } from "@/hooks/use-user-role"
-import { Menu, X, LayoutDashboard, Wallet, LogOut, User, Search } from "lucide-react"
+import { Menu, X, LayoutDashboard, Wallet, LogOut, User, Search, Loader2 } from "lucide-react"
 
 // Marketing nav — shown to visitors
 const marketingNavItems = [
@@ -28,7 +28,7 @@ const marketingNavItems = [
 // Portal nav — shown to logged-in users
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/browse", label: "Browse", icon: Search },
+  { href: "/dashboard/browse", label: "NFT Listings", icon: Search },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ]
@@ -40,8 +40,18 @@ export function Header() {
   const role = user?.userInfo?.roleId as UserRole
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
 
   const loggedIn = isAuthenticated || !!user
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await logout()
+    } finally {
+      setSigningOut(false)
+    }
+  }
 
   return (
     <header className="site-header sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
@@ -66,14 +76,14 @@ export function Header() {
         <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
           {loggedIn
             ? portalNav.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+                const isActive = pathname === item.href
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
                       isActive
-                        ? "bg-white/80 text-[#171414] shadow-sm"
+                        ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
                         : "hover:bg-white/50 hover:text-[#171414]"
                     }`}
                   >
@@ -90,7 +100,7 @@ export function Header() {
                     href={item.href}
                     className={`rounded-full px-4 py-2 transition-all duration-200 ${
                       isActive
-                        ? "bg-white/80 text-[#171414] shadow-sm"
+                        ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
                         : "hover:bg-white/50 hover:text-[#171414]"
                     }`}
                   >
@@ -105,12 +115,18 @@ export function Header() {
             <>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full text-[#4A4A4A] hover:bg-white/50 hover:text-[#171414]"
-                onClick={() => logout()}
+                size="sm"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#4A4A4A] hover:bg-white/50 hover:text-[#171414]"
+                onClick={handleSignOut}
+                disabled={signingOut}
                 title="Sign out"
               >
-                <LogOut className="h-4 w-4" />
+                {signingOut ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <LogOut className="h-3.5 w-3.5" />
+                )}
+                {signingOut ? "Signing out..." : "Sign Out"}
               </Button>
             </>
           ) : (
@@ -146,7 +162,7 @@ export function Header() {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
-                    pathname === item.href || pathname.startsWith(item.href + "/")
+                    pathname === item.href
                       ? "bg-[#171414] text-[#E1BAC2]"
                       : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
                   }`}
@@ -169,6 +185,20 @@ export function Header() {
                   {t(item.key)}
                 </Link>
               ))}
+          {loggedIn && (
+            <button
+              onClick={() => { setMobileOpen(false); handleSignOut() }}
+              disabled={signingOut}
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-[#171414]/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#4A4A4A] transition-all hover:bg-[#171414]/5 hover:text-[#171414]"
+            >
+              {signingOut ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LogOut className="h-3.5 w-3.5" />
+              )}
+              {signingOut ? "Signing out..." : "Sign Out"}
+            </button>
+          )}
           {!loggedIn && (
             <Link
               href="/login"

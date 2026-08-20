@@ -10,6 +10,7 @@ import {
   onChainChanged,
   isMetaMaskInstalled,
   truncateAddress,
+  disconnectWallet,
 } from '@/lib/web3';
 import apiInstance from '@/lib/axios-v1';
 import { useAuthStore } from '@/lib/auth/auth-store';
@@ -26,6 +27,8 @@ interface WalletAuthState {
   balance: string | null;
   error: string | null;
   isMetaMaskAvailable: boolean;
+  isAuthenticated: boolean;
+  autoLoginChecked: boolean;
 }
 
 interface WalletAuthActions {
@@ -39,7 +42,7 @@ interface WalletAuthActions {
 
 export function useWalletAuth(): WalletAuthState & WalletAuthActions {
   const router = useRouter();
-  const { login, logout, isAuthenticated } = useAuthStore();
+  const { logout, isAuthenticated: storeIsAuthenticated } = useAuthStore();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -47,6 +50,8 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
   const [chainId, setChainId] = useState<number | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoLoginChecked, setAutoLoginChecked] = useState(false);
+  const [walletAuthenticated, setWalletAuthenticated] = useState(false);
 
   // Re-check MetaMask on each render (extension may load late)
   const [isMetaMaskAvailable, setIsMetaMaskAvailable] = useState(false);
@@ -54,10 +59,13 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
     setIsMetaMaskAvailable(isMetaMaskInstalled());
   });
 
-  // Check for existing connection on mount
+  // Check for existing connection + auto-login on mount
   useEffect(() => {
     async function checkConnection() {
-      if (!window.ethereum) return;
+      if (!window.ethereum) {
+        setAutoLoginChecked(true);
+        return;
+      }
       try {
         const existing = await getConnectedWallet();
         if (existing) {
@@ -65,9 +73,44 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
           setIsConnected(true);
           const bal = await getETHBalance(existing);
           setBalance(bal);
+
+          // Auto-login: check if there's a valid session for this wallet
+          try {
+            // Check localStorage authState
+            const raw = localStorage.getItem('authState');
+            const auth = raw ? JSON.parse(raw) : null;
+            const token = auth?.token;
+            const walletInAuth = auth?.walletAddress;
+
+            // Also check sessionStorage (useAuth stores tokens there)
+            const sessionToken = sessionStorage.getItem('accessToken');
+            const sessionWallet = sessionStorage.getItem('walletAddress');
+            const sessionUserType = sessionStorage.getItem('userType');
+
+            const hasToken = token || sessionToken;
+            const hasMatchingWallet = 
+              (walletInAuth && walletInAuth.toLowerCase() === existing.toLowerCase()) ||
+              (sessionWallet && sessionWallet.toLowerCase() === existing.toLowerCase());
+
+            if (hasToken && hasMatchingWallet) {
+              // Token exists for this wallet — user can skip sign step
+              setWalletAuthenticated(true);
+              // Also sync walletAddress into authState if missing
+              if (token && !walletInAuth) {
+                localStorage.setItem('authState', JSON.stringify({
+                  ...auth,
+                  walletAddress: existing,
+                }));
+              }
+            }
+          } catch {
+            // Ignore parse errors
+          }
         }
       } catch {
         // Not connected
+      } finally {
+        setAutoLoginChecked(true);
       }
     }
     checkConnection();
@@ -156,26 +199,30 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
         return { success: false, needsRegistration: true };
       }
 
-      // 4. Store auth tokens
-      login(
-        { username: walletAddress, password: '__wallet__' },
-        role
-      );
-
-      // Also store in sessionStorage for compatibility
+      // 4. Store auth tokens in all storage locations
       sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('refreshToken', data.refreshToken);
       sessionStorage.setItem('expiredAt', data.expiredAt.toString());
       sessionStorage.setItem('userType', role);
       sessionStorage.setItem('walletAddress', walletAddress);
 
-      // Store in localStorage for axios interceptor
-      localStorage.setItem('authState', JSON.stringify({
+      const authData = {
         isAuthenticated: true,
         token: data.accessToken,
         userType: role,
         refreshToken: data.refreshToken,
         walletAddress,
+      };
+
+      // Store in localStorage — this is the single source of truth for
+      // both axios interceptor and useAuth().isAuthenticated
+      localStorage.setItem('authState', JSON.stringify(authData));
+
+      // Dispatch storage event so useAuth's useLocalStorage hook
+      // re-reads the value (it listens for storage changes)
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'authState',
+        newValue: JSON.stringify(authData),
       }));
 
       return { success: true };
@@ -186,7 +233,7 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
     } finally {
       setIsSigning(false);
     }
-  }, [walletAddress, login]);
+  }, [walletAddress]);
 
   const signAndRegister = useCallback(async (role: UserRole, profileData: Record<string, any>) => {
     if (!walletAddress) {
@@ -216,13 +263,14 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
         ...profileData,
       });
 
-      const { data } = registerResponse.data;
-
-      // 4. Store auth tokens
-      login(
-        { username: walletAddress, password: '__wallet__' },
-        role
-      );
+      const { data } = registerResponse.data;      // 4. Store auth tokens
+      const authData = {
+        isAuthenticated: true,
+        token: data.accessToken,
+        userType: role,
+        refreshToken: data.refreshToken,
+        walletAddress,
+      };
 
       sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('refreshToken', data.refreshToken);
@@ -230,12 +278,10 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
       sessionStorage.setItem('userType', role);
       sessionStorage.setItem('walletAddress', walletAddress);
 
-      localStorage.setItem('authState', JSON.stringify({
-        isAuthenticated: true,
-        token: data.accessToken,
-        userType: role,
-        refreshToken: data.refreshToken,
-        walletAddress,
+      localStorage.setItem('authState', JSON.stringify(authData));
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'authState',
+        newValue: JSON.stringify(authData),
       }));
 
       return { success: true };
@@ -246,15 +292,16 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
     } finally {
       setIsSigning(false);
     }
-  }, [walletAddress, login]);
+  }, [walletAddress]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    // Revoke MetaMask permissions so wallet shows as disconnected
+    await disconnectWallet();
     setWalletAddress(null);
     setIsConnected(false);
     setBalance(null);
     setChainId(null);
     setError(null);
-    // Don't logout of the app — just disconnect wallet
   }, []);
 
   const refreshBalance = useCallback(async () => {
@@ -263,6 +310,8 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
       setBalance(bal);
     }
   }, [walletAddress]);
+
+  const isAuthenticated = walletAuthenticated || storeIsAuthenticated;
 
   return {
     walletAddress,
@@ -273,6 +322,8 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
     balance,
     error,
     isMetaMaskAvailable,
+    isAuthenticated,
+    autoLoginChecked,
     connect,
     signAndLogin,
     signAndRegister,

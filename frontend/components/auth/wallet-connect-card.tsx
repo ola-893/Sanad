@@ -37,6 +37,8 @@ export function WalletConnectCard({
     balance,
     error,
     isMetaMaskAvailable,
+    isAuthenticated,
+    autoLoginChecked,
     connect,
     signAndLogin,
     truncateAddress,
@@ -44,6 +46,16 @@ export function WalletConnectCard({
 
   const [copied, setCopied] = useState(false);
   const [chainId, setChainId] = useState<number>(0);
+  const [autoRedirecting, setAutoRedirecting] = useState(false);
+
+  // Auto-redirect if wallet connected + already authenticated
+  useEffect(() => {
+    if (autoLoginChecked && isConnected && isAuthenticated && !autoRedirecting) {
+      setAutoRedirecting(true);
+      toast.success('Welcome back! Redirecting to dashboard...');
+      router.push(dashboardPath);
+    }
+  }, [autoLoginChecked, isConnected, isAuthenticated, autoRedirecting, dashboardPath, router]);
 
   // Detect network on connect
   useEffect(() => {
@@ -139,8 +151,30 @@ export function WalletConnectCard({
           </Button>
         )}
 
+        {/* Auto-redirecting state */}
+        {autoRedirecting && (
+          <div className="flex items-center justify-center gap-3 rounded-xl border border-[#171414]/10 bg-[#F5F5F3] p-6">
+            <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
+            <div>
+              <p className="text-sm font-medium text-[#171414]">Already connected!</p>
+              <p className="text-xs text-muted-foreground">Redirecting to your dashboard...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Connected + already authenticated — show brief state before redirect */}
+        {isConnected && isAuthenticated && !autoRedirecting && autoLoginChecked && (
+          <div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+            <div>
+              <p className="text-sm font-medium text-emerald-800">Wallet recognized</p>
+              <p className="text-xs text-emerald-600">Setting up your session...</p>
+            </div>
+          </div>
+        )}
+
         {/* Connected — show wallet info + sign button */}
-        {isConnected && walletAddress && (
+        {isConnected && walletAddress && !isAuthenticated && !autoRedirecting && (
           <div className="space-y-4">
             {/* Wallet badge */}
             <div className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-[#F5F5F3] p-4">

@@ -19,6 +19,7 @@ import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
 import apiInstance from "@/lib/axios-v1"
+import { CreditScoreCard } from "@/components/credit-score-card"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -125,8 +126,11 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Charts Row */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          {/* Credit Score + Cash Flow */}
+          <div className="grid gap-4 lg:grid-cols-7">
+            <div className="lg:col-span-3">
+              <CreditScoreCard walletAddress={walletAddress ?? undefined} />
+            </div>
             <Card className={`${glass} lg:col-span-4`}>
               <CardHeader>
                 <p className="kicker-gold">Portfolio</p>
@@ -137,17 +141,19 @@ export default function DashboardPage() {
                 <Overview />
               </CardContent>
             </Card>
-            <Card className={`${glass} lg:col-span-3`}>
-              <CardHeader>
-                <p className="kicker-gold">Activity</p>
-                <CardTitle className="font-display">Recent Activity</CardTitle>
-                <CardDescription>On-chain events for your account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RecentActivity />
-              </CardContent>
-            </Card>
           </div>
+
+          {/* Recent Activity */}
+          <Card className={glass}>
+            <CardHeader>
+              <p className="kicker-gold">Activity</p>
+              <CardTitle className="font-display">Recent Activity</CardTitle>
+              <CardDescription>On-chain events for your account</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentActivity />
+            </CardContent>
+          </Card>
 
 
         </div>

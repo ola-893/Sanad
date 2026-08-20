@@ -58,18 +58,19 @@ export function useAuth() {
     }, [setAuth, setUser, router, setIsLoading]);
 
     const logout = useCallback(async () => {
+        // Disconnect MetaMask wallet on sign-out
         try {
-            await logoutUser();
-            removeAuth();
-            setUser(null);
-            router.push('/');
-        } catch (error) {
-            console.error('Logout error:', error);
-            removeAuth();
-            setUser(null);
-            router.push('/');
+            const { disconnectWallet } = await import('@/lib/web3');
+            await disconnectWallet();
+        } catch {
+            // MetaMask may not be available — continue with logout
         }
-    }, [removeAuth, setUser, router]);
+        // Do NOT call logoutUser() — it does a server-side redirect to /en/admin/login
+        // which hijacks client navigation. Wallet auth is purely client-side.
+        // Keep auth tokens in storage — reconnecting wallet will auto-login.
+        setUser(null);
+        router.push('/');
+    }, [setUser, router]);
 
     const refreshAuthToken = useCallback(async () => {
         try {

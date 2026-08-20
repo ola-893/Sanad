@@ -17,20 +17,20 @@ const roles: Array<{
   color: string;
 }> = [
   {
-    id: 'borrower',
-    title: 'Borrower',
-    description: 'Apply for Shariah-compliant gold financing',
-    icon: BriefcaseIcon,
-    href: '/login/borrower',
-    color: 'bg-blue-50 text-blue-600',
-  },
-  {
     id: 'investor',
     title: 'Investor',
     description: 'Browse and invest in SAG tokens for yield',
     icon: UserIcon,
     href: '/login/investor',
     color: 'bg-amber-50 text-amber-600',
+  },
+  {
+    id: 'borrower',
+    title: 'Borrower',
+    description: 'Apply for Shariah-compliant gold financing',
+    icon: BriefcaseIcon,
+    href: '/login/borrower',
+    color: 'bg-blue-50 text-blue-600',
   },
   {
     id: 'pawnshop',

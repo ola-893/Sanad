@@ -315,6 +315,24 @@ export function getNetworkName(chainId: number): string {
 }
 
 /**
+ * Disconnect MetaMask wallet — revokes permissions so user must reconnect.
+ * Called on sign-out to ensure clean state.
+ */
+export async function disconnectWallet(): Promise<void> {
+  const provider = getMetaMaskProvider();
+  if (!provider) return;
+
+  try {
+    await provider.request({
+      method: 'wallet_revokePermissions',
+      params: [{ eth_accounts: {} }],
+    });
+  } catch {
+    // Some wallets don't support revokePermissions — fallback to ignoring
+  }
+}
+
+/**
  * Copy address to clipboard
  */
 export async function copyAddress(address: string): Promise<void> {
