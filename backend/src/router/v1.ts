@@ -14,7 +14,7 @@ import { creditcoinRoutes } from '@/features/creditcoin/index.js';
 import { kycRoutes } from '@/features/kyc/index.js';
 import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
-import creditOracleRoutes from '@/features/credit-oracle/credit-oracle.routes.js';
+import { creditOracleRoutes } from '@/core/credit-bureau/index.js';
 
 const v1Router = express.Router();
 
