@@ -38,9 +38,8 @@ export class AttestcoinOracleRelayerService {
 
   constructor() {
     const rpcUrl = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
-    this.cc3Provider = new ethers.JsonRpcProvider(rpcUrl, {
-      chainId: 102031,
-      name: 'Creditcoin3Testnet',
+    this.cc3Provider = new ethers.JsonRpcProvider(rpcUrl, 102031, {
+      staticNetwork: ethers.Network.from(102031),
     });
 
     const privateKey = process.env.PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY;
@@ -50,7 +49,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xBB2Bf716AD1C99d0aED17C61234620Cca327eE0f';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x866d812a57ef13866b85D09a8633218678dAeff3';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://proof-gen-api.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }

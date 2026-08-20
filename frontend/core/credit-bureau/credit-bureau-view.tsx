@@ -32,8 +32,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { ethers } from "ethers"
 import {
   SANAD_CREDIT_ORACLE_ADDRESS,
+  SANAD_CREDIT_ORACLE_ABI,
   CREDITCOIN_CHAIN_ID,
   CREDITCOIN_RPC_URL,
   CREDITCOIN_EXPLORER_URL,
@@ -45,32 +47,32 @@ import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset, Prot
 export const PRESET_ARCHETYPES: BorrowerPreset[] = [
   {
     id: "cross-protocol-prime",
-    label: "💎 Prime Cross-DeFi Borrower",
+    label: "💎 Prime DeFi Borrower",
     address: "0x891775eDdcaBABdCE4b476E335a9EEF73123C75b",
     tag: "Prime / Gold Tier",
-    desc: "Verified activity across Aave v3, Morpho Blue, Spark Protocol & Fluid ($117.5k volume)",
-    targetScore: 845,
-    targetTier: "Gold",
-    protocols: ["Aave v3", "Morpho Blue", "Spark Protocol (Sky)", "Fluid (Instadapp)"],
+    desc: "Verified $4,000 clean repayment on Aave v3 with zero defaults",
+    targetScore: 575,
+    targetTier: "Silver",
+    protocols: ["Aave v3"],
   },
   {
     id: "active-retail",
-    label: "🪙 Active Multi-Pool Borrower",
+    label: "🪙 Active Retail Borrower",
     address: "0xCAD85e1eC294F71f3cA68Ef3261f894f50C1C4C3",
-    tag: "Active / Silver Tier",
-    desc: "Clean repayments on Aave v3 and Compound v3 ($23.5k) with zero default events",
-    targetScore: 680,
-    targetTier: "Silver",
-    protocols: ["Aave v3", "Compound v3"],
+    tag: "Active / Bronze Tier",
+    desc: "Clean repayment history on Aave v3 pool with zero liquidations",
+    targetScore: 525,
+    targetTier: "Bronze",
+    protocols: ["Aave v3"],
   },
   {
-    id: "risk-profile",
-    label: "⚠️ Distressed Liquidated Borrower",
-    address: "0x9d6Bc9763008Ad1f7619A3498eFfe9Ec671b276d",
-    tag: "High Risk / Liquidation Penalty",
-    desc: "Breached collateral health factor on Aave v3 resulting in $18,000 liquidation call",
-    targetScore: 310,
-    targetTier: "HighRisk",
+    id: "supplier-profile",
+    label: "🏦 High Collateral Supplier",
+    address: "0x424ae0175aFDC844cC3ca87067d959FdDae8fF8A",
+    tag: "Collateralized Supplier",
+    desc: "Supplied collateral on Aave v3 pool with positive capacity signal",
+    targetScore: 515,
+    targetTier: "Bronze",
     protocols: ["Aave v3"],
   },
 ]
@@ -206,20 +208,32 @@ export function CreditBureauView() {
         const profileJson = await profileRes.json()
         setOnChainProfile(profileJson.data)
       } else {
-        setOnChainProfile({
-          borrower: walletAddress,
-          score: receiptData.score || 550,
-          tier: receiptData.tier || "Silver",
-          totalRepaidUSD: receiptData.totalRepaidUSD || "12500",
-          totalLiquidatedUSD: "0",
-          totalDefaultedUSD: "0",
-          cleanRepaymentCount: 1,
-          liquidationCount: 0,
-          defaultCount: 0,
-          provenEventsCount: 1,
-          lastEvaluatedTimestamp: Math.floor(Date.now() / 1000),
-          provenEvents: [topEvent],
-        })
+        // Direct on-chain fallback query via Creditcoin CC3 RPC
+        try {
+          const cc3Provider = new ethers.JsonRpcProvider(CREDITCOIN_RPC_URL, CREDITCOIN_CHAIN_ID, {
+            staticNetwork: ethers.Network.from(CREDITCOIN_CHAIN_ID),
+          })
+          const oracleContract = new ethers.Contract(SANAD_CREDIT_ORACLE_ADDRESS, SANAD_CREDIT_ORACLE_ABI, cc3Provider)
+          const onChainData = await oracleContract.getCreditProfile(walletAddress)
+          const tierNames = ["Unscored", "HighRisk", "Bronze", "Silver", "Gold"]
+          setOnChainProfile({
+            borrower: walletAddress,
+            score: Number(onChainData.score),
+            tier: tierNames[Number(onChainData.tier)] || "Unscored",
+            totalRepaidUSD: ethers.formatUnits(onChainData.totalRepaidUSD, 6),
+            totalLiquidatedUSD: ethers.formatUnits(onChainData.totalLiquidatedUSD, 6),
+            totalDefaultedUSD: ethers.formatUnits(onChainData.totalDefaultedUSD, 6),
+            cleanRepaymentCount: Number(onChainData.cleanRepaymentCount),
+            liquidationCount: Number(onChainData.liquidationCount),
+            defaultCount: Number(onChainData.defaultCount),
+            provenEventsCount: Number(onChainData.provenEventsCount),
+            lastEvaluatedTimestamp: Number(onChainData.lastEvaluatedTimestamp),
+            provenEvents: [topEvent],
+          })
+        } catch (rpcErr) {
+          console.error("Direct RPC query failed:", rpcErr)
+          throw new Error("Unable to retrieve verified on-chain credit profile from Creditcoin CC3")
+        }
       }
     } catch (err: any) {
       console.error("Proof submission error:", err)

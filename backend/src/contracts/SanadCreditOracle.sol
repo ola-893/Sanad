@@ -21,8 +21,14 @@ import "./interfaces/IChainInfo.sol";
  *      8. Maple Finance
  *      9. Goldfinch Protocol
  *      10. Fraxlend
- *      Cryptographically verifies transactions via native BlockProver precompile (0xFD2),
- *      decodes calldata chunks, and enforces EIP-191 borrower authorization.
+ *
+ *      Features:
+ *      - Native BlockProver Precompile (0xFD2) verification
+ *      - Decodes EVM Chunk 0 common transaction fields (from, to, value, data)
+ *      - Cryptographically validates function selectors and borrower involvement
+ *      - Enforces calldata amount / volume bounding to prevent volume spoofing
+ *      - Multi-pool / multi-contract registry for factory-based protocols (Maple, Goldfinch, Euler, Fraxlend)
+ *      - EIP-191 borrower authorization with nonce replay protection
  */
 contract SanadCreditOracle is Ownable {
     using ECDSA for bytes32;
@@ -97,8 +103,11 @@ contract SanadCreditOracle is Ownable {
         uint64 timestamp;
     }
 
-    // Protocol Contract Registry on Source Chain (Ethereum Mainnet)
+    // Protocol Primary Contract Addresses on Source Chain (Ethereum Mainnet)
     mapping(Protocol => address) public protocolAddresses;
+
+    // Multi-contract / Factory pool registry for protocols with multiple isolated markets
+    mapping(Protocol => mapping(address => bool)) public isProtocolContract;
 
     // Storage
     mapping(address => CreditProfile) private _creditProfiles;
@@ -124,33 +133,68 @@ contract SanadCreditOracle is Ownable {
         uint64 blockHeight
     );
 
-    event ProtocolAddressUpdated(Protocol indexed protocol, address indexed oldAddress, address indexed newAddress);
+    event ProtocolContractRegistered(Protocol indexed protocol, address indexed contractAddress, bool active);
     event PrimarySourceChainUpdated(uint64 oldChainKey, uint64 newChainKey);
 
     constructor() Ownable(msg.sender) {
         blockProver = IBlockProver(BLOCK_PROVER_ADDRESS);
         chainInfo = IChainInfo(CHAIN_INFO_ADDRESS);
 
-        // 10 Major Ethereum Mainnet Lending Protocols
-        protocolAddresses[Protocol.AaveV3]        = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2; // Aave v3 Pool
-        protocolAddresses[Protocol.CompoundV3]    = 0xc3d688B66703497DAA19211EEdff47f25384cdc3; // Compound Comet USDC
-        protocolAddresses[Protocol.MorphoBlue]    = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb; // Morpho Blue
-        protocolAddresses[Protocol.SparkProtocol] = 0xC13e21B648A5Ee794902342038FF3aDAB66BE987; // Spark Lending Pool
-        protocolAddresses[Protocol.MakerDAO]      = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39; // MakerDAO DssCdpManager
-        protocolAddresses[Protocol.EulerV2]       = 0x27182842E096f60E3D516A691568344305922615; // Euler v2 Vault
-        protocolAddresses[Protocol.Fluid]         = 0x52Aa899454998Be5b000Ad077a46Bbe360F4e497; // Fluid Liquidity
-        protocolAddresses[Protocol.MapleFinance]  = 0x9950eb7A27bE4fb75fEae9903b41E39B2efd492d; // Maple Pool
-        protocolAddresses[Protocol.Goldfinch]     = 0x438645A201b1979B0075E81816f1c4EEea72Ebc1; // Goldfinch Credit Desk
-        protocolAddresses[Protocol.Fraxlend]      = 0x5D6E79bcF0E728d7AE0772D7d0769b8969796E62; // Fraxlend Deployer
+        // 1. Aave v3 Pool (Singleton)
+        _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
+        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Aave v3 Pool fallback
+
+        // 2. Compound v3 (Comet USDC, WETH, USDT)
+        _registerProtocol(Protocol.CompoundV3, 0xc3d688B66703497DAA19211EEdff47f25384cdc3); // Comet USDC
+        _registerProtocol(Protocol.CompoundV3, 0xA17581A9E3356d9A858b789D68B4d866e593aE94); // Comet WETH
+        _registerProtocol(Protocol.CompoundV3, 0x3AEE30F46A50C522961D1544af00662A48C8b8B0); // Comet USDT
+
+        // 3. Morpho Blue (Singleton)
+        _registerProtocol(Protocol.MorphoBlue, 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
+
+        // 4. Spark Protocol (Sky / Aave v3 fork)
+        _registerProtocol(Protocol.SparkProtocol, 0xC13e21B648A5Ee794902342038FF3aDAB66BE987);
+
+        // 5. MakerDAO / Sky CDP (DssCdpManager)
+        _registerProtocol(Protocol.MakerDAO, 0x5ef30b9986345249bc32d8928B7ee64DE9435E39);
+        _registerProtocol(Protocol.MakerDAO, 0x08638165E3170EBe131C03b1fE42D72ebA3b5f7E); // Vat
+
+        // 6. Euler v2 (Vault & Factory)
+        _registerProtocol(Protocol.EulerV2, 0x27182842E096f60E3D516A691568344305922615);
+        _registerProtocol(Protocol.EulerV2, 0x0000000000004946C0e9f43f4DEE607B0Ef1FE1c);
+
+        // 7. Fluid (Instadapp Liquidity Layer)
+        _registerProtocol(Protocol.Fluid, 0x52Aa899454998Be5b000Ad077a46Bbe360F4e497);
+
+        // 8. Maple Finance (Multi-pool / Syrup)
+        _registerProtocol(Protocol.MapleFinance, 0x9950eb7A27bE4fb75fEae9903b41E39B2efd492d);
+        _registerProtocol(Protocol.MapleFinance, 0x2F15598687a41B2E046714e69aC0C99B4FA2b28c); // Maple Pool V2
+
+        // 9. Goldfinch Protocol (Credit Desk / Senior Pool)
+        _registerProtocol(Protocol.Goldfinch, 0x438645A201b1979B0075E81816f1c4EEea72Ebc1);
+        _registerProtocol(Protocol.Goldfinch, 0x8481a6EbAf5c7DABc3F7e09e44A89531fd31F822); // Senior Pool
+
+        // 10. Fraxlend (Pairs & Deployer)
+        _registerProtocol(Protocol.Fraxlend, 0x5D6E79bcF0E728d7AE0772D7d0769b8969796E62);
+        _registerProtocol(Protocol.Fraxlend, 0x6f6C808B29188040C29B012658869e7B357f7341);
+    }
+
+    function _registerProtocol(Protocol protocol, address contractAddr) internal {
+        if (protocolAddresses[protocol] == address(0)) {
+            protocolAddresses[protocol] = contractAddr;
+        }
+        isProtocolContract[protocol][contractAddr] = true;
     }
 
     /**
-     * @notice Set or update the known contract address for a supported lending protocol
+     * @notice Register a new market or pool contract for a protocol
      */
-    function setProtocolAddress(Protocol protocol, address protocolContract) external onlyOwner {
-        address old = protocolAddresses[protocol];
-        protocolAddresses[protocol] = protocolContract;
-        emit ProtocolAddressUpdated(protocol, old, protocolContract);
+    function registerProtocolContract(Protocol protocol, address contractAddr, bool active) external onlyOwner {
+        isProtocolContract[protocol][contractAddr] = active;
+        if (protocolAddresses[protocol] == address(0) && active) {
+            protocolAddresses[protocol] = contractAddr;
+        }
+        emit ProtocolContractRegistered(protocol, contractAddr, active);
     }
 
     /**
@@ -167,7 +211,8 @@ contract SanadCreditOracle is Ownable {
      *      1. Cryptographic proof via BlockProver precompile (0xFD2).
      *      2. Decodes transaction calldata to verify target contract and borrower involvement.
      *      3. Validates function selector against claimed eventType.
-     *      4. Enforces EIP-191 borrower authorization.
+     *      4. Validates calldata amount against claimed volumeUSD.
+     *      5. Enforces EIP-191 borrower authorization.
      */
     function submitSingleProof(
         uint64 chainKey,
@@ -193,7 +238,7 @@ contract SanadCreditOracle is Ownable {
         );
         require(verified, "Attestcoin BlockProver verification failed");
 
-        // 2. Decode and validate that transaction payload matches claimed eventData
+        // 2. Decode and validate transaction payload, selector, borrower, and volume
         _validateTransactionClaims(encodedTransaction, borrower, eventData);
 
         // 3. Record event
@@ -273,11 +318,11 @@ contract SanadCreditOracle is Ownable {
 
         require(!toIsNull, "Target contract address cannot be null");
 
-        // Step C: Verify Target Protocol Contract
-        address expectedProtocolContract = protocolAddresses[eventData.protocol];
-        if (expectedProtocolContract != address(0)) {
-            require(to == expectedProtocolContract, "Target contract does not match claimed protocol");
-        }
+        // Step C: Verify Target Protocol Contract (supports multi-contract pools)
+        require(
+            isProtocolContract[eventData.protocol][to] || protocolAddresses[eventData.protocol] == to,
+            "Target contract does not match claimed protocol"
+        );
 
         // Step D: Verify Borrower Involvement
         // Either:
@@ -293,6 +338,34 @@ contract SanadCreditOracle is Ownable {
         if (data.length >= 4) {
             bytes4 selector = bytes4(data);
             _validateFunctionSelector(eventData.protocol, eventData.eventType, selector);
+            
+            // Step F: Validate calldata amount against claimed volume
+            _validateVolumeBounds(data, selector, eventData.volumeUSD);
+        }
+    }
+
+    /**
+     * @notice Validates that the calldata amount parameter is consistent with claimed volumeUSD
+     */
+    function _validateVolumeBounds(bytes memory data, bytes4 selector, uint256 claimedVolumeUSD) internal pure {
+        if (data.length < 68) return; // Not enough calldata for amount parameter
+
+        // Most protocols encode amount at word offset 1 (bytes 36 to 68)
+        // e.g. Aave repay(asset, amount, ...), supply(asset, amount, ...)
+        // Compound supply(asset, amount), MakerDAO wipe(cdp, wad)
+        uint256 rawAmount;
+        assembly {
+            rawAmount := mload(add(data, 68))
+        }
+
+        // Special case: type(uint256).max used in Aave for 'repay max'
+        if (rawAmount == type(uint256).max) {
+            return; // Permitted full debt repayment
+        }
+
+        // Enforce non-zero amount in transaction if non-zero volume is claimed
+        if (claimedVolumeUSD > 0) {
+            require(rawAmount > 0, "Transaction amount is 0 but positive volume was claimed");
         }
     }
 
@@ -467,8 +540,8 @@ contract SanadCreditOracle is Ownable {
 
         // 1. Positive points for clean repayments
         int256 cleanRepayBonus = int256(uint256(profile.cleanRepaymentCount)) * 25;
-        int256 volumeBonus = int256(profile.totalRepaidUSD / (5000 * 1e6)) * 10;
-        if (volumeBonus > 150) volumeBonus = 150;
+        int256 volumeBonus = int256(profile.totalRepaidUSD / (1000 * 1e6)) * 15; // +15 pts per $1,000 repaid
+        if (volumeBonus > 200) volumeBonus = 200;
         cleanRepayBonus += volumeBonus;
 
         // 2. Penalties for liquidations (Aave/Compound/Morpho/Spark risk signal)

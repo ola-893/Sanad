@@ -130,7 +130,7 @@ export const ETHEREUM_DEFI_ADDRESSES: Record<string, { protocol: Protocol; name:
 
 // Curated demo profiles with real, provable Ethereum Mainnet DeFi activity across 10 protocols
 export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
-  // Prime Cross-Protocol Whale (Aave v3 + Morpho Blue + Spark + MakerDAO + Maple)
+  // Prime Clean Repayer (Aave v3 $4,000 Clean Repayment)
   '0x891775eddcababdce4b476e335a9eef73123c75b': [
     {
       sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
@@ -139,54 +139,15 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
-      volumeUSD: 12500,
+      volumeUSD: 4000,
       timestamp: 1740000000,
-      description: 'Repaid $12,500 USDC on Aave v3 Pool (0% default rate)',
+      description: 'Repaid $4,000 USDS on Aave v3 Pool (0% default rate)',
       weightScore: 35,
       etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
     },
-    {
-      sourceTxHash: '0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
-      blockHeight: 25795870,
-      protocol: Protocol.MorphoBlue,
-      protocolName: 'Morpho Blue',
-      eventType: EventType.CollateralSupply,
-      eventTypeName: 'Collateral Supply',
-      volumeUSD: 50000,
-      timestamp: 1739800000,
-      description: 'Supplied $50,000 WETH collateral to Morpho Blue singleton vault',
-      weightScore: 25,
-      etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
-    },
-    {
-      sourceTxHash: '0xa301ff71e7bfa5840da9646e1b18314a273a06848677ac47b6ad4f4ab661ef35',
-      blockHeight: 25795950,
-      protocol: Protocol.SparkProtocol,
-      protocolName: 'Spark Protocol (Sky)',
-      eventType: EventType.CleanRepayment,
-      eventTypeName: 'Clean Repayment',
-      volumeUSD: 25000,
-      timestamp: 1739700000,
-      description: 'Settled $25,000 DAI borrowing position on Spark Lending Pool',
-      weightScore: 40,
-      etherscanUrl: 'https://etherscan.io/tx/0xa301ff71e7bfa5840da9646e1b18314a273a06848677ac47b6ad4f4ab661ef35',
-    },
-    {
-      sourceTxHash: '0x622f361c0a8b79281be272676015ce895ea04812cf2afe7aba850433462f6da1',
-      blockHeight: 25795710,
-      protocol: Protocol.Fluid,
-      protocolName: 'Fluid (Instadapp)',
-      eventType: EventType.CollateralSupply,
-      eventTypeName: 'Collateral Supply',
-      volumeUSD: 30000,
-      timestamp: 1739600000,
-      description: 'Deposited $30,000 liquidity buffer on Fluid Smart Debt Layer',
-      weightScore: 20,
-      etherscanUrl: 'https://etherscan.io/tx/0x622f361c0a8b79281be272676015ce895ea04812cf2afe7aba850433462f6da1',
-    }
   ],
 
-  // Active Retail DeFi Borrower (Aave v3 + Compound v3 + Euler v2)
+  // Active Retail DeFi Borrower (Aave v3 Clean Repay)
   '0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3': [
     {
       sourceTxHash: '0xbe983c489f29cab90e34ea1a3320f3b7bcfa22b29f972d33bd13163a175e8d23',
@@ -195,28 +156,32 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
-      volumeUSD: 8500,
+      volumeUSD: 60,
       timestamp: 1739500000,
-      description: 'Repaid $8,500 USDT on Aave v3 Pool',
+      description: 'Repaid $59.80 USDC on Aave v3 Pool',
       weightScore: 25,
       etherscanUrl: 'https://etherscan.io/tx/0xbe983c489f29cab90e34ea1a3320f3b7bcfa22b29f972d33bd13163a175e8d23',
     },
-    {
-      sourceTxHash: '0x92aecb7dba00d886decad5e363e420fca091ebebe8be2c92f4ec39a56463431c',
-      blockHeight: 25795630,
-      protocol: Protocol.CompoundV3,
-      protocolName: 'Compound v3',
-      eventType: EventType.CollateralSupply,
-      eventTypeName: 'Collateral Supply',
-      volumeUSD: 15000,
-      timestamp: 1739300000,
-      description: 'Supplied $15,000 USDC on Compound Comet',
-      weightScore: 15,
-      etherscanUrl: 'https://etherscan.io/tx/0x92aecb7dba00d886decad5e363e420fca091ebebe8be2c92f4ec39a56463431c',
-    }
   ],
 
-  // Also match deployer address for 1-click live demo
+  // High Collateral Supplier (Aave v3 Collateral Supply)
+  '0x424ae0175afdc844cc3ca87067d959fddae8ff8a': [
+    {
+      sourceTxHash: '0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
+      blockHeight: 25795870,
+      protocol: Protocol.AaveV3,
+      protocolName: 'Aave v3',
+      eventType: EventType.CollateralSupply,
+      eventTypeName: 'Collateral Supply',
+      volumeUSD: 600,
+      timestamp: 1739800000,
+      description: 'Supplied $597.67 USDC collateral to Aave v3 Pool',
+      weightScore: 20,
+      etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
+    },
+  ],
+
+  // Deployer / 1-Click Fast Path Demo (Aave v3 Proven Repay)
   '0x506e724d7fddbf91b6607d5af0700d385d952f8a': [
     {
       sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
@@ -225,56 +190,13 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
-      volumeUSD: 12500,
+      volumeUSD: 4000,
       timestamp: 1740000000,
-      description: 'Repaid $12,500 USDC on Aave v3 Pool (0% default rate)',
+      description: 'Repaid $4,000 USDS on Aave v3 Pool (0% default rate)',
       weightScore: 35,
       etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
     },
-    {
-      sourceTxHash: '0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
-      blockHeight: 25795870,
-      protocol: Protocol.MorphoBlue,
-      protocolName: 'Morpho Blue',
-      eventType: EventType.CollateralSupply,
-      eventTypeName: 'Collateral Supply',
-      volumeUSD: 35000,
-      timestamp: 1739800000,
-      description: 'Supplied $35,000 collateral to Morpho Blue singleton vault',
-      weightScore: 20,
-      etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
-    },
-    {
-      sourceTxHash: '0xa301ff71e7bfa5840da9646e1b18314a273a06848677ac47b6ad4f4ab661ef35',
-      blockHeight: 25795950,
-      protocol: Protocol.SparkProtocol,
-      protocolName: 'Spark Protocol (Sky)',
-      eventType: EventType.CleanRepayment,
-      eventTypeName: 'Clean Repayment',
-      volumeUSD: 20000,
-      timestamp: 1739700000,
-      description: 'Settled $20,000 DAI on Spark Lending Pool',
-      weightScore: 30,
-      etherscanUrl: 'https://etherscan.io/tx/0xa301ff71e7bfa5840da9646e1b18314a273a06848677ac47b6ad4f4ab661ef35',
-    }
   ],
-
-  // High Risk Candidate (Liquidated on Aave / Spark)
-  '0x9d6bc9763008ad1f7619a3498effe9ec671b276d': [
-    {
-      sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-      blockHeight: 25795960,
-      protocol: Protocol.AaveV3,
-      protocolName: 'Aave v3',
-      eventType: EventType.OvercollateralizedLiquidation,
-      eventTypeName: 'Liquidation Call',
-      volumeUSD: 18000,
-      timestamp: 1738000000,
-      description: 'Liquidated for $18,000 due to collateral threshold breach on Aave v3',
-      weightScore: -35,
-      etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-    }
-  ]
 };
 
 export class DefiDiscoveryService {

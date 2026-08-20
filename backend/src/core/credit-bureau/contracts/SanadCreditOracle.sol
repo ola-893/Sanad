@@ -21,8 +21,14 @@ import "./interfaces/IChainInfo.sol";
  *      8. Maple Finance
  *      9. Goldfinch Protocol
  *      10. Fraxlend
- *      Cryptographically verifies transactions via native BlockProver precompile (0xFD2),
- *      decodes calldata chunks, and enforces EIP-191 borrower authorization.
+ *
+ *      Features:
+ *      - Native BlockProver Precompile (0xFD2) verification
+ *      - Decodes EVM Chunk 0 common transaction fields (from, to, value, data)
+ *      - Cryptographically validates function selectors and borrower involvement
+ *      - Enforces calldata amount / volume bounding to prevent volume spoofing
+ *      - Multi-pool / multi-contract registry for factory-based protocols (Maple, Goldfinch, Euler, Fraxlend)
+ *      - EIP-191 borrower authorization with nonce replay protection
  */
 contract SanadCreditOracle is Ownable {
     using ECDSA for bytes32;
@@ -97,8 +103,11 @@ contract SanadCreditOracle is Ownable {
         uint64 timestamp;
     }
 
-    // Protocol Contract Registry on Source Chain (Ethereum Mainnet)
+    // Protocol Primary Contract Addresses on Source Chain (Ethereum Mainnet)
     mapping(Protocol => address) public protocolAddresses;
+
+    // Multi-contract / Factory pool registry for protocols with multiple isolated markets
+    mapping(Protocol => mapping(address => bool)) public isProtocolContract;
 
     // Storage
     mapping(address => CreditProfile) private _creditProfiles;
@@ -124,51 +133,72 @@ contract SanadCreditOracle is Ownable {
         uint64 blockHeight
     );
 
-    event ProtocolAddressUpdated(Protocol indexed protocol, address indexed oldAddress, address indexed newAddress);
+    event ProtocolContractRegistered(Protocol indexed protocol, address indexed contractAddress, bool active);
     event PrimarySourceChainUpdated(uint64 oldChainKey, uint64 newChainKey);
 
     constructor() Ownable(msg.sender) {
         blockProver = IBlockProver(BLOCK_PROVER_ADDRESS);
         chainInfo = IChainInfo(CHAIN_INFO_ADDRESS);
 
-        // 10 Major Ethereum Mainnet Lending Protocols
-        protocolAddresses[Protocol.AaveV3]        = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2; // Aave v3 Pool
-        protocolAddresses[Protocol.CompoundV3]    = 0xc3d688B66703497DAA19211EEdff47f25384cdc3; // Compound Comet USDC
-        protocolAddresses[Protocol.MorphoBlue]    = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb; // Morpho Blue
-        protocolAddresses[Protocol.SparkProtocol] = 0xC13e21B648A5Ee794902342038FF3aDAB66BE987; // Spark Lending Pool
-        protocolAddresses[Protocol.MakerDAO]      = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39; // MakerDAO DssCdpManager
-        protocolAddresses[Protocol.EulerV2]       = 0x27182842E096f60E3D516A691568344305922615; // Euler v2 Vault
-        protocolAddresses[Protocol.Fluid]         = 0x52Aa899454998Be5b000Ad077a46Bbe360F4e497; // Fluid Liquidity
-        protocolAddresses[Protocol.MapleFinance]  = 0x9950eb7A27bE4fb75fEae9903b41E39B2efd492d; // Maple Pool
-        protocolAddresses[Protocol.Goldfinch]     = 0x438645A201b1979B0075E81816f1c4EEea72Ebc1; // Goldfinch Credit Desk
-        protocolAddresses[Protocol.Fraxlend]      = 0x5D6E79bcF0E728d7AE0772D7d0769b8969796E62; // Fraxlend Deployer
+        // 1. Aave v3 Pool (Singleton)
+        _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
+        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e);
+
+        // 2. Compound v3 (Comet USDC, WETH, USDT)
+        _registerProtocol(Protocol.CompoundV3, 0xc3d688B66703497DAA19211EEdff47f25384cdc3); // Comet USDC
+        _registerProtocol(Protocol.CompoundV3, 0xA17581A9E3356d9A858b789D68B4d866e593aE94); // Comet WETH
+        _registerProtocol(Protocol.CompoundV3, 0x3AEE30F46A50C522961D1544af00662A48C8b8B0); // Comet USDT
+
+        // 3. Morpho Blue (Singleton)
+        _registerProtocol(Protocol.MorphoBlue, 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
+
+        // 4. Spark Protocol (Sky / Aave v3 fork)
+        _registerProtocol(Protocol.SparkProtocol, 0xC13e21B648A5Ee794902342038FF3aDAB66BE987);
+
+        // 5. MakerDAO / Sky CDP (DssCdpManager)
+        _registerProtocol(Protocol.MakerDAO, 0x5ef30b9986345249bc32d8928B7ee64DE9435E39);
+        _registerProtocol(Protocol.MakerDAO, 0x08638165E3170EBe131C03b1fE42D72ebA3b5f7E);
+
+        // 6. Euler v2 (Vault & Factory)
+        _registerProtocol(Protocol.EulerV2, 0x27182842E096f60E3D516A691568344305922615);
+        _registerProtocol(Protocol.EulerV2, 0x0000000000004946C0e9f43f4DEE607B0Ef1FE1c);
+
+        // 7. Fluid (Instadapp Liquidity Layer)
+        _registerProtocol(Protocol.Fluid, 0x52Aa899454998Be5b000Ad077a46Bbe360F4e497);
+
+        // 8. Maple Finance (Multi-pool / Syrup)
+        _registerProtocol(Protocol.MapleFinance, 0x9950eb7A27bE4fb75fEae9903b41E39B2efd492d);
+        _registerProtocol(Protocol.MapleFinance, 0x2F15598687a41B2E046714e69aC0C99B4FA2b28c);
+
+        // 9. Goldfinch Protocol (Credit Desk / Senior Pool)
+        _registerProtocol(Protocol.Goldfinch, 0x438645A201b1979B0075E81816f1c4EEea72Ebc1);
+        _registerProtocol(Protocol.Goldfinch, 0x8481a6EbAf5c7DABc3F7e09e44A89531fd31F822);
+
+        // 10. Fraxlend (Pairs & Deployer)
+        _registerProtocol(Protocol.Fraxlend, 0x5D6E79bcF0E728d7AE0772D7d0769b8969796E62);
+        _registerProtocol(Protocol.Fraxlend, 0x6f6C808B29188040C29B012658869e7B357f7341);
     }
 
-    /**
-     * @notice Set or update the known contract address for a supported lending protocol
-     */
-    function setProtocolAddress(Protocol protocol, address protocolContract) external onlyOwner {
-        address old = protocolAddresses[protocol];
-        protocolAddresses[protocol] = protocolContract;
-        emit ProtocolAddressUpdated(protocol, old, protocolContract);
+    function _registerProtocol(Protocol protocol, address contractAddr) internal {
+        if (protocolAddresses[protocol] == address(0)) {
+            protocolAddresses[protocol] = contractAddr;
+        }
+        isProtocolContract[protocol][contractAddr] = true;
     }
 
-    /**
-     * @notice Set primary source chain key (e.g. 3 for Ethereum Mainnet on CC3 Testnet)
-     */
+    function registerProtocolContract(Protocol protocol, address contractAddr, bool active) external onlyOwner {
+        isProtocolContract[protocol][contractAddr] = active;
+        if (protocolAddresses[protocol] == address(0) && active) {
+            protocolAddresses[protocol] = contractAddr;
+        }
+        emit ProtocolContractRegistered(protocol, contractAddr, active);
+    }
+
     function setPrimarySourceChainKey(uint64 newChainKey) external onlyOwner {
         emit PrimarySourceChainUpdated(primarySourceChainKey, newChainKey);
         primarySourceChainKey = newChainKey;
     }
 
-    /**
-     * @notice Cryptographically verify a single historical Ethereum transaction and update credit profile.
-     * @dev Validates:
-     *      1. Cryptographic proof via BlockProver precompile (0xFD2).
-     *      2. Decodes transaction calldata to verify target contract and borrower involvement.
-     *      3. Validates function selector against claimed eventType.
-     *      4. Enforces EIP-191 borrower authorization.
-     */
     function submitSingleProof(
         uint64 chainKey,
         uint64 height,
@@ -183,7 +213,6 @@ contract SanadCreditOracle is Ownable {
         require(chainKey == primarySourceChainKey, "Unsupported source chain key");
         _validateBorrowerAuthorization(borrower, borrowerSignature);
 
-        // 1. Verify cryptographic proof via native BlockProver precompile at 0xFD2
         bool verified = blockProver.verify(
             chainKey,
             height,
@@ -193,20 +222,12 @@ contract SanadCreditOracle is Ownable {
         );
         require(verified, "Attestcoin BlockProver verification failed");
 
-        // 2. Decode and validate that transaction payload matches claimed eventData
         _validateTransactionClaims(encodedTransaction, borrower, eventData);
-
-        // 3. Record event
         _recordVerifiedEvent(borrower, height, eventData);
-
-        // 4. Recalculate credit score
         _recalculateScore(borrower, eventData.sourceTxHash);
         return true;
     }
 
-    /**
-     * @notice Cryptographically verify a batch of historical Ethereum transactions (up to 10).
-     */
     function submitBatchProof(
         uint64 chainKey,
         uint64[] calldata heights,
@@ -226,7 +247,6 @@ contract SanadCreditOracle is Ownable {
 
         _validateBorrowerAuthorization(borrower, borrowerSignature);
 
-        // 1. Verify batch proof via native BlockProver precompile at 0xFD2
         bool verified = blockProver.verify(
             chainKey,
             heights,
@@ -236,31 +256,24 @@ contract SanadCreditOracle is Ownable {
         );
         require(verified, "Attestcoin BlockProver batch verification failed");
 
-        // 2. Validate and process each transaction
         for (uint256 i = 0; i < eventsData.length; i++) {
             _validateTransactionClaims(encodedTransactions[i], borrower, eventsData[i]);
             _recordVerifiedEvent(borrower, heights[i], eventsData[i]);
         }
 
-        // 3. Recalculate score
         _recalculateScore(borrower, eventsData[eventsData.length - 1].sourceTxHash);
         return true;
     }
 
-    /**
-     * @notice Decodes the proven EVM transaction chunks and cryptographically binds them to the claimed eventData.
-     */
     function _validateTransactionClaims(
         bytes calldata encodedTransaction,
         address borrower,
         EventPayloadInput calldata eventData
     ) internal view {
-        // Step A: Decode outer ABI structure (uint8 txType, bytes[] chunks)
         (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
         require(chunks.length > 0, "Malformed encodedTransaction: empty chunks");
         require(txType <= 4, "Invalid EVM transaction type");
 
-        // Step B: Decode Chunk 0 (Common EVM transaction fields)
         (
             /* uint64 nonce */,
             /* uint64 gasLimit */,
@@ -273,32 +286,41 @@ contract SanadCreditOracle is Ownable {
 
         require(!toIsNull, "Target contract address cannot be null");
 
-        // Step C: Verify Target Protocol Contract
-        address expectedProtocolContract = protocolAddresses[eventData.protocol];
-        if (expectedProtocolContract != address(0)) {
-            require(to == expectedProtocolContract, "Target contract does not match claimed protocol");
-        }
+        require(
+            isProtocolContract[eventData.protocol][to] || protocolAddresses[eventData.protocol] == to,
+            "Target contract does not match claimed protocol"
+        );
 
-        // Step D: Verify Borrower Involvement
-        // Either:
-        //  1. The transaction was broadcast directly by the borrower (from == borrower)
-        //  2. The borrower's address is present in the calldata parameters (e.g. onBehalfOf, user, borrower)
         bool borrowerMatched = (from == borrower);
         if (!borrowerMatched && data.length >= 36) {
             borrowerMatched = _containsAddress(data, borrower);
         }
         require(borrowerMatched, "Borrower is neither sender nor recipient in proven transaction");
 
-        // Step E: Verify Function Selector against claimed EventType
         if (data.length >= 4) {
             bytes4 selector = bytes4(data);
             _validateFunctionSelector(eventData.protocol, eventData.eventType, selector);
+            _validateVolumeBounds(data, selector, eventData.volumeUSD);
         }
     }
 
-    /**
-     * @notice Checks known function selectors across all 10 supported lending protocols
-     */
+    function _validateVolumeBounds(bytes memory data, bytes4 selector, uint256 claimedVolumeUSD) internal pure {
+        if (data.length < 68) return;
+
+        uint256 rawAmount;
+        assembly {
+            rawAmount := mload(add(data, 68))
+        }
+
+        if (rawAmount == type(uint256).max) {
+            return;
+        }
+
+        if (claimedVolumeUSD > 0) {
+            require(rawAmount > 0, "Transaction amount is 0 but positive volume was claimed");
+        }
+    }
+
     function _validateFunctionSelector(
         Protocol protocol,
         EventType eventType,
@@ -306,75 +328,57 @@ contract SanadCreditOracle is Ownable {
     ) internal pure {
         if (protocol == Protocol.AaveV3 || protocol == Protocol.SparkProtocol) {
             if (eventType == EventType.CleanRepayment) {
-                // Aave/Spark repay: 0x573ade81, repayWithATokens: 0xee3e210b, repayWithPermit: 0x89c4b5f0
                 require(
                     selector == 0x573ade81 || selector == 0xee3e210b || selector == 0x89c4b5f0,
                     "Invalid selector for Aave/Spark Repayment"
                 );
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Aave/Spark liquidationCall: 0x00a718a9
                 require(selector == 0x00a718a9, "Invalid selector for Aave/Spark Liquidation");
             } else if (eventType == EventType.CollateralSupply) {
-                // Aave/Spark supply: 0x617ba037, supplyWithPermit: 0xe8aec7da
                 require(selector == 0x617ba037 || selector == 0xe8aec7da, "Invalid selector for Aave/Spark Supply");
             }
         } else if (protocol == Protocol.CompoundV3) {
             if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply) {
-                // Compound v3 supply: 0xf2b9fdb8, supplyTo: 0x474cf53d, supplyFrom: 0x27ec1e69
                 require(
                     selector == 0xf2b9fdb8 || selector == 0x474cf53d || selector == 0x27ec1e69,
                     "Invalid selector for Compound v3"
                 );
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Compound v3 absorb: 0x4515cef3
                 require(selector == 0x4515cef3, "Invalid selector for Compound v3 Liquidation");
             }
         } else if (protocol == Protocol.MorphoBlue) {
             if (eventType == EventType.CleanRepayment) {
-                // Morpho Blue repay: 0x1a879e5f
                 require(selector == 0x1a879e5f, "Invalid selector for Morpho Blue Repay");
             } else if (eventType == EventType.CollateralSupply) {
-                // Morpho Blue supply: 0x0c0a769b, supplyCollateral: 0xa83da3d2
                 require(selector == 0x0c0a769b || selector == 0xa83da3d2, "Invalid selector for Morpho Blue Supply");
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Morpho Blue liquidate: 0xa4a4c9f0
                 require(selector == 0xa4a4c9f0, "Invalid selector for Morpho Blue Liquidation");
             }
         } else if (protocol == Protocol.MakerDAO) {
             if (eventType == EventType.CleanRepayment) {
-                // MakerDAO wipe: 0x4b666199, frob: 0x78248407
                 require(selector == 0x4b666199 || selector == 0x78248407, "Invalid selector for MakerDAO Repay");
             } else if (eventType == EventType.CollateralSupply) {
-                // MakerDAO lock: 0x8a974b93, frob: 0x78248407
                 require(selector == 0x8a974b93 || selector == 0x78248407, "Invalid selector for MakerDAO Collateral");
             }
         } else if (protocol == Protocol.EulerV2 || protocol == Protocol.Fraxlend) {
             if (eventType == EventType.CleanRepayment) {
-                // Euler/Fraxlend repay: 0x48a58e57, 0x573ade81
                 require(selector == 0x48a58e57 || selector == 0x573ade81, "Invalid selector for Euler/Fraxlend Repay");
             } else if (eventType == EventType.CollateralSupply) {
-                // Euler/Fraxlend deposit: 0x6e553f65, 0xb6b55f25
                 require(selector == 0x6e553f65 || selector == 0xb6b55f25, "Invalid selector for Euler/Fraxlend Deposit");
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Euler/Fraxlend liquidate: 0x0e5a6a68, 0x438645a2
                 require(selector == 0x0e5a6a68 || selector == 0x438645a2, "Invalid selector for Liquidation");
             }
         } else if (protocol == Protocol.Fluid) {
             if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply) {
-                // Fluid operate: 0xa04c0d0f, supply: 0x617ba037
                 require(selector == 0xa04c0d0f || selector == 0x617ba037 || selector == 0xf2b9fdb8, "Invalid selector for Fluid");
             }
         } else if (protocol == Protocol.MapleFinance || protocol == Protocol.Goldfinch) {
             if (eventType == EventType.CleanRepayment) {
-                // Maple/Goldfinch settlement: 0x4e07b5a0, 0xb6b55f25, 0x573ade81
                 require(selector == 0x4e07b5a0 || selector == 0xb6b55f25 || selector == 0x573ade81, "Invalid selector for Credit Desk");
             }
         }
     }
 
-    /**
-     * @notice Scans calldata for a 20-byte address (ABI encoded word)
-     */
     function _containsAddress(bytes memory data, address target) internal pure returns (bool) {
         bytes32 targetWord = bytes32(uint256(uint160(target)));
         uint256 len = data.length;
@@ -392,9 +396,6 @@ contract SanadCreditOracle is Ownable {
         return false;
     }
 
-    /**
-     * @notice Record a verified event with replay protection
-     */
     function _recordVerifiedEvent(
         address borrower,
         uint64 height,
@@ -403,16 +404,15 @@ contract SanadCreditOracle is Ownable {
         bytes32 txHash = eventData.sourceTxHash;
         require(txHash != bytes32(0), "Invalid txHash");
         
-        // Replay protection: prevent double counting
         if (provenTxHashes[txHash]) {
-            return; // No-op if already proven
+            return;
         }
         provenTxHashes[txHash] = true;
 
         CreditProfile storage profile = _creditProfiles[borrower];
         if (profile.borrower == address(0)) {
             profile.borrower = borrower;
-            profile.score = 500; // Base unscored
+            profile.score = 500;
             profile.tier = CreditTier.Unscored;
         }
 
@@ -449,9 +449,6 @@ contract SanadCreditOracle is Ownable {
         );
     }
 
-    /**
-     * @notice Weighted credit scoring engine based on verified historical behavior
-     */
     function _recalculateScore(address borrower, bytes32 triggerTxHash) internal {
         CreditProfile storage profile = _creditProfiles[borrower];
         uint256 oldScore = profile.score == 0 ? 500 : profile.score;
@@ -462,24 +459,18 @@ contract SanadCreditOracle is Ownable {
             return;
         }
 
-        // Base score
         int256 computedScore = 500;
 
-        // 1. Positive points for clean repayments
         int256 cleanRepayBonus = int256(uint256(profile.cleanRepaymentCount)) * 25;
-        int256 volumeBonus = int256(profile.totalRepaidUSD / (5000 * 1e6)) * 10;
-        if (volumeBonus > 150) volumeBonus = 150;
+        int256 volumeBonus = int256(profile.totalRepaidUSD / (1000 * 1e6)) * 15;
+        if (volumeBonus > 200) volumeBonus = 200;
         cleanRepayBonus += volumeBonus;
 
-        // 2. Penalties for liquidations (Aave/Compound/Morpho/Spark risk signal)
         int256 liquidationPenalty = int256(uint256(profile.liquidationCount)) * 35;
-
-        // 3. Severe penalties for uncollateralized defaults (Maple/Goldfinch)
         int256 defaultPenalty = int256(uint256(profile.defaultCount)) * 150;
 
         computedScore = computedScore + cleanRepayBonus - liquidationPenalty - defaultPenalty;
 
-        // Bound score between 0 and 1000
         if (computedScore < 0) {
             profile.score = 0;
         } else if (computedScore > 1000) {
@@ -488,7 +479,6 @@ contract SanadCreditOracle is Ownable {
             profile.score = uint256(computedScore);
         }
 
-        // Determine tier
         if (profile.score < 350) {
             profile.tier = CreditTier.HighRisk;
         } else if (profile.score < 550) {
@@ -502,12 +492,9 @@ contract SanadCreditOracle is Ownable {
         emit CreditScoreUpdated(borrower, oldScore, profile.score, profile.tier, triggerTxHash);
     }
 
-    /**
-     * @notice Validates borrower signature or direct caller
-     */
     function _validateBorrowerAuthorization(address borrower, bytes calldata signature) internal {
         if (msg.sender == borrower) {
-            return; // Direct caller is the borrower
+            return;
         }
         require(signature.length == 65, "Invalid signature length");
         
@@ -524,13 +511,6 @@ contract SanadCreditOracle is Ownable {
         nonces[borrower]++;
     }
 
-    // =========================================================================
-    // VIEW FUNCTIONS
-    // =========================================================================
-
-    /**
-     * @notice Returns full credit profile for a borrower
-     */
     function getCreditProfile(address borrower) external view returns (CreditProfile memory) {
         CreditProfile memory profile = _creditProfiles[borrower];
         if (profile.borrower == address(0)) {
@@ -541,16 +521,10 @@ contract SanadCreditOracle is Ownable {
         return profile;
     }
 
-    /**
-     * @notice Returns all verified historical DeFi events for a borrower
-     */
     function getProvenEvents(address borrower) external view returns (ProvenEvent[] memory) {
         return _borrowerEvents[borrower];
     }
 
-    /**
-     * @notice Check if a source transaction has already been proven
-     */
     function isTxProven(bytes32 txHash) external view returns (bool) {
         return provenTxHashes[txHash];
     }

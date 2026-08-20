@@ -1,6 +1,6 @@
 export const SANAD_CREDIT_ORACLE_ADDRESS =
   process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS ||
-  '0xBB2Bf716AD1C99d0aED17C61234620Cca327eE0f';
+  '0x866d812a57ef13866b85D09a8633218678dAeff3';
 
 export const CREDITCOIN_CHAIN_ID = 102031;
 export const CREDITCOIN_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';
