@@ -59,12 +59,12 @@ export interface DiscoveredDeFiEvent {
 }
 
 export interface WalletDiscoveryResult {
-  borrower: string;
-  scannedAt: string;
-  totalEventsFound: number;
-  selectedTopEvents: DiscoveredDeFiEvent[];
-  protocolsScanned: string[];
-  summary: {
+  borrower?: string;
+  scannedAt?: string;
+  totalEventsFound?: number;
+  selectedTopEvents?: DiscoveredDeFiEvent[];
+  protocolsScanned?: string[];
+  summary?: {
     cleanRepaymentsCount: number;
     liquidationsCount: number;
     defaultsCount: number;
@@ -72,6 +72,9 @@ export interface WalletDiscoveryResult {
     estimatedTier: string;
     activeProtocolsCount: number;
   };
+  hasVerifiedHistory?: boolean;
+  events?: DiscoveredDeFiEvent[];
+  message?: string;
 }
 
 // 10 Major Ethereum Mainnet Protocol Contract Addresses
@@ -180,23 +183,6 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       etherscanUrl: 'https://etherscan.io/tx/0x66f1ecb284976808158b2dedf8b884289bbc842361a0aaaf6107fd162552f2be',
     },
   ],
-
-  // Deployer / 1-Click Fast Path Demo (Aave v3 Proven Repay)
-  '0x506e724d7fddbf91b6607d5af0700d385d952f8a': [
-    {
-      sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-      blockHeight: 25795960,
-      protocol: Protocol.AaveV3,
-      protocolName: 'Aave v3',
-      eventType: EventType.CleanRepayment,
-      eventTypeName: 'Clean Repayment',
-      volumeUSD: 4000,
-      timestamp: 1740000000,
-      description: 'Repaid $4,000 USDS on Aave v3 Pool (0% default rate)',
-      weightScore: 35,
-      etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-    },
-  ],
 };
 
 export class DefiDiscoveryService {
@@ -233,9 +219,12 @@ export class DefiDiscoveryService {
       console.warn(`[DefiDiscovery] Etherscan live query notice: ${err.message}`);
     }
 
-    // If no events found for custom wallet, provide a deterministic clean baseline
     if (events.length === 0) {
-      events = this._generateBaselineDiscovery(normalized);
+      return {
+        hasVerifiedHistory: false,
+        events: [],
+        message: "No proven DeFi history found for this address yet.",
+      };
     }
 
     // 3. Deduplicate events by sourceTxHash
@@ -327,26 +316,5 @@ export class DefiDiscoveryService {
       }
     }
     return discovered;
-  }
-
-  /**
-   * Generates a realistic baseline event for demo testing if wallet is brand new
-   */
-  private _generateBaselineDiscovery(walletAddress: string): DiscoveredDeFiEvent[] {
-    return [
-      {
-        sourceTxHash: '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-        blockHeight: 25795960,
-        protocol: Protocol.AaveV3,
-        protocolName: 'Aave v3',
-        eventType: EventType.CleanRepayment,
-        eventTypeName: 'Clean Repayment',
-        volumeUSD: 12500,
-        timestamp: Math.floor(Date.now() / 1000) - 86400 * 5,
-        description: 'Verified $12,500 USDC clean loan settlement on Aave v3',
-        weightScore: 35,
-        etherscanUrl: 'https://etherscan.io/tx/0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079',
-      }
-    ];
   }
 }
