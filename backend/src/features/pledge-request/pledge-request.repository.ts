@@ -114,14 +114,29 @@ export async function getPawnshopByUserId(
   return result.rows[0] || null;
 }
 
-export async function getAllPawnshops(): Promise<
-  { userId: string; firstName: string; lastName: string; walletId: string }[]
-> {
+export async function getAllPawnshops(): Promise<any[]> {
   const { pool } = await import('@/db/index.js');
   const result = await pool.query(
-    `SELECT user_id as "userId", user_first_name as "firstName",
-            user_last_name as "lastName", wallet_id as "walletId"
-     FROM main.user WHERE role_id = 'PAWNSHOP' AND status = 'ACTIVE'`
+    `SELECT u.user_id as "userId", u.user_first_name as "firstName",
+            u.user_last_name as "lastName", u.wallet_id as "walletId",
+            p.business_name as "businessName",
+            p.business_registration_no as "businessRegistrationNo",
+            p.license_number as "licenseNumber",
+            p.business_type as "businessType",
+            p.year_established as "yearEstablished",
+            p.city as "city",
+            p.state as "state",
+            p.country as "country",
+            p.business_phone as "businessPhone",
+            p.business_email as "businessEmail",
+            p.services_offered as "servicesOffered",
+            p.operating_hours as "operatingHours",
+            p.kyc_status as "kycStatus",
+            p.branch_count as "branchCount",
+            p.address_line1 as "addressLine1"
+     FROM main.user u
+     LEFT JOIN main.pawnshop_profile p ON u.user_id = p.user_id
+     WHERE u.role_id = 'PAWNSHOP' AND u.status = 'ACTIVE'`
   );
   return result.rows as any[];
 }

@@ -19,6 +19,8 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import apiInstance from '@/lib/axios-v1'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
+import { Wallet } from 'lucide-react'
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -101,6 +103,9 @@ function ListItemSkeleton() {
 }
 
 export default function PawnshopDashboard() {
+  const { balance: walletBalance } = useWalletAuth()
+  const ethBalance = walletBalance || '0.0000'
+
   const { data: sagsData, isLoading: sagsLoading } = useQuery({
     queryKey: ['pawnshop-sags'],
     queryFn: async (): Promise<SAGResponse> => {
@@ -157,21 +162,47 @@ export default function PawnshopDashboard() {
       </div>
 
       {/* KYC Banner */}
-      {!profileLoading && !kycApproved && (
-        <Card className="border-l-4 border-l-amber-400 bg-amber-50">
+      {!profileLoading && profile && (
+        <Card className={`border-l-4 ${
+          profile.kycStatus === 'approved' ? 'border-l-emerald-400 bg-emerald-50' :
+          profile.kycStatus === 'rejected' ? 'border-l-red-400 bg-red-50' :
+          'border-l-amber-400 bg-amber-50'
+        }`}>
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              {profile.kycStatus === 'approved' ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              ) : profile.kycStatus === 'rejected' ? (
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              ) : (
+                <Clock className="h-5 w-5 text-amber-600" />
+              )}
               <div>
-                <p className="font-medium text-amber-800">Complete Your KYC Verification</p>
-                <p className="text-sm text-amber-700">
-                  Please complete your KYC verification to unlock all features and start receiving pledge requests.
+                <p className={`font-medium ${
+                  profile.kycStatus === 'approved' ? 'text-emerald-800' :
+                  profile.kycStatus === 'rejected' ? 'text-red-800' : 'text-amber-800'
+                }`}>
+                  KYC Status: <span className="capitalize">{profile.kycStatus}</span>
+                </p>
+                <p className={`text-sm ${
+                  profile.kycStatus === 'approved' ? 'text-emerald-700' :
+                  profile.kycStatus === 'rejected' ? 'text-red-700' : 'text-amber-700'
+                }`}>
+                  {profile.kycStatus === 'approved'
+                    ? 'Your account is verified. You can receive pledge requests from borrowers.'
+                    : profile.kycStatus === 'rejected'
+                    ? 'Your KYC was rejected. Please update your documents and reapply.'
+                    : 'Your KYC is pending admin review. You can update your profile while waiting.'}
                 </p>
               </div>
             </div>
-            <Button asChild variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100">
+            <Button asChild variant="outline" className={
+              profile.kycStatus === 'approved' ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-100' :
+              profile.kycStatus === 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-100' :
+              'border-amber-300 text-amber-700 hover:bg-amber-100'
+            }>
               <Link href="/pawnshop/profile">
-                Complete KYC
+                {profile.kycStatus === 'approved' ? 'View Profile' : 'Update Profile'}
               </Link>
             </Button>
           </CardContent>
@@ -179,7 +210,7 @@ export default function PawnshopDashboard() {
       )}
 
       {/* Stats Row */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {sagsLoading ? (
           <>
             <StatCardSkeleton />
@@ -188,6 +219,17 @@ export default function PawnshopDashboard() {
           </>
         ) : (
           <>
+            <Card className={`${glass} border-l-4 border-l-blue-500`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Wallet Balance</CardTitle>
+                <Wallet className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#171414]">{ethBalance} ETH</div>
+                <p className="text-xs text-muted-foreground">Sepolia Testnet</p>
+              </CardContent>
+            </Card>
+
             <Card className={`${glass} border-l-4 border-l-primary`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total SAGs</CardTitle>

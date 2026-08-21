@@ -12,39 +12,39 @@ import {
   Shield,
 } from "lucide-react"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
+import { useQuery } from "@tanstack/react-query"
+import { getETHBalance as fetchETHBalance } from "@/lib/web3"
+import apiInstance from "@/lib/axios-v1"
 import { toast } from "sonner"
 
-async function getETHBalance(address: string): Promise<string> {
-  if (!window.ethereum) return "0"
-  const hex = await window.ethereum.request({
-    method: "eth_getBalance",
-    params: [address, "latest"],
-  })
-  return (parseInt(hex, 16) / 1e18).toFixed(6)
-}
+
 
 export default function WalletPage() {
-  const { walletAddress, isConnected, truncateAddress } = useWalletAuth()
+  const { walletAddress, isConnected, balance: walletBalance, chainId, refreshBalance, truncateAddress } = useWalletAuth()
   const [copied, setCopied] = useState(false)
-  const [ethBalance, setEthBalance] = useState("0.000000")
   const [isLoading, setIsLoading] = useState(false)
-  const [networkName, setNetworkName] = useState("")
+
+  const ethBalance = walletBalance || "0.000000"
+  const networkName = chainId === 11155111 ? "ETH Sepolia Testnet"
+    : chainId === 1 ? "Ethereum Mainnet"
+    : chainId === 102031 ? "Creditcoin CC3"
+    : "ETH Sepolia Testnet"
+
+  // Fetch CTC balance from backend (Creditcoin CC3)
+  const { data: ctcData, isLoading: ctcLoading } = useQuery({
+    queryKey: ["wallet-ctc-balance"],
+    queryFn: async () => {
+      const { data } = await apiInstance.get("/investor/wallet/balance")
+      return data?.data
+    },
+    retry: 1,
+  })
 
   const fetchBalance = async () => {
     if (!walletAddress) return
     setIsLoading(true)
     try {
-      const bal = await getETHBalance(walletAddress)
-      setEthBalance(bal)
-      if (window.ethereum) {
-        const chainIdHex = await window.ethereum.request({ method: "eth_chainId" })
-        const chainId = parseInt(chainIdHex, 16)
-        if (chainId === 11155111) setNetworkName("ETH Sepolia Testnet")
-        else if (chainId === 1) setNetworkName("Ethereum Mainnet")
-        else setNetworkName(`Chain ${chainId}`)
-      }
-    } catch {
-      setEthBalance("0")
+      await refreshBalance()
     } finally {
       setIsLoading(false)
     }
@@ -120,14 +120,66 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* Balance */}
+        {/* ETH Balance (Sepolia) */}
         <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
-          <p className="kicker-gold mb-4">Balance</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="kicker-gold">ETH Balance</p>
+            <Badge className="bg-[#E1BAC2]/20 text-[#171414] border-[#E1BAC2]/40 text-[10px] font-mono">
+              {networkName || "Connecting..."}
+            </Badge>
+          </div>
           <div className="flex items-baseline gap-2">
             <span className="font-display text-3xl sm:text-4xl font-extrabold text-[#171414]">{ethBalance}</span>
             <span className="text-lg font-mono font-bold text-[#4A4A4A]">ETH</span>
           </div>
-          <p className="text-xs text-[#4A4A4A] mt-2">{networkName}</p>
+          <p className="text-xs text-[#4A4A4A] mt-2">Sepolia Testnet — used for deposits & repayments</p>
+          <div className="mt-3 p-3 rounded-xl bg-[#F5F5F3] border border-[#171414]/5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#4A4A4A] mb-1">Need testnet ETH?</p>
+            <a
+              href="https://sepoliafaucet.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold text-[#171414] hover:underline inline-flex items-center gap-1"
+            >
+              Get free SepoliaETH → <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+
+        {/* CTC Balance (Creditcoin CC3) */}
+        <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
+          <div className="flex items-center justify-between mb-4">
+            <p className="kicker-gold">CTC Balance</p>
+            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-mono">
+              Creditcoin CC3
+            </Badge>
+          </div>
+          {ctcLoading ? (
+            <div className="flex items-center gap-2 py-4">
+              <RefreshCw className="h-4 w-4 animate-spin text-[#171414]" />
+              <span className="font-mono text-xs text-[#4A4A4A]">Loading CTC balance...</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-3xl sm:text-4xl font-extrabold text-[#171414]">
+                  {ctcData?.balanceCTC || "0.0000"}
+                </span>
+                <span className="text-lg font-mono font-bold text-[#4A4A4A]">CTC</span>
+              </div>
+              <p className="text-xs text-[#4A4A4A] mt-2">Creditcoin CC3 Testnet — bridged from ETH via Attestcoin</p>
+              {ctcData?.address && (
+                <a
+                  href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/address/${ctcData.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-3 font-mono text-[10px] text-[#4A4A4A] hover:text-[#171414] hover:underline"
+                >
+                  View on Blockscout <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </>
+          )}
         </div>
 
         {/* Network Info */}

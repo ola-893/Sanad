@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertCircle, RefreshCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AlertTriangle, RefreshCcw, ArrowLeft } from 'lucide-react'
+import { Logo } from '@/components/logo'
+
+const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
 export default function Error({
   error,
@@ -13,71 +14,83 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('Homepage error:', error)
+    console.error('Page error:', error)
   }, [error])
 
   return (
-    <div className="flex flex-col min-h-screen bg-softBeige">
-      {/* Hero Section */}
-      <section className="relative bg-deepGreen py-20 md:py-28">
-        <div className="container mx-auto px-4 md:px-6 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-ivory">Oops! Something went wrong</h1>
-          <p className="text-lg md:text-xl opacity-90 text-ivory">
-            We&apos;re having trouble loading the investment opportunities.
+    <div className="flex flex-col min-h-screen bg-[#FAFAF8] items-center justify-center p-4 md:p-8">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <div className="flex items-center rounded-full bg-[#171414] py-2 pl-2 pr-4">
+            <Logo asLink={false} surface="dark" />
+          </div>
+        </div>
+
+        {/* Error Card */}
+        <div className={`${glass} p-8 sm:p-10 text-center`}>
+          {/* Icon */}
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1BAC2]/20">
+            <AlertTriangle className="h-8 w-8 text-[#171414]" />
+          </div>
+
+          {/* Title */}
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-[#171414]">
+            Something went wrong
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-2 font-mono text-xs uppercase tracking-[0.15em] text-[#4A4A4A]">
+            {error.message?.includes('SAG')
+              ? 'Failed to load investment opportunities'
+              : 'We encountered an unexpected error'}
           </p>
-        </div>
-      </section>
 
-      {/* Error Content */}
-      <section className="py-16 flex-1 flex items-center justify-center">
-        <div className="container mx-auto px-4 md:px-6">
-          <Card className="max-w-md mx-auto border-destructive/30 bg-destructive/10">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-destructive" />
-              </div>
-              <CardTitle className="text-destructive">Failed to Load Data</CardTitle>
-              <CardDescription className="text-destructive">
-                We couldn&apos;t fetch the latest SAG investment opportunities. This might be due to:
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="text-sm text-destructive space-y-2">
-                <li>• API server is temporarily unavailable</li>
-                <li>• Network connectivity issues</li>
-                <li>• Server maintenance in progress</li>
-              </ul>
-              
-              <div className="flex flex-col gap-3 mt-6">
-                <Button 
-                  onClick={reset}
-                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                >
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/'}
-                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
-                >
-                  Reload Page
-                </Button>
-              </div>
+          {/* Error digest (dev) */}
+          {error.digest && (
+            <p className="mt-2 font-mono text-[10px] text-[#4A4A4A]/60">
+              Error ID: {error.digest}
+            </p>
+          )}
 
-              {process.env.NODE_ENV === 'development' && (
-                <details className="mt-4">
-                  <summary className="text-xs text-destructive cursor-pointer">Technical Details</summary>
-                  <pre className="text-xs text-red-400 mt-2 p-2 bg-destructive/10 rounded overflow-auto">
-                    {error.message}
-                  </pre>
-                </details>
-              )}
-            </CardContent>
-          </Card>
+          {/* Actions */}
+          <div className="mt-8 space-y-3">
+            <button
+              onClick={reset}
+              className="w-full rounded-full bg-[#171414] px-6 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] transition-colors hover:bg-black flex items-center justify-center gap-2"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Try Again
+            </button>
+
+            <button
+              onClick={() => window.location.href = '/'}
+              className="w-full rounded-full border border-[#171414]/15 bg-white/60 px-6 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-[#171414] transition-colors hover:bg-[#171414]/5 flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Home
+            </button>
+          </div>
+
+          {/* Dev details */}
+          {process.env.NODE_ENV === 'development' && (
+            <details className="mt-6 text-left">
+              <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] hover:text-[#171414]">
+                Technical Details
+              </summary>
+              <pre className="mt-2 rounded-xl bg-[#F5F5F3] border border-[#171414]/10 p-3 font-mono text-[11px] text-[#4A4A4A] overflow-auto max-h-40">
+                {error.message}
+                {error.stack && `\n\n${error.stack}`}
+              </pre>
+            </details>
+          )}
         </div>
-      </section>
+
+        {/* Help text */}
+        <p className="text-center font-mono text-[10px] text-[#4A4A4A]/60">
+          If this persists, check your network connection or try again later.
+        </p>
+      </div>
     </div>
   )
 }

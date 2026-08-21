@@ -42,26 +42,11 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
   )
 }
 
-async function getETHBalance(address: string): Promise<string> {
-  if (!window.ethereum) return "0"
-  const hex = await window.ethereum.request({
-    method: "eth_getBalance",
-    params: [address, "latest"],
-  })
-  return (parseInt(hex, 16) / 1e18).toFixed(4)
-}
-
 export default function BorrowerDashboardPage() {
-  const { walletAddress } = useWalletAuth()
-  const [ethBalance, setEthBalance] = useState("0.0000")
+  const { walletAddress, balance: walletBalance } = useWalletAuth()
+  const ethBalance = walletBalance || "0.0000"
   const [loans, setLoans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (walletAddress) {
-      getETHBalance(walletAddress).then(setEthBalance).catch(() => setEthBalance("0"))
-    }
-  }, [walletAddress])
 
   useEffect(() => {
     // Fetch borrower's SAG loans
@@ -84,7 +69,7 @@ export default function BorrowerDashboardPage() {
           {/* Stats Row */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="ETH Balance"
+              label="Wallet Balance"
               value={`${ethBalance} ETH`}
               sub="Sepolia Testnet"
               icon={Wallet}

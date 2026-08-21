@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useAtomValue } from "jotai"
 import { userAtom } from "@/store/atoms"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import apiInstance from "@/lib/axios-v1"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -122,17 +123,20 @@ const KYC_COLORS: Record<string, string> = {
 
 export default function PawnshopProfilePage() {
   const user = useAtomValue(userAtom)
-  const walletAddress = user?.wallet?.address || ""
+  const { walletAddress: mmAddress } = useWalletAuth()
+  const walletAddress = user?.wallet?.address || mmAddress || (() => {
+    try { return JSON.parse(localStorage.getItem('authState') || '{}').walletAddress || '' } catch { return '' }
+  })()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<PawnshopProfile>({ ...EMPTY_PROFILE, walletAddress })
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["pawnshop-profile"],
+    queryKey: ["pawnshop-profile-edit"],
     queryFn: async (): Promise<PawnshopProfile> => {
       const { data } = await apiInstance.get("/pawnshop/profile")
-      return data.data || data
+      const raw = data?.data ?? data
+      return raw as PawnshopProfile
     },
-    enabled: !!walletAddress,
   })
 
   useEffect(() => {
@@ -156,6 +160,7 @@ export default function PawnshopProfilePage() {
     },
     onSuccess: () => {
       toast.success("Profile saved successfully")
+      queryClient.invalidateQueries({ queryKey: ["pawnshop-profile-edit"] })
       queryClient.invalidateQueries({ queryKey: ["pawnshop-profile"] })
     },
     onError: (err: any) => {

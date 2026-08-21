@@ -19,7 +19,7 @@ import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
 import apiInstance from "@/lib/axios-v1"
-import { CreditScoreCard } from "@/components/credit-score-card"
+
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -42,28 +42,15 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
   )
 }
 
-async function getETHBalance(address: string): Promise<string> {
-  if (!window.ethereum) return "0"
-  const hex = await window.ethereum.request({
-    method: "eth_getBalance",
-    params: [address, "latest"],
-  })
-  return (parseInt(hex, 16) / 1e18).toFixed(4)
-}
+
 
 export default function DashboardPage() {
-  const { walletAddress } = useWalletAuth()
+  const { walletAddress, balance: walletBalance } = useWalletAuth()
+
   const { data: nfts = [], isLoading: nftsLoading, isError: nftsError } = useInvestorNfts()
   const { data: logs = [], isLoading: logsLoading, isError: logsError } = useAuditLogs()
 
-  const [ethBalance, setEthBalance] = useState("0.0000")
   const [poolData, setPoolData] = useState<{ totalLiquidity: string; userLpBalance: string } | null>(null)
-
-  useEffect(() => {
-    if (walletAddress) {
-      getETHBalance(walletAddress).then(setEthBalance).catch(() => setEthBalance("0"))
-    }
-  }, [walletAddress])
 
   useEffect(() => {
     apiInstance.get("/investor/pool/data")
@@ -107,8 +94,8 @@ export default function DashboardPage() {
           {/* Stats Row */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="ETH Balance"
-              value={`${ethBalance} ETH`}
+              label="Wallet Balance"
+              value={`${walletBalance || '0.0000'} ETH`}
               sub="Sepolia Testnet"
               icon={Wallet}
             />
@@ -132,12 +119,9 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Credit Score + Cash Flow */}
-          <div className="grid gap-4 lg:grid-cols-7">
-            <div className="lg:col-span-3">
-              <CreditScoreCard walletAddress={walletAddress ?? undefined} />
-            </div>
-            <Card className={`${glass} lg:col-span-4`}>
+          {/* Cash Flow + Activity */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className={glass}>
               <CardHeader>
                 <p className="kicker-gold">Portfolio</p>
                 <CardTitle className="font-display">Cash Flow Overview</CardTitle>
@@ -147,19 +131,18 @@ export default function DashboardPage() {
                 <Overview />
               </CardContent>
             </Card>
-          </div>
 
-          {/* Recent Activity */}
-          <Card className={glass}>
-            <CardHeader>
-              <p className="kicker-gold">Activity</p>
-              <CardTitle className="font-display">Recent Activity</CardTitle>
-              <CardDescription>On-chain events for your account</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentActivity />
-            </CardContent>
-          </Card>
+            <Card className={glass}>
+              <CardHeader>
+                <p className="kicker-gold">Activity</p>
+                <CardTitle className="font-display">Recent Activity</CardTitle>
+                <CardDescription>On-chain events for your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RecentActivity />
+              </CardContent>
+            </Card>
+          </div>
 
 
         </div>

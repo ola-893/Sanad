@@ -34,6 +34,21 @@ interface Pawnshop {
   firstName: string
   lastName: string
   walletId: string
+  businessName?: string
+  businessRegistrationNo?: string
+  licenseNumber?: string
+  businessType?: string
+  yearEstablished?: string
+  city?: string
+  state?: string
+  country?: string
+  businessPhone?: string
+  businessEmail?: string
+  servicesOffered?: string[]
+  operatingHours?: Record<string, string>
+  kycStatus?: string
+  branchCount?: string
+  addressLine1?: string
 }
 
 const ASSET_TYPES = ["Gold", "Silver", "Diamond"]
@@ -224,30 +239,79 @@ export default function BorrowerApplyPage() {
                     <button
                       key={p.userId}
                       onClick={() => setSelectedPawnshop(p.userId)}
-                      className={`w-full rounded-xl border p-4 text-left transition-all ${
+                      className={`w-full rounded-xl border p-5 text-left transition-all ${
                         selectedPawnshop === p.userId
                           ? "border-[#E1BAC2] bg-[#E1BAC2]/10 shadow-md"
                           : "border-[#171414]/10 bg-white/40 hover:bg-white/60"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-4">
                         <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
                             selectedPawnshop === p.userId ? "bg-[#E1BAC2]" : "bg-[#F5F5F3]"
                           }`}
                         >
-                          <Store className={`h-5 w-5 ${selectedPawnshop === p.userId ? "text-[#171414]" : "text-[#4A4A4A]"}`} />
+                          <Store className={`h-6 w-6 ${selectedPawnshop === p.userId ? "text-[#171414]" : "text-[#4A4A4A]"}`} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
+                          {/* Business Name */}
                           <p className="text-sm font-bold text-[#171414]">
+                            {p.businessName || `${p.firstName} ${p.lastName}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {p.firstName} {p.lastName}
                           </p>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {p.walletId.slice(0, 6)}...{p.walletId.slice(-4)}
-                          </p>
+
+                          {/* Details Row */}
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                            {p.city && p.state && (
+                              <span className="text-[11px] text-[#4A4A4A]">
+                                📍 {p.city}, {p.state}
+                              </span>
+                            )}
+                            {p.yearEstablished && (
+                              <span className="text-[11px] text-[#4A4A4A]">
+                                Est. {p.yearEstablished}
+                              </span>
+                            )}
+                            {p.branchCount && Number(p.branchCount) > 1 && (
+                              <span className="text-[11px] text-[#4A4A4A]">
+                                {p.branchCount} branches
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Services */}
+                          {p.servicesOffered && Array.isArray(p.servicesOffered) && p.servicesOffered.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {(p.servicesOffered as string[]).slice(0, 3).map((s: string) => (
+                                <span key={s} className="inline-block rounded-full bg-[#171414]/5 px-2 py-0.5 text-[10px] font-mono text-[#4A4A4A]">
+                                  {s}
+                                </span>
+                              ))}
+                              {(p.servicesOffered as string[]).length > 3 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{(p.servicesOffered as string[]).length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* KYC Badge */}
+                          <div className="mt-2">
+                            <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider ${
+                              p.kycStatus === 'approved'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : p.kycStatus === 'pending'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-slate-50 text-slate-600 border border-slate-200'
+                            }`}>
+                              {p.kycStatus === 'approved' ? '✓ KYC Verified' : p.kycStatus === 'pending' ? 'Pending KYC' : 'Unverified'}
+                            </span>
+                          </div>
                         </div>
                         <ChevronRight
-                          className={`h-4 w-4 ${
+                          className={`h-4 w-4 shrink-0 mt-1 ${
                             selectedPawnshop === p.userId ? "text-[#E1BAC2]" : "text-transparent"
                           }`}
                         />
@@ -407,12 +471,29 @@ export default function BorrowerApplyPage() {
                   <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
                     Pawnshop
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <Store className="h-4 w-4 text-[#171414]" />
                     <span className="text-sm font-medium text-[#171414]">
-                      {selected?.firstName} {selected?.lastName}
+                      {selected?.businessName || `${selected?.firstName} ${selected?.lastName}`}
                     </span>
+                    {selected?.kycStatus === 'approved' && (
+                      <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
+                        ✓ Verified
+                      </span>
+                    )}
                   </div>
+                  {selected?.city && selected?.state && (
+                    <p className="text-xs text-muted-foreground">📍 {selected.city}, {selected.state}</p>
+                  )}
+                  {selected?.servicesOffered && Array.isArray(selected.servicesOffered) && selected.servicesOffered.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {(selected.servicesOffered as string[]).map((s: string) => (
+                        <span key={s} className="inline-block rounded-full bg-[#171414]/5 px-2 py-0.5 text-[10px] font-mono text-[#4A4A4A]">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Gold Details */}
