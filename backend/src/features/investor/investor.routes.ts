@@ -7,5 +7,6 @@ const investorController = new InvestorController();
 router.get('/pool-stats', investorController.getPoolStats.bind(investorController));
 router.get('/nfts', investorController.getInvestorNFTInfo.bind(investorController));
 router.get('/wallet/balance', investorController.getInvestorWalletBalance.bind(investorController));
+router.post('/deposit/prove', investorController.proveDeposit.bind(investorController));
 
 export { router as investorRoutes };

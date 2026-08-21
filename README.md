@@ -84,12 +84,14 @@ npx tsx src/scripts/test-failure-paths.ts
 
 ## 📜 Contract & Network Reference
 
-### Smart Contracts on Creditcoin 3 Testnet (`102031`)
+### Smart Contracts on Creditcoin 3 Testnet (`102031`) & Ethereum Sepolia
 | Contract | Deployed Address | Network | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **`SanadCreditOracle.sol`** | `0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5) |
-| **`SAGToken.sol`** | `0xC005Db1A74d39073367925FC53D3B85b635A7DD5` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xC005Db1A74d39073367925FC53D3B85b635A7DD5) |
-| **`SanadLiquidityPool.sol`** | `0xfa453F00056153F2b209BbAE156cd3ad45e5B686` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xfa453F00056153F2b209BbAE156cd3ad45e5B686) |
+| **`SanadCreditOracle.sol`** | `0x74357E5FED91D6dDdd39847304b8651634693A00` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x74357E5FED91D6dDdd39847304b8651634693A00) |
+| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
+| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
+| **`RepaymentGateway.sol`** | `0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162) |
+| **`InvestorVault.sol`** | `0xE037A229aF3886D0181B7727e8252F72B1d3d45B` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B) |
 
 ### Network & Prover Endpoints
 | Component | Identifier | Endpoint |

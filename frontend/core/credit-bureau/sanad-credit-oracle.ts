@@ -2,7 +2,7 @@ import { Protocol, ProtocolMeta } from './types';
 
 export const SANAD_CREDIT_ORACLE_ADDRESS =
   process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS ||
-  '0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5';
+  '0xA75bD1010B49Af8CD5bD1209a789B36F97cd5764';
 
 export const CREDITCOIN_CHAIN_ID = 102031;
 export const CREDITCOIN_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';

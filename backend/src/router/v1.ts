@@ -5,7 +5,7 @@ import { authRoutes } from '@/features/auth/index.js';
 import { healthRoutes } from '@/features/health/index.js';
 import { handleUpload } from '@/features/upload/index.js';
 import { sagRoutes } from '@/features/sag/index.js';
-import { investorRoutes } from '@/features/investor/index.js';
+import { investorRoutes, investorController } from '@/features/investor/index.js';
 import { pawnshopRoutes } from '@/features/pawnshop/index.js';
 import { goldPriceRoutes } from '@/features/gold-price/index.js';
 import authenticateJWT from '@/middleware/authenticate-jwt.js';
@@ -14,7 +14,7 @@ import { creditcoinRoutes } from '@/features/creditcoin/index.js';
 import { kycRoutes } from '@/features/kyc/index.js';
 import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
-import { creditOracleRoutes } from '@/core/credit-bureau/index.js';
+import { creditOracleRoutes, CreditOracleController } from '@/core/credit-bureau/index.js';
 
 const v1Router = express.Router();
 
@@ -31,6 +31,8 @@ v1Router.use('/gold-price', goldPriceRoutes);
 // Creditcoin & Attestcoin Protocol Routes
 v1Router.use('/creditcoin', creditcoinRoutes);
 v1Router.use('/credit-oracle', creditOracleRoutes);
+v1Router.post('/loan/repay/prove', (req, res) => new CreditOracleController().proveRepayment(req, res));
+v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveDeposit(req, res));
 
 // RBAC & Admin routes
 v1Router.use('/rbac', rbacRoutes);
