@@ -51,14 +51,25 @@ export async function deployToTestnet() {
   const compiled = compileContracts();
 
   const deploymentResults: {
+    creditOracle?: string;
     sagToken?: string;
     liquidityPool?: string;
     depositTxHash?: string;
     depositedAmountCTC?: string;
   } = {};
 
-  // 1. Deploy SAGToken on Creditcoin CC3
-  console.log('\n[3/4-A] Deploying SAGToken.sol to Creditcoin 3 Testnet...');
+  // 1. Deploy SanadCreditOracle on Creditcoin CC3
+  console.log('\n[3/4-A] Deploying SanadCreditOracle.sol (with Token Decimals & Calldata Verification) to Creditcoin 3 Testnet...');
+  const oracleFactory = new ethers.ContractFactory(compiled.SanadCreditOracle.abi, compiled.SanadCreditOracle.bytecode, cc3Signer);
+  const oracleContract = await oracleFactory.deploy();
+  console.log(`  • Broadcast Tx: ${oracleContract.deploymentTransaction()?.hash}`);
+  await oracleContract.waitForDeployment();
+  deploymentResults.creditOracle = await oracleContract.getAddress();
+  console.log(`  ✅ SanadCreditOracle Deployed at: ${deploymentResults.creditOracle}`);
+  console.log(`     Explorer: https://creditcoin-testnet.blockscout.com/address/${deploymentResults.creditOracle}`);
+
+  // 2. Deploy SAGToken on Creditcoin CC3
+  console.log('\n[3/4-B] Deploying SAGToken.sol to Creditcoin 3 Testnet...');
   const sagFactory = new ethers.ContractFactory(compiled.SAGToken.abi, compiled.SAGToken.bytecode, cc3Signer);
   const sagContract = await sagFactory.deploy();
   console.log(`  • Broadcast Tx: ${sagContract.deploymentTransaction()?.hash}`);
@@ -67,8 +78,8 @@ export async function deployToTestnet() {
   console.log(`  ✅ SAGToken Deployed at: ${deploymentResults.sagToken}`);
   console.log(`     Explorer: https://creditcoin-testnet.blockscout.com/address/${deploymentResults.sagToken}`);
 
-  // 2. Deploy SanadLiquidityPool on Creditcoin CC3
-  console.log('\n[3/4-B] Deploying SanadLiquidityPool.sol to Creditcoin 3 Testnet...');
+  // 3. Deploy SanadLiquidityPool on Creditcoin CC3
+  console.log('\n[3/4-C] Deploying SanadLiquidityPool.sol to Creditcoin 3 Testnet...');
   const poolFactory = new ethers.ContractFactory(
     compiled.SanadLiquidityPool.abi,
     compiled.SanadLiquidityPool.bytecode,
@@ -81,8 +92,8 @@ export async function deployToTestnet() {
   console.log(`  ✅ SanadLiquidityPool Deployed at: ${deploymentResults.liquidityPool}`);
   console.log(`     Explorer: https://creditcoin-testnet.blockscout.com/address/${deploymentResults.liquidityPool}`);
 
-  // 3. Grant SETTLEMENT_ROLE & MINTER_ROLE on SAGToken to SanadLiquidityPool
-  console.log('\n[3/4-C] Configuring AccessControl Roles on Creditcoin CC3...');
+  // 4. Grant SETTLEMENT_ROLE & MINTER_ROLE on SAGToken to SanadLiquidityPool
+  console.log('\n[3/4-D] Configuring AccessControl Roles on Creditcoin CC3...');
   const SETTLEMENT_ROLE = ethers.keccak256(ethers.toUtf8Bytes('SETTLEMENT_ROLE'));
   const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes('MINTER_ROLE'));
 
@@ -94,7 +105,7 @@ export async function deployToTestnet() {
   await tx2.wait();
   console.log(`  ✅ Granted MINTER_ROLE to Deployer (Tx: ${tx2.hash})`);
 
-  // 4. Test Native CTC Deposit against new SanadLiquidityPool
+  // 5. Test Native CTC Deposit against new SanadLiquidityPool
   console.log('\n[4/4] Executing Real Native CTC Deposit against new SanadLiquidityPool...');
   const depositAmount = ethers.parseEther('5.0'); // 5 tCTC
   console.log(`  • Calling depositLiquidity() with ${ethers.formatEther(depositAmount)} tCTC value...`);
@@ -116,15 +127,38 @@ export async function deployToTestnet() {
   const envPath = path.resolve(process.cwd(), '.env');
   if (fs.existsSync(envPath)) {
     let envContent = fs.readFileSync(envPath, 'utf8');
+    envContent = envContent.replace(/SANAD_CREDIT_ORACLE_ADDRESS=.*/, `SANAD_CREDIT_ORACLE_ADDRESS="${deploymentResults.creditOracle}"`);
     envContent = envContent.replace(/SAG_TOKEN_ADDRESS=.*/, `SAG_TOKEN_ADDRESS="${deploymentResults.sagToken}"`);
     envContent = envContent.replace(/SANAD_LIQUIDITY_POOL_ADDRESS=.*/, `SANAD_LIQUIDITY_POOL_ADDRESS="${deploymentResults.liquidityPool}"`);
     fs.writeFileSync(envPath, envContent, 'utf8');
     console.log(`\n  ✅ Updated ${envPath} with new contract addresses.`);
   }
 
+  // Update creditcoin.config.ts file with new deployed addresses
+  const configPath = path.resolve(process.cwd(), 'src/features/creditcoin/creditcoin.config.ts');
+  if (fs.existsSync(configPath)) {
+    let configContent = fs.readFileSync(configPath, 'utf8');
+    configContent = configContent.replace(/creditOracleAddress: .*,/, `creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '${deploymentResults.creditOracle}',`);
+    configContent = configContent.replace(/sagTokenAddress: .*,/, `sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '${deploymentResults.sagToken}',`);
+    configContent = configContent.replace(/liquidityPoolAddress: .*,/, `liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '${deploymentResults.liquidityPool}',`);
+    fs.writeFileSync(configPath, configContent, 'utf8');
+    console.log(`  ✅ Updated ${configPath} with new fallback addresses.`);
+  }
+
+  // Update frontend .env.local if exists
+  const frontendEnvPath = path.resolve(process.cwd(), '../frontend/.env.local');
+  if (fs.existsSync(frontendEnvPath)) {
+    let feContent = fs.readFileSync(frontendEnvPath, 'utf8');
+    feContent = feContent.replace(/NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS=.*/, `NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS="${deploymentResults.creditOracle}"`);
+    feContent = feContent.replace(/NEXT_PUBLIC_SAG_TOKEN_ADDRESS=.*/, `NEXT_PUBLIC_SAG_TOKEN_ADDRESS="${deploymentResults.sagToken}"`);
+    feContent = feContent.replace(/NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS=.*/, `NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS="${deploymentResults.liquidityPool}"`);
+    fs.writeFileSync(frontendEnvPath, feContent, 'utf8');
+    console.log(`  ✅ Updated ${frontendEnvPath} with new contract addresses.`);
+  }
+
   // Save results to summary
   console.log('\n========================================================================');
-  console.log('DEPLOYMENT & LIVE NATIVE CTC DEPOSIT COMPLETE SUMMARY');
+  console.log('FRESH DEPLOYMENT & LIVE NATIVE CTC DEPOSIT COMPLETE SUMMARY');
   console.log('========================================================================');
   console.log(JSON.stringify(deploymentResults, null, 2));
 
