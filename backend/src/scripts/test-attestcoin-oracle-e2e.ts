@@ -90,19 +90,6 @@ export async function runAttestcoinOracleE2E() {
   console.log(`  • Merkle Proof Siblings: ${proofData.merkleProof.siblings.length}`);
   console.log(`  • Continuity Proof Roots: ${proofData.continuityProof.roots.length}`);
 
-  const merkleProofTuple = {
-    root: proofData.merkleProof.root,
-    siblings: proofData.merkleProof.siblings.map((s: any) => ({
-      hash: s.hash,
-      isLeft: s.isLeft,
-    })),
-  };
-
-  const continuityProofTuple = {
-    lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
-    roots: proofData.continuityProof.roots,
-  };
-
   const eventPayload = {
     sourceTxHash: realAaveTxHash,
     protocol: 0, // AaveV3
@@ -111,44 +98,18 @@ export async function runAttestcoinOracleE2E() {
     timestamp: 1740000000,
   };
 
-  // For testing: since relayer is submitting on behalf of realBorrower,
-  // we can also test self-submission by setting borrower = relayer when sender == borrower,
-  // or generating a valid signature if we control the key.
-  // In the real contract: if msg.sender == borrower, no signature needed!
-  // To test the contract decoding against realAaveTxHash:
-  // Since realAaveTx from is 0x891775eDdcaBABdCE4b476E335a9EEF73123C75b,
-  // let's test submitting for realBorrower:
-  // If we configure protocol address or test with direct borrower:
   console.log('\nSubmitting Attestcoin Proof to SanadCreditOracle on CC3 Testnet...');
   
-  // Create an authorized signature or test direct call
-  // For testnet E2E: let's test if direct relayer or signature
   const nonce = await (oracleContract as any).nonces(realBorrower);
   console.log(`• Borrower Nonce: ${nonce}`);
-
-  // When testing with direct borrower:
-  const isDirect = (relayerSigner.address.toLowerCase() === realBorrower.toLowerCase());
-  let sig = '0x';
-  if (!isDirect) {
-    // If not direct caller, we can sign or test with a simulated wallet that matches 'from'
-    // For this E2E test, let's create a signature or test relayer submission
-    const messageHash = ethers.keccak256(
-      ethers.solidityPacked(
-        ['address', 'address', 'uint256', 'uint256'],
-        [realBorrower, oracleAddress, 102031, nonce]
-      )
-    );
-    // Note: If we don't have the private key of 0x8917..., the signature check requires the borrower.
-    // In our contract: msg.sender == borrower bypasses signature requirement.
-  }
 
   // Submit proof
   const tx = await (oracleContract as any).submitSingleProof(
     proofData.chainKey,
     proofData.headerNumber,
     proofData.txBytes,
-    merkleProofTuple,
-    continuityProofTuple,
+    proofData.merkleProof,
+    proofData.continuityProof,
     realBorrower,
     eventPayload,
     '0x' // If msg.sender == borrower or signature

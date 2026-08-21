@@ -105,18 +105,6 @@ async function main() {
 
   // 4. Submit Proof to SanadLiquidityPool on CC3
   console.log('\n[4/5] Submitting Proof to SanadLiquidityPool on Creditcoin CC3...');
-  const merkleProofTuple = {
-    root: proofData.merkleProof.root,
-    siblings: proofData.merkleProof.siblings.map((s: any) => ({
-      hash: s.hash,
-      isLeft: s.isLeft,
-    })),
-  };
-
-  const continuityProofTuple = {
-    lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
-    roots: proofData.continuityProof.roots,
-  };
 
   console.log(`  • Calling verifyAndSettleRepayment(tokenId: ${testTokenId}, chainKey: ${proofData.chainKey})...`);
   const settleTx = await poolContract.verifyAndSettleRepayment(
@@ -124,8 +112,8 @@ async function main() {
     proofData.chainKey,
     proofData.headerNumber,
     proofData.txBytes,
-    merkleProofTuple,
-    continuityProofTuple,
+    proofData.merkleProof,
+    proofData.continuityProof,
     repayTxHash,
     0 // Auto-derived from calldata
   );
@@ -153,8 +141,8 @@ async function main() {
       proofData.chainKey,
       proofData.headerNumber,
       proofData.txBytes,
-      merkleProofTuple,
-      continuityProofTuple,
+      proofData.merkleProof,
+      proofData.continuityProof,
       repayTxHash,
       0
     );
@@ -171,8 +159,8 @@ async function main() {
       proofData.chainKey,
       proofData.headerNumber,
       proofData.txBytes,
-      merkleProofTuple,
-      continuityProofTuple,
+      proofData.merkleProof,
+      proofData.continuityProof,
       ethers.keccak256(ethers.toUtf8Bytes('fake_hash')),
       0
     );

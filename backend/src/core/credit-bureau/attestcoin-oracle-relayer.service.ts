@@ -111,19 +111,6 @@ export class AttestcoinOracleRelayerService {
       const proofData = proofResult.data;
       const contract = this.getContract();
 
-      const merkleProofTuple = {
-        root: proofData.merkleProof.root,
-        siblings: proofData.merkleProof.siblings.map((s: any) => ({
-          hash: s.hash,
-          isLeft: s.isLeft,
-        })),
-      };
-
-      const continuityProofTuple = {
-        lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
-        roots: proofData.continuityProof.roots,
-      };
-
       const eventPayload = {
         sourceTxHash: event.sourceTxHash,
         protocol: event.protocol,
@@ -139,8 +126,8 @@ export class AttestcoinOracleRelayerService {
         proofData.chainKey,
         proofData.headerNumber,
         proofData.txBytes,
-        merkleProofTuple,
-        continuityProofTuple,
+        proofData.merkleProof,
+        proofData.continuityProof,
         borrowerAddress,
         eventPayload,
         sig
@@ -269,27 +256,14 @@ export class AttestcoinOracleRelayerService {
         this.signer
       );
 
-      const merkleProofTuple = {
-        root: proofData.merkleProof.root,
-        siblings: proofData.merkleProof.siblings.map((s: any) => ({
-          hash: s.hash,
-          isLeft: s.isLeft,
-        })),
-      };
-
-      const continuityProofTuple = {
-        lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
-        roots: proofData.continuityProof.roots,
-      };
-
       console.log(`[AttestcoinRelayer] Calling verifyAndSettleRepayment for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndSettleRepayment(
         tokenId,
         proofData.chainKey,
         proofData.headerNumber,
         proofData.txBytes,
-        merkleProofTuple,
-        continuityProofTuple,
+        proofData.merkleProof,
+        proofData.continuityProof,
         sourceTxHash,
         0 // 0 allows pool to derive exact amount from decoded calldata
       );
@@ -357,26 +331,13 @@ export class AttestcoinOracleRelayerService {
         this.signer
       );
 
-      const merkleProofTuple = {
-        root: proofData.merkleProof.root,
-        siblings: proofData.merkleProof.siblings.map((s: any) => ({
-          hash: s.hash,
-          isLeft: s.isLeft,
-        })),
-      };
-
-      const continuityProofTuple = {
-        lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
-        roots: proofData.continuityProof.roots,
-      };
-
       console.log(`[AttestcoinRelayer] Calling verifyAndRecordDeposit on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndRecordDeposit(
         proofData.chainKey,
         proofData.headerNumber,
         proofData.txBytes,
-        merkleProofTuple,
-        continuityProofTuple,
+        proofData.merkleProof,
+        proofData.continuityProof,
         sourceTxHash,
         0 // 0 allows pool to derive exact amount from decoded calldata
       );
