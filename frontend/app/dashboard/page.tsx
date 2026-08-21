@@ -67,7 +67,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     apiInstance.get("/investor/pool/data")
-      .then((res) => setPoolData(res.data.data))
+      .then((res) => {
+        const d = res.data.data
+        setPoolData({
+          totalLiquidity: d.totalPoolLiquidityCTC || d.totalLiquidity || "0.0000",
+          userLpBalance: d.userLpBalanceCTC || d.userLpBalance || "0.0000",
+        })
+      })
       .catch(() => setPoolData({ totalLiquidity: "0.0000", userLpBalance: "0.0000" }))
   }, [])
 

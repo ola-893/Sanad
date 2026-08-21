@@ -58,6 +58,48 @@ export class AttestcoinOracleRelayerService {
     return this.oracleContractAddress;
   }
 
+  /**
+   * Resolve a protocol value to its numeric uint8 for the on-chain contract.
+   * Handles both numeric enums (Protocol.AaveV3 = 0) and string names ("AaveV3", "Aave v3").
+   */
+  private resolveProtocolNumber(protocol: any): number {
+    if (typeof protocol === 'number') return protocol;
+    const name = String(protocol).trim();
+    const map: Record<string, number> = {
+      'AaveV3': 0, 'Aave v3': 0, 'Aave V3': 0,
+      'CompoundV3': 1, 'Compound v3': 1, 'Compound V3': 1,
+      'MorphoBlue': 2, 'Morpho Blue': 2,
+      'SparkProtocol': 3, 'Spark Protocol': 3, 'Spark Protocol (Sky)': 3,
+      'MakerDAO': 4, 'MakerDAO (Sky CDP)': 4,
+      'EulerV2': 5, 'Euler v2': 5, 'Euler V2': 5,
+      'Fluid': 6, 'Fluid (Instadapp)': 6,
+      'MapleFinance': 7, 'Maple Finance': 7,
+      'Goldfinch': 8, 'Goldfinch Protocol': 8,
+      'Fraxlend': 9, 'Frax Lend': 9,
+    };
+    const val = map[name] ?? map[name.toLowerCase()] ?? 0;
+    console.log(`[AttestcoinRelayer] Protocol: "${name}" → ${val}`);
+    return val;
+  }
+
+  /**
+   * Resolve an event type value to its numeric uint8 for the on-chain contract.
+   * Handles both numeric enums (EventType.CleanRepayment = 0) and string names.
+   */
+  private resolveEventTypeNumber(eventType: any): number {
+    if (typeof eventType === 'number') return eventType;
+    const name = String(eventType).trim();
+    const map: Record<string, number> = {
+      'CleanRepayment': 0, 'Clean Repayment': 0,
+      'OvercollateralizedLiquidation': 1, 'Liquidation Call': 1, 'Liquidation': 1,
+      'UndercollateralizedDefault': 2, 'Undercollateralized Default': 2, 'Default': 2,
+      'CollateralSupply': 3, 'Collateral Supply': 3, 'Deposit': 3,
+    };
+    const val = map[name] ?? map[name.toLowerCase()] ?? 0;
+    console.log(`[AttestcoinRelayer] EventType: "${name}" → ${val}`);
+    return val;
+  }
+
   private getContract(): ethers.Contract {
     return new ethers.Contract(this.oracleContractAddress, SANAD_CREDIT_ORACLE_ABI, this.signer);
   }
@@ -98,13 +140,16 @@ export class AttestcoinOracleRelayerService {
 
       const eventPayload = {
         sourceTxHash: event.sourceTxHash,
-        protocol: event.protocol,
-        eventType: event.eventType,
+        protocol: this.resolveProtocolNumber(event.protocol),
+        eventType: this.resolveEventTypeNumber(event.eventType),
         volumeUSD: ethers.parseUnits(event.volumeUSD.toString(), 6),
         timestamp: event.timestamp,
       };
 
-      const sig = borrowerSignature && borrowerSignature.length === 132 ? borrowerSignature : '0x';
+      // Signature must come from the borrower's wallet — contract verifies signer == borrower
+      if (!borrowerSignature || borrowerSignature.length !== 132) {
+        throw new Error('Borrower signature required (personal_sign from MetaMask). Proof submission skipped.');
+      }
 
       console.log(`[AttestcoinRelayer] Submitting proof to SanadCreditOracle (${this.oracleContractAddress}) on CC3...`);
       const tx = await contract.submitSingleProof(
@@ -115,7 +160,7 @@ export class AttestcoinOracleRelayerService {
         continuityProofTuple,
         borrowerAddress,
         eventPayload,
-        sig
+        borrowerSignature
       );
 
       console.log(`[AttestcoinRelayer] Broadcast Tx: ${tx.hash}. Awaiting confirmation...`);

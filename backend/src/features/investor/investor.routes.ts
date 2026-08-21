@@ -5,6 +5,7 @@ const router = express.Router();
 const investorController = new InvestorController();
 
 router.get('/pool-stats', investorController.getPoolStats.bind(investorController));
+router.get('/pool/data', investorController.getPoolStats.bind(investorController));
 router.get('/nfts', investorController.getInvestorNFTInfo.bind(investorController));
 router.get('/wallet/balance', investorController.getInvestorWalletBalance.bind(investorController));
 

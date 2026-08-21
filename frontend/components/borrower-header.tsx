@@ -12,7 +12,7 @@ import { Menu, X, LayoutDashboard, CreditCard, User, LogOut, Loader2 } from "luc
 const borrowerNav = [
   { href: "/dashboard/borrower", label: "Dashboard", icon: LayoutDashboard },
   { href: "/register/kyc", label: "Apply for Loan", icon: CreditCard },
-  { href: "/dashboard/profile", label: "Profile", icon: User },
+  { href: "/dashboard/borrower/profile", label: "Profile", icon: User },
 ]
 
 export function BorrowerHeader() {

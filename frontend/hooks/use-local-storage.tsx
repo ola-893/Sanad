@@ -15,22 +15,33 @@ function useLocalStorage<T>(key: string, initialValue?: T): UseLocalStorageRetur
   const [value, setValue] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount + listen for cross-tab / programmatic storage events
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        setValue(JSON.parse(item));
-      } else if (initialValue) {
-        window.localStorage.setItem(key, JSON.stringify(initialValue));
-        setValue(initialValue);
+
+    const readValue = () => {
+      try {
+        const item = window.localStorage.getItem(key);
+        if (item) {
+          setValue(JSON.parse(item));
+        } else if (initialValue) {
+          window.localStorage.setItem(key, JSON.stringify(initialValue));
+          setValue(initialValue);
+        }
+      } catch (error) {
+        console.error(`Error reading localStorage key "${key}":`, error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    readValue();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === key) readValue();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [key, initialValue]);
 
   // Return a wrapped version of useState's setter function that 

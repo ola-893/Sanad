@@ -28,7 +28,7 @@ const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/browse", label: "NFT Listings", icon: Search },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
-  { href: "/dashboard/profile", label: "Profile", icon: User },
+  { href: "/dashboard/investor/profile", label: "Profile", icon: User },
 ]
 
 export function Header() {
