@@ -26,7 +26,7 @@ export async function runAttestcoinOracleE2E() {
     throw new Error('PRIVATE_KEY not found in environment.');
   }
 
-  const proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://proof-gen-api.cc3-testnet.creditcoin.network';
+  const proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
   const ETHEREUM_MAINNET_CHAIN_KEY = 3; // Chain Key 3 = Ethereum Mainnet on CC3 Testnet
 
   console.log('[1/5] Connecting to Creditcoin CC3 Testnet & Attestcoin Services...');

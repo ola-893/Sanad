@@ -39,7 +39,7 @@ export const CREDITCOIN_CONFIG: CreditcoinNetworkConfig = {
   explorerUrl: 'https://creditcoin-testnet.blockscout.com/',
 
   // Attestcoin Proof Builder API
-  proofBuilderUrl: process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://proof-gen-api.cc3-testnet.creditcoin.network',
+  proofBuilderUrl: process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network',
   sourceChainKey: 3, // Ethereum Mainnet (Chain Key 3 on CC3 Testnet)
 
   // CC3 Precompiles

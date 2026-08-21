@@ -38,7 +38,7 @@ Across Southeast Asia and emerging markets, over **50,000 pawnshops and Ar-Rahnu
 
 ### 2. Universal Smart Contracts (Attestcoin SDK)
 - **Source Chain (Ethereum Sepolia)**: `RepaymentGateway.sol` accepts debt repayments and emits `InvoiceRepaymentReceived`.
-- **Proof Relay Engine**: Off-chain relayer queries the Creditcoin Attestcoin Prover (`https://proof-gen-api.cc3-testnet.creditcoin.network`), fetches cryptographic Merkle inclusion proofs, and settles on `SanadLiquidityPool.sol` without bridge tokens.
+- **Proof Relay Engine**: Off-chain relayer queries the Creditcoin Attestcoin Prover (`https://prover.cc3-testnet.creditcoin.network`), fetches cryptographic Merkle inclusion proofs, and settles on `SanadLiquidityPool.sol` without bridge tokens.
 
 ### 3. Autonomous AI Appraisal & Observability
 - **Gold Appraisal Agent (`agent/gold_evaluator.py`)**: Computes real-time fair market value, dynamic LTV haircuts (e.g. 916 gold), and Shariah compliance bounds.
@@ -98,7 +98,7 @@ npx tsx src/scripts/test-failure-paths.ts
 | :--- | :--- | :--- |
 | **Creditcoin 3 Testnet** | Chain ID `102031` | `https://rpc.cc3-testnet.creditcoin.network` |
 | **Blockscout Explorer** | CC3 Testnet | `https://creditcoin-testnet.blockscout.com/` |
-| **Attestcoin Prover** | ChainKey `3` (Mainnet) | `https://proof-gen-api.cc3-testnet.creditcoin.network` |
+| **Attestcoin Prover** | ChainKey `3` (Mainnet) | `https://prover.cc3-testnet.creditcoin.network` |
 | **Precompile: BlockProver** | `0x0000000000000000000000000000000000000FD2` | Native L1 Precompile |
 | **Precompile: ChainInfo** | `0x0000000000000000000000000000000000000fD3` | Native L1 Precompile |
 
