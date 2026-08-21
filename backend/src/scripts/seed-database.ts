@@ -159,6 +159,56 @@ async function seed() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS main.pawnshop_profile (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(40) NOT NULL UNIQUE,
+        wallet_address VARCHAR(42) NOT NULL,
+        business_name TEXT NOT NULL DEFAULT '',
+        business_registration_no VARCHAR(50) DEFAULT '',
+        license_number VARCHAR(50) DEFAULT '',
+        license_expiry VARCHAR(20) DEFAULT '',
+        business_type VARCHAR(50) DEFAULT 'ar-rahnu',
+        year_established VARCHAR(10) DEFAULT '',
+        number_of_employees VARCHAR(20) DEFAULT '',
+        branch_count VARCHAR(10) DEFAULT '1',
+        business_phone VARCHAR(20) DEFAULT '',
+        business_email VARCHAR(100) DEFAULT '',
+        website VARCHAR(200) DEFAULT '',
+        address_line1 TEXT DEFAULT '',
+        address_line2 TEXT DEFAULT '',
+        city VARCHAR(100) DEFAULT '',
+        state VARCHAR(100) DEFAULT '',
+        postal_code VARCHAR(10) DEFAULT '',
+        country VARCHAR(50) DEFAULT 'Malaysia',
+        latitude VARCHAR(20) DEFAULT '',
+        longitude VARCHAR(20) DEFAULT '',
+        operating_hours JSONB DEFAULT '{}',
+        services_offered JSONB DEFAULT '[]',
+        kyc_status VARCHAR(20) DEFAULT 'pending',
+        kyc_submitted_at TIMESTAMP,
+        kyc_approved_at TIMESTAMP,
+        kyc_rejection_reason TEXT,
+        documents JSONB DEFAULT '[]',
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS main.sag (
+        sag_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        token_id VARCHAR(100) DEFAULT '',
+        sag_name TEXT NOT NULL,
+        sag_description TEXT DEFAULT '',
+        sag_properties JSONB DEFAULT '{}',
+        sag_type TEXT DEFAULT 'Conventional',
+        cert_no VARCHAR(100) UNIQUE,
+        status VARCHAR(30) DEFAULT 'active',
+        approval_status VARCHAR(30) DEFAULT 'pending',
+        original_owner VARCHAR(42) DEFAULT '',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        closed_at TIMESTAMP
+      );
     `);
     console.log('✓ Tables & schemas verified.');
 

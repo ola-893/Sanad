@@ -6,7 +6,7 @@ import { healthRoutes } from '@/features/health/index.js';
 import { handleUpload } from '@/features/upload/index.js';
 import { sagRoutes } from '@/features/sag/index.js';
 import { investorRoutes, investorController } from '@/features/investor/index.js';
-import { pawnshopRoutes } from '@/features/pawnshop/index.js';
+import { pawnshopRoutes, pawnshopProfileRoutes } from '@/features/pawnshop/index.js';
 import { goldPriceRoutes } from '@/features/gold-price/index.js';
 import authenticateJWT from '@/middleware/authenticate-jwt.js';
 import uploadRoutes from '@/features/upload/upload.routes.js';
@@ -26,6 +26,7 @@ v1Router.use('/upload', uploadRoutes);
 v1Router.use('/kyc', kycRoutes);
 v1Router.use('/sag', sagRoutes);
 v1Router.use('/investor', authenticateJWT, investorRoutes);
+v1Router.use('/pawnshop', pawnshopProfileRoutes);
 v1Router.use('/pawnshop', authenticateJWT, pawnshopRoutes);
 v1Router.use('/gold-price', goldPriceRoutes);
 

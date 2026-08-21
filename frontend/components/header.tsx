@@ -42,6 +42,7 @@ export function Header() {
 
   const loggedIn = isAuthenticated || !!user
   const isKycPage = pathname.startsWith('/register/kyc')
+  const isRegisterPage = pathname.startsWith('/register')
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -74,7 +75,7 @@ export function Header() {
         </button>
 
         {/* Pill nav — desktop only */}
-        {!isKycPage && (
+        {!isKycPage && !isRegisterPage && (
           <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
             {loggedIn
               ? portalNav.map((item) => {
@@ -155,7 +156,7 @@ export function Header() {
       </div>
 
       {/* Mobile nav drawer */}
-      {mobileOpen && (
+      {mobileOpen && !isRegisterPage && (
         <div className="absolute left-2 right-2 top-[60px] rounded-2xl border border-[rgba(23,20,20,0.1)] bg-[#F5F5F3] p-2 shadow-[0_24px_64px_rgba(23,20,20,0.12)] sm:left-3 sm:right-3 sm:top-[68px] md:hidden">
           {!isKycPage && (
             <>

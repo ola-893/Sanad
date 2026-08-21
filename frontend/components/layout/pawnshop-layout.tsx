@@ -3,10 +3,7 @@
 import { useRouter } from 'next/navigation'
 import {
   Sidebar,
-  SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -14,7 +11,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from '@/components/ui/sidebar'
-import { Building2, LogOut, FileText, Inbox } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Logo } from '../logo'
@@ -26,12 +23,6 @@ interface PawnshopLayoutProps {
 
 export default function PawnshopLayout({ children }: PawnshopLayoutProps) {
   const router = useRouter()
-
-  const navigation = [
-    { name: 'Dashboard', href: '/pawnshop/dashboard', icon: Building2 },
-    { name: 'Pledge Requests', href: '/pawnshop/requests', icon: Inbox },
-    { name: 'My NFTs', href: '/pawnshop/nfts', icon: FileText },
-  ]
 
   const handleSignOut = () => {
     // Clear sessionStorage
@@ -61,25 +52,6 @@ export default function PawnshopLayout({ children }: PawnshopLayoutProps) {
                 </h1>
               </div>
             </SidebarHeader>
-
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {navigation.map((item) => (
-                      <SidebarMenuItem key={item.name}>
-                        <SidebarMenuButton asChild>
-                          <a href={item.href}>
-                            <item.icon />
-                            <span>{item.name}</span>
-                          </a>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
 
             <SidebarFooter>
               <SidebarMenu>
