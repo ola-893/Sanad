@@ -5,6 +5,7 @@ import { uploadJsonToIpfs } from '../util/ipfs-upload.js';
 import { SagSchema } from '../features/sag/sag.model.js';
 import { createSag } from '../features/sag/sag.repository.js';
 import { callGoldEvaluator } from '../util/gold-evaluator.js';
+import { KycService } from '../features/kyc/kyc.service.js';
 
 export interface AsyncCreditcoinSagJobData {
   sagData: any;
@@ -23,6 +24,7 @@ export interface CreditcoinSagResult {
 }
 
 const sagTokenService = new SagTokenService();
+const kycService = new KycService();
 
 export async function processAsyncCreditcoinSag(job: Job<AsyncCreditcoinSagJobData>): Promise<CreditcoinSagResult> {
   const { sagData, userId, pawnshopAddress, borrowerAddress } = job.data;
@@ -36,6 +38,33 @@ export async function processAsyncCreditcoinSag(job: Job<AsyncCreditcoinSagJobDa
     await updateProgress(job, socketService, userId, 'validating', 15, 'Validating SAG data and borrower credentials...');
     const validatedData = SagSchema.parse(sagData);
 
+    // Resolve borrower credit tier and score from KYC record
+    let borrowerCreditTier: 'Gold' | 'Silver' | 'Bronze' | 'HighRisk' | 'Unscored' = 'Unscored';
+    let borrowerCreditScore = 500;
+
+    try {
+      let kycRecord = null;
+      if (userId) {
+        const kycStatus = await kycService.getKycStatusByUserId(userId);
+        kycRecord = kycStatus.submission;
+      }
+      if (!kycRecord && borrowerAddress) {
+        const kycStatus = await kycService.getKycStatusByWalletAddress(borrowerAddress);
+        kycRecord = kycStatus.submission;
+      }
+
+      if (kycRecord) {
+        if (kycRecord.creditTier) {
+          borrowerCreditTier = kycRecord.creditTier as any;
+        }
+        if (kycRecord.creditScore !== null && kycRecord.creditScore !== undefined) {
+          borrowerCreditScore = kycRecord.creditScore;
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Evaluator] Could not load KYC credit bureau record for async worker:', err);
+    }
+
     // Stage 2: AI Gold Valuation (35%)
     await updateProgress(job, socketService, userId, 'ai_evaluation', 35, 'AI agent appraising gold purity and computing dynamic LTV...');
     const goldEvaluateJson = {
@@ -43,7 +72,12 @@ export async function processAsyncCreditcoinSag(job: Job<AsyncCreditcoinSagJobDa
       gold_weight_g: validatedData.sagProperties.weightG,
       purity: validatedData.sagProperties.purity,
       tenure_days: validatedData.sagProperties.tenorM * 30,
+      borrower_address: borrowerAddress || undefined,
+      credit_tier: borrowerCreditTier,
+      credit_score: borrowerCreditScore,
     };
+
+    console.log(`[AI Evaluator] Async job evaluating loan for borrower (User: '${userId}', Wallet: '${borrowerAddress}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_myr} MYR`);
 
     let goldEvalResult = null;
     try {

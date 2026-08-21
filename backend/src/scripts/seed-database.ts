@@ -128,6 +128,10 @@ async function seed() {
         edd_source_of_funds TEXT,
         edd_approved_by VARCHAR(40),
         next_review_date TIMESTAMP,
+        ethereum_wallet_address VARCHAR(46),
+        credit_score INTEGER,
+        credit_tier VARCHAR(20),
+        attestcoin_proof_tx VARCHAR(66),
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );

@@ -194,6 +194,63 @@ export class KycService {
   }
 
   /**
+   * Get KYC status by Ethereum Wallet Address (for credit tier & scoring resolution)
+   */
+  public async getKycStatusByWalletAddress(walletAddress: string): Promise<{
+    status: string;
+    riskScore: number;
+    amlStatus: string;
+    documentType: string;
+    flags: string[];
+    submission?: KycSubmissionType | null;
+    isApproved: boolean;
+  }> {
+    if (!walletAddress) {
+      return {
+        status: 'not_started',
+        riskScore: 0,
+        amlStatus: 'unscreened',
+        documentType: 'MyKad',
+        flags: [],
+        submission: null,
+        isApproved: false,
+      };
+    }
+
+    const records = await db
+      .select()
+      .from(KycSubmission)
+      .where(eq(KycSubmission.ethereumWalletAddress, walletAddress))
+      .orderBy(desc(KycSubmission.createdAt))
+      .limit(1);
+
+    if (!records || records.length === 0) {
+      return {
+        status: 'not_started',
+        riskScore: 0,
+        amlStatus: 'unscreened',
+        documentType: 'MyKad',
+        flags: [],
+        submission: null,
+        isApproved: false,
+      };
+    }
+
+    const sub = records[0];
+    const isApproved = sub.status === 'approved' || sub.status === 'approved_with_edd';
+
+    return {
+      status: sub.status,
+      riskScore: sub.riskScore,
+      amlStatus: sub.amlStatus,
+      documentType: sub.documentType,
+      flags: (sub.flags as string[]) || [],
+      submission: sub,
+      isApproved,
+    };
+  }
+
+  /**
    * Get all pending KYC applications (for admin queue)
    */
   public async getPendingSubmissions(): Promise<any[]> {

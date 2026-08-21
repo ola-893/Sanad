@@ -304,21 +304,73 @@ contract SanadCreditOracle is Ownable {
         }
     }
 
-    function _validateVolumeBounds(bytes memory data, bytes4 selector, uint256 claimedVolumeUSD) internal pure {
-        if (data.length < 68) return;
+    // Known Ethereum Mainnet Stablecoin Token Addresses for Strict Volume Decimals Verification
+    address private constant USDC_TOKEN = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // 6 decimals
+    address private constant USDT_TOKEN = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // 6 decimals
+    address private constant DAI_TOKEN  = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // 18 decimals
+    address private constant GHO_TOKEN  = 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; // 18 decimals
+    address private constant USDe_TOKEN = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; // 18 decimals
+    address private constant FRAX_TOKEN = 0x853d955aCEf822Db058eb8505911ED77F175b99e; // 18 decimals
 
+    /**
+     * @notice Validates that the calldata amount parameter is consistent with claimed volumeUSD.
+     * @dev Decodes actual token amount from calldata (accounting for token decimals).
+     *      Enforces a strict ±20% tolerance band for USD stablecoins (USDC, USDT, DAI, GHO, USDe, FRAX)
+     *      and order-of-magnitude mathematical bounds for volatile assets, preventing volume spoofing.
+     *      Tolerance Band Rationale: ±20% allows for minor oracle spread and peg variations ($0.98-$1.02)
+     *      while strictly rejecting fabricated or disproportionate claimed volumes (e.g. $50,000 claimed on a $50 repay).
+     */
+    function _validateVolumeBounds(bytes memory data, bytes4 /* selector */, uint256 claimedVolumeUSD) internal pure {
+        if (data.length < 68) return; // Not enough calldata for (asset, amount) parameters
+
+        // Extract asset address (bytes 4..36) and raw amount (bytes 36..68)
+        address asset;
         uint256 rawAmount;
         assembly {
+            asset := mload(add(data, 36))
             rawAmount := mload(add(data, 68))
         }
 
+        // Special case: type(uint256).max used in Aave/Spark/Fraxlend for 'repay max debt'
         if (rawAmount == type(uint256).max) {
             return;
         }
 
+        // Enforce non-zero raw transaction amount if positive volume is claimed
         if (claimedVolumeUSD > 0) {
             require(rawAmount > 0, "Transaction amount is 0 but positive volume was claimed");
+        } else {
+            return;
         }
+
+        // 1. Stablecoins with 6 decimals (USDC, USDT)
+        // rawAmount is in 10^6 units, directly matching claimedVolumeUSD (6 decimals)
+        if (asset == USDC_TOKEN || asset == USDT_TOKEN) {
+            uint256 expectedUSD = rawAmount;
+            require(
+                claimedVolumeUSD >= (expectedUSD * 80) / 100 &&
+                claimedVolumeUSD <= (expectedUSD * 120) / 100,
+                "Claimed volumeUSD outside 20% tolerance band of 6-decimal stablecoin calldata"
+            );
+            return;
+        }
+
+        // 2. Stablecoins with 18 decimals (DAI, GHO, USDe, FRAX)
+        // rawAmount is in 10^18 units, normalized to 10^6 units by dividing by 10^12
+        if (asset == DAI_TOKEN || asset == GHO_TOKEN || asset == USDe_TOKEN || asset == FRAX_TOKEN) {
+            uint256 expectedUSD = rawAmount / 1e12;
+            if (expectedUSD > 0) {
+                require(
+                    claimedVolumeUSD >= (expectedUSD * 80) / 100 &&
+                    claimedVolumeUSD <= (expectedUSD * 120) / 100,
+                    "Claimed volumeUSD outside 20% tolerance band of 18-decimal stablecoin calldata"
+                );
+            }
+            return;
+        }
+
+        // 3. Volatile/other assets: upper mathematical sanity limit
+        require(claimedVolumeUSD <= rawAmount * 100000, "Claimed volumeUSD exceeds upper mathematical bound of token calldata");
     }
 
     function _validateFunctionSelector(

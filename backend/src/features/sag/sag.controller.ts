@@ -30,12 +30,47 @@ export const createSagController = async (req: Request, res: Response) => {
 
         const sagData = SagSchema.parse(req.body);
 
+        // Resolve borrower identification and on-chain credit record
+        const borrowerUserId = userInfo?.userId || (sagData.sagProperties as any).borrowerId || '';
+        const borrowerWallet = userInfo?.accountId || (sagData.sagProperties as any).borrowerAddress || '';
+
+        let borrowerCreditTier: 'Gold' | 'Silver' | 'Bronze' | 'HighRisk' | 'Unscored' = 'Unscored';
+        let borrowerCreditScore = 500;
+
+        try {
+            let kycRecord = null;
+            if (borrowerUserId) {
+                const kycStatus = await kycService.getKycStatusByUserId(borrowerUserId);
+                kycRecord = kycStatus.submission;
+            }
+            if (!kycRecord && borrowerWallet) {
+                const kycStatus = await kycService.getKycStatusByWalletAddress(borrowerWallet);
+                kycRecord = kycStatus.submission;
+            }
+
+            if (kycRecord) {
+                if (kycRecord.creditTier) {
+                    borrowerCreditTier = kycRecord.creditTier as any;
+                }
+                if (kycRecord.creditScore !== null && kycRecord.creditScore !== undefined) {
+                    borrowerCreditScore = kycRecord.creditScore;
+                }
+            }
+        } catch (err) {
+            console.warn('[AI Evaluator] Could not load KYC credit bureau record for borrower, using default Unscored:', err);
+        }
+
         const goldEvaluateJson = {
             "principal_myr": sagData.sagProperties.loan,
             "gold_weight_g": sagData.sagProperties.weightG,
             "purity": sagData.sagProperties.purity,
-            "tenure_days": sagData.sagProperties.tenorM * 30
+            "tenure_days": sagData.sagProperties.tenorM * 30,
+            "borrower_address": borrowerWallet || undefined,
+            "credit_tier": borrowerCreditTier,
+            "credit_score": borrowerCreditScore,
         };
+
+        console.log(`[AI Evaluator] Evaluating loan for borrower (User: '${borrowerUserId}', Wallet: '${borrowerWallet}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_myr} MYR`);
         
         if (!sagData) {
             return res.status(400).json({ error: 'SAG data is required' });
