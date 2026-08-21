@@ -8,6 +8,11 @@ const router = express.Router();
 router.get('/profiles', pawnshopProfileController.listAll.bind(pawnshopProfileController));
 router.get('/profiles/:userId', pawnshopProfileController.getByUserId.bind(pawnshopProfileController));
 
+// Admin routes
+router.get('/admin/pawnshops', authenticateJWT, pawnshopProfileController.adminListPawnshops.bind(pawnshopProfileController));
+router.get('/admin/pawnshops/pending', authenticateJWT, pawnshopProfileController.adminListPendingPawnshops.bind(pawnshopProfileController));
+router.post('/admin/pawnshops/:userId/kyc', authenticateJWT, pawnshopProfileController.adminReviewPawnshopKyc.bind(pawnshopProfileController));
+
 // Protected routes (pawnshop only)
 router.use(authenticateJWT);
 router.post('/profile', pawnshopProfileController.upsert.bind(pawnshopProfileController));

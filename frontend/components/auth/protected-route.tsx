@@ -33,11 +33,8 @@ export function ProtectedRoute({
       return;
     }
 
-    if (user) {
-      setChecking(false);
-      return;
-    }
-
+    // Always fetch fresh profile to get the latest role from DB
+    // (JWT roleName may be stale if role was changed after login)
     let cancelled = false;
 
     const fetchProfile = async () => {

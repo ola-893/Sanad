@@ -6,12 +6,13 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
 import { useAuth } from "@/hooks/use-auth"
-import { Menu, X, LayoutDashboard, CreditCard, User, LogOut, Loader2 } from "lucide-react"
+import { Menu, X, LayoutDashboard, CreditCard, User, LogOut, Loader2, Fingerprint } from "lucide-react"
 
 // Borrower portal nav
 const borrowerNav = [
   { href: "/dashboard/borrower", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/borrower/apply", label: "Apply for Loan", icon: CreditCard },
+  { href: "/dashboard/borrower/credit", label: "Credit Profile", icon: Fingerprint },
   { href: "/dashboard/borrower/profile", label: "Profile", icon: User },
 ]
 

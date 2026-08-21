@@ -1,13 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import apiInstance from "@/lib/axios-v1"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -17,22 +18,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  Scale,
   Shield,
-  AlertTriangle,
-  CheckCircle,
-  ExternalLink,
+  Scale,
   Lock,
   Unlock,
   Flame,
-  Search,
+  AlertTriangle,
+  ExternalLink,
   RefreshCw,
   Clock,
   Coins,
-  FileCheck
+  FileCheck,
+  Loader2,
+  CheckCircle,
+  Search,
+  Link2,
+  Fingerprint,
 } from "lucide-react"
-import apiInstance from "@/lib/axios-v1"
+
+/* ─── Design tokens ─── */
+const GLASS = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+const LABEL = "font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#171414]/50"
+const VALUE = "font-display text-3xl font-extrabold tabular-nums text-[#171414]"
+const INPUT = "rounded-xl border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2]"
+const BTN = "rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black"
 
 interface AuditLogEntry {
   id: string
@@ -44,72 +55,370 @@ interface AuditLogEntry {
   details: any
 }
 
+interface KycAuditEntry {
+  id: string
+  userId: string
+  eventType: string
+  actor: string
+  details: any
+  timestamp: string
+}
+
+interface OracleInfo {
+  oracleAddress: string
+  network: string
+  sourceChain: string
+  proofApiUrl: string
+  explorerUrl: string
+}
+
 export default function CompliancePage() {
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
-  const [loading, setLoading] = useState(false)
-  const [filterType, setFilterType] = useState<string>("ALL")
-  
-  // Action Form State
+  const [activeTab, setActiveTab] = useState("audit")
+  const [filterType, setFilterType] = useState("ALL")
+
+  /* ─── On-chain audit logs ─── */
+  const { data: chainLogsData, isLoading: chainLoading, refetch: refetchChain } = useQuery({
+    queryKey: ["compliance-chain-logs"],
+    queryFn: async () => {
+      const { data } = await apiInstance.get("/creditcoin/audit-logs")
+      return (data?.logs || []) as AuditLogEntry[]
+    },
+    refetchInterval: 15_000,
+  })
+
+  /* ─── KYC audit logs ─── */
+  const { data: kycLogsData, isLoading: kycLoading, refetch: refetchKyc } = useQuery({
+    queryKey: ["compliance-kyc-logs"],
+    queryFn: async () => {
+      const { data } = await apiInstance.get("/kyc/audit-logs")
+      return (data?.data || []) as KycAuditEntry[]
+    },
+  })
+
+  /* ─── Attestcoin Oracle info ─── */
+  const { data: oracleInfo } = useQuery({
+    queryKey: ["oracle-info"],
+    queryFn: async (): Promise<OracleInfo> => {
+      const { data } = await apiInstance.get("/credit-oracle/info")
+      return data?.data || data
+    },
+  })
+
+  const chainLogs = chainLogsData || []
+  const kycLogs = kycLogsData || []
+
+  const filteredChainLogs = chainLogs.filter((log) => {
+    if (filterType === "ALL") return true
+    if (filterType === "COMPLIANCE") return log.eventType.includes("FROZEN") || log.eventType.includes("WIPED")
+    if (filterType === "MINT") return log.eventType === "COLLATERAL_MINTED"
+    if (filterType === "SETTLEMENT") return log.eventType === "REPAYMENT_VERIFIED" || log.eventType.includes("UNLOCKED")
+    if (filterType === "LIQUIDATION") return log.eventType.includes("LIQUIDAT") || log.eventType.includes("SURPLUS")
+    return true
+  })
+
+  const totalEvents = chainLogs.length + kycLogs.length
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className={LABEL}>Regulatory Oversight</p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+            Compliance & Attestcoin
+          </h1>
+          <p className="mt-1 text-sm text-[#4A4A4A]">
+            On-chain audit trail, Attestcoin credit proofs, and Shariah enforcement
+          </p>
+        </div>
+        <Button variant="ghost" className="rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" onClick={() => { refetchChain(); refetchKyc() }}>
+          <RefreshCw className="h-3 w-3 mr-1" /> Sync
+        </Button>
+      </div>
+
+      {/* Attestcoin Protocol Banner */}
+      <div className={`${GLASS} overflow-hidden`}>
+        <div className="flex items-stretch">
+          <div className="flex items-center justify-center bg-[#171414] px-8">
+            <Fingerprint className="h-10 w-10 text-[#E1BAC2]" />
+          </div>
+          <div className="flex-1 px-6 py-5">
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="font-display text-lg font-bold text-[#171414]">Attestcoin Credit Oracle</h3>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px]">CC3 Testnet</Badge>
+            </div>
+            <p className="text-sm text-[#4A4A4A] mb-3">
+              Cryptographic proof of borrower DeFi history on Ethereum Mainnet, verified on-chain via Attestcoin&apos;s Block Prover precompile. Credit scores derived from proven repayment events across 10+ lending protocols.
+            </p>
+            <div className="flex flex-wrap gap-4 text-xs">
+              {oracleInfo?.oracleAddress && (
+                <div className="flex items-center gap-1.5">
+                  <span className={LABEL}>Oracle</span>
+                  <a href={oracleInfo.explorerUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors">
+                    {oracleInfo.oracleAddress.slice(0, 10)}...{oracleInfo.oracleAddress.slice(-6)}
+                    <ExternalLink className="inline h-3 w-3 ml-1" />
+                  </a>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className={LABEL}>Source</span>
+                <span className="font-mono text-[10px] text-[#171414]">Ethereum Mainnet</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={LABEL}>Prover</span>
+                <span className="font-mono text-[10px] text-[#171414]">Block Prover 0xFD2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "On-Chain Events", value: chainLogs.length, icon: Coins, loading: chainLoading },
+          { label: "KYC Events", value: kycLogs.length, icon: FileCheck, loading: kycLoading },
+          { label: "Total Audit Records", value: totalEvents, icon: Scale },
+          { label: "Compliance Status", value: "AAOIFI", icon: Shield, color: "text-emerald-600" },
+        ].map((s) => (
+          <div key={s.label} className={`${GLASS} p-5`}>
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+              <s.icon className={`h-4 w-4 ${s.color || "text-[#E1BAC2]"}`} />
+            </div>
+            <p className={LABEL}>{s.label}</p>
+            <p className={`mt-1 ${VALUE} text-xl`}>{s.loading ? "—" : s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Switcher */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-lg grid-cols-3 rounded-full bg-[#171414]/5 p-1">
+          <TabsTrigger value="audit" className="rounded-full font-display text-sm font-bold data-[state=active]:bg-[#171414] data-[state=active]:text-[#E1BAC2]">
+            <Coins className="h-4 w-4 mr-1.5" /> On-Chain
+          </TabsTrigger>
+          <TabsTrigger value="kyc" className="rounded-full font-display text-sm font-bold data-[state=active]:bg-[#171414] data-[state=active]:text-[#E1BAC2]">
+            <Shield className="h-4 w-4 mr-1.5" /> KYC Trail
+          </TabsTrigger>
+          <TabsTrigger value="enforcement" className="rounded-full font-display text-sm font-bold data-[state=active]:bg-[#171414] data-[state=active]:text-[#E1BAC2]">
+            <Lock className="h-4 w-4 mr-1.5" /> Enforcement
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ─── On-Chain Audit Trail ─── */}
+        <TabsContent value="audit">
+          <div className={`${GLASS} p-6`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+              <div className="relative flex-1 w-full max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A]" />
+                <Input placeholder="Filter events..." className={`pl-10 ${INPUT}`} disabled />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {["ALL", "MINT", "SETTLEMENT", "COMPLIANCE", "LIQUIDATION"].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilterType(f)}
+                    className={`rounded-full px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all ${
+                      filterType === f
+                        ? "bg-[#171414] text-[#E1BAC2]"
+                        : "bg-[#171414]/5 text-[#171414]/60 hover:bg-[#171414]/10"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {chainLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-[#E1BAC2]" />
+              </div>
+            ) : filteredChainLogs.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+                  <Coins className="h-7 w-7 text-[#E1BAC2]" />
+                </div>
+                <p className="font-display text-lg font-bold text-[#171414]">No on-chain events</p>
+                <p className="mt-1 text-sm text-[#4A4A4A]">Events will appear as SAGs are minted, settled, and managed</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#171414]/10">
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Token</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Block</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Details</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx Hash</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredChainLogs.map((log) => {
+                      const isWipe = log.eventType.includes("WIPED")
+                      const isFreeze = log.eventType.includes("FROZEN")
+                      const isMint = log.eventType === "COLLATERAL_MINTED"
+                      const isRepay = log.eventType.includes("REPAYMENT")
+                      const isLiq = log.eventType.includes("LIQUIDAT") || log.eventType.includes("SURPLUS")
+
+                      return (
+                        <TableRow key={log.id} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
+                          <TableCell>
+                            <Badge className={`font-mono text-[10px] ${
+                              isWipe ? "bg-red-50 text-red-600 border-red-200" :
+                              isFreeze ? "bg-amber-50 text-amber-600 border-amber-200" :
+                              isMint ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                              isRepay ? "bg-blue-50 text-blue-600 border-blue-200" :
+                              isLiq ? "bg-purple-50 text-purple-600 border-purple-200" :
+                              "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
+                            }`}>
+                              {log.eventType.replace(/_/g, " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-[#171414]">
+                            {log.tokenId ? `#${log.tokenId}` : "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-[#4A4A4A]">
+                            {log.blockNumber || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-[#4A4A4A] max-w-[200px] truncate">
+                            {log.details?.reason ||
+                              (log.details?.appraisedValueUSD && `$${log.details.appraisedValueUSD}`) ||
+                              (log.details?.amountUSD && `$${log.details.amountUSD}`) ||
+                              "—"}
+                          </TableCell>
+                          <TableCell>
+                            {log.transactionHash ? (
+                              <a href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"}/tx/${log.transactionHash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors">
+                                {log.transactionHash.slice(0, 10)}...
+                                <ExternalLink className="inline h-3 w-3 ml-1" />
+                              </a>
+                            ) : (
+                              <span className="font-mono text-[10px] text-[#4A4A4A]">Genesis</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-[10px] text-[#4A4A4A] whitespace-nowrap">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ─── KYC Audit Trail ─── */}
+        <TabsContent value="kyc">
+          <div className={`${GLASS} p-6`}>
+            {kycLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-[#E1BAC2]" />
+              </div>
+            ) : kycLogs.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+                  <Shield className="h-7 w-7 text-[#E1BAC2]" />
+                </div>
+                <p className="font-display text-lg font-bold text-[#171414]">No KYC audit events</p>
+                <p className="mt-1 text-sm text-[#4A4A4A]">Events will appear as KYC submissions are reviewed</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#171414]/10">
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">User</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Actor</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Details</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {kycLogs.map((log) => {
+                      const isApproved = log.eventType.includes("approved")
+                      const isRejected = log.eventType.includes("rejected")
+                      const isSubmitted = log.eventType.includes("submitted")
+
+                      return (
+                        <TableRow key={log.id} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
+                          <TableCell>
+                            <Badge className={`font-mono text-[10px] ${
+                              isApproved ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                              isRejected ? "bg-red-50 text-red-600 border-red-200" :
+                              isSubmitted ? "bg-[#E1BAC2]/20 text-[#171414] border-[#E1BAC2]/30" :
+                              "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
+                            }`}>
+                              {log.eventType.replace(/_/g, " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-[#171414]">{log.userId?.slice(0, 16)}...</TableCell>
+                          <TableCell className="font-mono text-xs text-[#4A4A4A]">{log.actor}</TableCell>
+                          <TableCell className="text-xs text-[#4A4A4A] max-w-[250px] truncate">
+                            {log.details?.notes || log.details?.riskScore ? `Risk: ${log.details.riskScore}` : JSON.stringify(log.details)}
+                          </TableCell>
+                          <TableCell className="font-mono text-[10px] text-[#4A4A4A] whitespace-nowrap">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ─── Enforcement Controls ─── */}
+        <TabsContent value="enforcement">
+          <EnforcementPanel />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ENFORCEMENT PANEL
+   ════════════════════════════════════════════════════════════════════════ */
+function EnforcementPanel() {
   const [actionType, setActionType] = useState<"token" | "address">("token")
   const [targetInput, setTargetInput] = useState("")
   const [reasonInput, setReasonInput] = useState("")
   const [actionLoading, setActionLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-
-  // Wipe Modal State
   const [wipeTokenId, setWipeTokenId] = useState("")
   const [wipeReason, setWipeReason] = useState("")
   const [isWipeOpen, setIsWipeOpen] = useState(false)
 
-  const fetchAuditLogs = async () => {
-    setLoading(true)
-    try {
-      const { data } = await apiInstance.get("/creditcoin/audit-logs")
-      if (data.success && Array.isArray(data.logs)) {
-        setAuditLogs(data.logs)
-      }
-    } catch (err) {
-      console.warn("Could not fetch audit logs from backend:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchAuditLogs()
-    const interval = setInterval(fetchAuditLogs, 10000)
-    return () => clearInterval(interval)
-  }, [])
-
   const handleComplianceAction = async (action: "freeze" | "unfreeze") => {
     if (!targetInput || !reasonInput) {
-      setActionMessage({ type: "error", text: "Please provide both a target identifier and compliance rationale." })
+      setActionMessage({ type: "error", text: "Target and reason are required." })
       return
     }
-
     setActionLoading(true)
     setActionMessage(null)
-
     try {
       const { data } = await apiInstance.post(`/creditcoin/compliance/${action}`, {
         type: actionType,
         target: targetInput,
         reason: reasonInput,
       })
-
       if (data.success) {
-        setActionMessage({
-          type: "success",
-          text: `Successfully executed ${action.toUpperCase()} on ${actionType} ${targetInput}. Tx: ${data.transactionHash?.slice(0, 16)}...`,
-        })
+        setActionMessage({ type: "success", text: `${action.toUpperCase()} executed. Tx: ${data.transactionHash?.slice(0, 16)}...` })
         setTargetInput("")
         setReasonInput("")
-        fetchAuditLogs()
       } else {
-        setActionMessage({ type: "error", text: data.error || `Failed to execute ${action}` })
+        setActionMessage({ type: "error", text: data.error || `Failed to ${action}` })
       }
     } catch (err: any) {
-      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message || "Network error submitting compliance action" })
+      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message })
     } finally {
       setActionLoading(false)
     }
@@ -123,362 +432,131 @@ export default function CompliancePage() {
         tokenId: wipeTokenId,
         reason: wipeReason,
       })
-
       if (data.success) {
-        setActionMessage({
-          type: "success",
-          text: `Token #${wipeTokenId} administratively wiped & seized under legal forfeiture.`,
-        })
+        setActionMessage({ type: "success", text: `Token #${wipeTokenId} administratively wiped.` })
         setIsWipeOpen(false)
         setWipeTokenId("")
         setWipeReason("")
-        fetchAuditLogs()
       } else {
-        setActionMessage({ type: "error", text: data.error || "Wipe action failed" })
+        setActionMessage({ type: "error", text: data.error || "Wipe failed" })
       }
     } catch (err: any) {
-      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message || "Network error" })
+      setActionMessage({ type: "error", text: err?.response?.data?.error || err.message })
     } finally {
       setActionLoading(false)
     }
   }
 
-  const filteredLogs = auditLogs.filter((log) => {
-    if (filterType === "ALL") return true
-    if (filterType === "COMPLIANCE") return log.eventType.includes("FROZEN") || log.eventType.includes("WIPED")
-    if (filterType === "MINT") return log.eventType === "COLLATERAL_MINTED"
-    if (filterType === "SETTLEMENT") return log.eventType === "REPAYMENT_VERIFIED" || log.eventType === "COLLATERAL_UNLOCKED"
-    if (filterType === "LIQUIDATION") return log.eventType.includes("LIQUIDAT") || log.eventType.includes("SURPLUS") || log.eventType.includes("SHORTFALL")
-    return true
-  })
-
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 font-mono">
-              Creditcoin CC3 L1
-            </Badge>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-              Shariah Compliant (AAOIFI)
-            </Badge>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Regulator & Compliance Oversight</h1>
-          <p className="text-gray-600">
-            Real-time on-chain audit trail, role-gated asset freezing, AML enforcement, and Shariah surplus inspection.
-          </p>
+    <div className="space-y-6">
+      {actionMessage && (
+        <div className={`${GLASS} flex items-center gap-3 px-5 py-4 ${
+          actionMessage.type === "success"
+            ? "border-l-4 border-l-emerald-500"
+            : "border-l-4 border-l-red-500"
+        }`}>
+          {actionMessage.type === "success"
+            ? <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+            : <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />}
+          <p className="text-sm text-[#171414]">{actionMessage.text}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchAuditLogs} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Sync Ledger
+      )}
+
+      {/* Freeze/Unfreeze Controls */}
+      <div className={`${GLASS} p-6`}>
+        <div className="flex items-center gap-2 mb-1">
+          <Lock className="h-5 w-5 text-[#E1BAC2]" />
+          <h3 className="font-display text-lg font-bold text-[#171414]">Asset Freeze Controls</h3>
+        </div>
+        <p className="text-sm text-[#4A4A4A] mb-6">On-chain freeze for individual loans (token) or AML sanctions (address).</p>
+
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <Label className={LABEL}>Target Type</Label>
+            <div className="flex gap-2 mt-2">
+              {(["token", "address"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setActionType(t)}
+                  className={`flex-1 rounded-xl px-3 py-2.5 font-display text-sm font-bold transition-all ${
+                    actionType === t
+                      ? "bg-[#171414] text-[#E1BAC2]"
+                      : "bg-[#171414]/5 text-[#171414]/60 hover:bg-[#171414]/10"
+                  }`}
+                >
+                  {t === "token" ? "Token ID" : "EVM Address"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Label className={LABEL}>{actionType === "token" ? "Token ID" : "EVM Address"}</Label>
+            <Input placeholder={actionType === "token" ? "e.g. 1" : "0x..."} className={`mt-2 font-mono text-sm ${INPUT}`} value={targetInput} onChange={(e) => setTargetInput(e.target.value)} />
+          </div>
+          <div>
+            <Label className={LABEL}>Compliance Reason</Label>
+            <Input placeholder="e.g. AML Sanction Alert CC-2026-44" className={`mt-2 ${INPUT}`} value={reasonInput} onChange={(e) => setReasonInput(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" className="rounded-full font-mono text-[10px] font-bold text-amber-600 hover:bg-amber-50" disabled={actionLoading} onClick={() => handleComplianceAction("freeze")}>
+            {actionLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Lock className="h-3.5 w-3.5 mr-1.5" />}
+            Freeze
           </Button>
+          <Button variant="ghost" className="rounded-full font-mono text-[10px] font-bold text-emerald-600 hover:bg-emerald-50" disabled={actionLoading} onClick={() => handleComplianceAction("unfreeze")}>
+            {actionLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5 mr-1.5" />}
+            Unfreeze
+          </Button>
+        </div>
+      </div>
+
+      {/* Administrative Wipe */}
+      <div className={`${GLASS} p-6 border-l-4 border-l-red-400`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Flame className="h-5 w-5 text-red-500" />
+              <h3 className="font-display text-lg font-bold text-[#171414]">Administrative Seizure</h3>
+            </div>
+            <p className="text-sm text-[#4A4A4A]">Forced burn under court order or civil forfeiture. Irreversible.</p>
+          </div>
           <Dialog open={isWipeOpen} onOpenChange={setIsWipeOpen}>
             <DialogTrigger asChild>
-              <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
-                <Flame className="h-4 w-4 mr-2" />
-                Administrative Seizure / Wipe
+              <Button variant="destructive" className="rounded-full font-mono text-[10px] font-bold">
+                <Flame className="h-3.5 w-3.5 mr-1.5" /> Execute Wipe
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className={`${GLASS} sm:max-w-md`}>
               <DialogHeader>
-                <DialogTitle className="text-red-600 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Execute Administrative Token Wipe
+                <DialogTitle className="font-display text-xl font-bold text-red-600 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" /> Administrative Token Wipe
                 </DialogTitle>
-                <DialogDescription>
-                  This action executes a forced administrative burn (<code>_burn()</code>) on the selected SAG NFT,
-                  seizing the collateral receipt permanently under court order or civil forfeiture.
+                <DialogDescription className="text-[#4A4A4A]">
+                  Forced burn (<code>_burn()</code>) on a SAG NFT. Irreversible seizure.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-3">
-                <div className="space-y-1">
-                  <Label htmlFor="wipe-token">SAG Token ID</Label>
-                  <Input
-                    id="wipe-token"
-                    placeholder="e.g. 1"
-                    value={wipeTokenId}
-                    onChange={(e) => setWipeTokenId(e.target.value)}
-                  />
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label className={LABEL}>SAG Token ID *</Label>
+                  <Input placeholder="e.g. 1" className={`mt-1.5 font-mono ${INPUT}`} value={wipeTokenId} onChange={(e) => setWipeTokenId(e.target.value)} />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="wipe-reason">Regulatory / Legal Reason</Label>
-                  <Input
-                    id="wipe-reason"
-                    placeholder="e.g. High Court Order HC-2026-881 / Counterfeit Ingot Seizure"
-                    value={wipeReason}
-                    onChange={(e) => setWipeReason(e.target.value)}
-                  />
+                <div>
+                  <Label className={LABEL}>Legal Reason *</Label>
+                  <Textarea placeholder="e.g. High Court Order HC-2026-881" className={`mt-1.5 ${INPUT}`} value={wipeReason} onChange={(e) => setWipeReason(e.target.value)} rows={3} />
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsWipeOpen(false)}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleAdminWipe} disabled={actionLoading}>
-                  {actionLoading ? "Executing Wipe..." : "Confirm Forced Seizure"}
+              <DialogFooter className="gap-2">
+                <Button variant="ghost" className="rounded-full font-display text-sm font-bold" onClick={() => setIsWipeOpen(false)}>Cancel</Button>
+                <Button variant="destructive" className="rounded-full font-mono text-[10px] font-bold" disabled={!wipeTokenId || !wipeReason || actionLoading} onClick={handleAdminWipe}>
+                  {actionLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Flame className="h-4 w-4 mr-1" />}
+                  Confirm Seizure
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </div>
-
-      {actionMessage && (
-        <Alert className={actionMessage.type === "success" ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-red-300 bg-red-50 text-red-900"}>
-          <AlertTitle className="font-semibold">{actionMessage.type === "success" ? "Compliance Action Broadcast" : "Action Reverted"}</AlertTitle>
-          <AlertDescription>{actionMessage.text}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* High-Level Compliance Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Shariah Compliance
-              <Scale className="h-4 w-4 text-emerald-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-700">100% Compliant</div>
-            <p className="text-xs text-gray-500 mt-1">Zero interest/riba • 100% surplus returned</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-blue-100 shadow-sm bg-gradient-to-br from-white to-blue-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Gold Collateral Purity
-              <Coins className="h-4 w-4 text-amber-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-700">916 Standard (22K)</div>
-            <p className="text-xs text-gray-500 mt-1">22K gold standard (916 purity)</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-purple-100 shadow-sm bg-gradient-to-br from-white to-purple-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              On-Chain Audit Records
-              <FileCheck className="h-4 w-4 text-purple-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-700">{auditLogs.length} Events</div>
-            <p className="text-xs text-gray-500 mt-1">Indexed in PostgreSQL from CC3</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-gray-100 shadow-sm bg-gradient-to-br from-white to-gray-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
-              Grace Period Protection
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700">14 Days Protected</div>
-            <p className="text-xs text-gray-500 mt-1">No penalty interest during grace</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Interactive Compliance Action Control Box */}
-      <Card className="border-gray-200 shadow-sm">
-        <CardHeader className="bg-gray-50/50 border-b pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5 text-emerald-600" />
-            Enforcement Controls (COMPLIANCE_ROLE)
-          </CardTitle>
-          <CardDescription>
-            Targeted on-chain asset freeze (individual loan dispute) or address freeze (AML blacklist/sanction flag).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-xs font-semibold text-gray-600">Target Type</Label>
-              <div className="flex gap-2 mt-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={actionType === "token" ? "default" : "outline"}
-                  onClick={() => setActionType("token")}
-                  className={actionType === "token" ? "bg-emerald-600" : ""}
-                >
-                  Token ID (Loan)
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={actionType === "address" ? "default" : "outline"}
-                  onClick={() => setActionType("address")}
-                  className={actionType === "address" ? "bg-emerald-600" : ""}
-                >
-                  EVM Address (Account)
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold text-gray-600">
-                {actionType === "token" ? "Token ID" : "EVM Address"}
-              </Label>
-              <Input
-                placeholder={actionType === "token" ? "e.g. 1" : "0x..."}
-                value={targetInput}
-                onChange={(e) => setTargetInput(e.target.value)}
-                className="mt-1 font-mono text-sm"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold text-gray-600">Compliance Reason / Case ID</Label>
-              <Input
-                placeholder="e.g. AML Sanction Alert CC-2026-44"
-                value={reasonInput}
-                onChange={(e) => setReasonInput(e.target.value)}
-                className="mt-1 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-amber-700 border-amber-300 hover:bg-amber-50"
-              onClick={() => handleComplianceAction("freeze")}
-              disabled={actionLoading}
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              {actionLoading ? "Processing..." : `Freeze ${actionType === "token" ? "Token" : "Address"}`}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-              onClick={() => handleComplianceAction("unfreeze")}
-              disabled={actionLoading}
-            >
-              <Unlock className="h-4 w-4 mr-2" />
-              {actionLoading ? "Processing..." : `Unfreeze ${actionType === "token" ? "Token" : "Address"}`}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Live Audit Trail Explorer */}
-      <Card className="border-gray-200 shadow-sm">
-        <CardHeader className="bg-gray-50/50 border-b pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Scale className="h-5 w-5 text-emerald-600" />
-                Immutable Regulatory Audit Ledger
-              </CardTitle>
-              <CardDescription>
-                Direct on-chain events indexed from Creditcoin 3 (CC3) with full cryptographic verification hashes.
-              </CardDescription>
-            </div>
-            <Tabs value={filterType} onValueChange={setFilterType} className="w-auto">
-              <TabsList className="grid grid-cols-5 text-xs">
-                <TabsTrigger value="ALL">All</TabsTrigger>
-                <TabsTrigger value="COMPLIANCE">Compliance</TabsTrigger>
-                <TabsTrigger value="MINT">Mint</TabsTrigger>
-                <TabsTrigger value="SETTLEMENT">Settlement</TabsTrigger>
-                <TabsTrigger value="LIQUIDATION">Liquidation</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {filteredLogs.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Search className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-50" />
-              <p>No audit events recorded under this filter yet.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-600 uppercase bg-gray-50/80 border-b">
-                  <tr>
-                    <th className="px-6 py-3">Event Type</th>
-                    <th className="px-6 py-3">Token / Target</th>
-                    <th className="px-6 py-3">Block #</th>
-                    <th className="px-6 py-3">Details / Rationale</th>
-                    <th className="px-6 py-3">Tx Hash & Explorer</th>
-                    <th className="px-6 py-3">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredLogs.map((log) => {
-                    const isFreeze = log.eventType.includes("FROZEN")
-                    const isWipe = log.eventType.includes("WIPED")
-                    const isRepay = log.eventType.includes("REPAYMENT")
-                    const isLiq = log.eventType.includes("LIQUIDAT")
-                    const isSurplus = log.eventType.includes("SURPLUS")
-
-                    return (
-                      <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <Badge
-                            variant="outline"
-                            className={
-                              isWipe
-                                ? "bg-red-100 text-red-800 border-red-300"
-                                : isFreeze
-                                ? "bg-amber-100 text-amber-800 border-amber-300"
-                                : isSurplus
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                                : isRepay
-                                ? "bg-blue-100 text-blue-800 border-blue-300"
-                                : isLiq
-                                ? "bg-purple-100 text-purple-800 border-purple-300"
-                                : "bg-gray-100 text-gray-800"
-                            }
-                          >
-                            {log.eventType}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs">
-                          {log.tokenId ? `Token #${log.tokenId}` : log.details?.account || "N/A"}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs text-gray-600">{log.blockNumber || "Pending"}</td>
-                        <td className="px-6 py-4 text-xs max-w-xs truncate text-gray-700">
-                          {log.details?.reason ||
-                            (log.details?.appraisedValueUSD && `Val: $${log.details.appraisedValueUSD} (Loan: $${log.details.loanAmount})`) ||
-                            (log.details?.amountUSD && `Amount: $${log.details.amountUSD}`) ||
-                            JSON.stringify(log.details)}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs">
-                          <a
-                            href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/tx/${log.transactionHash}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 hover:underline"
-                          >
-                            {log.transactionHash ? `${log.transactionHash.slice(0, 10)}...` : "Genesis"}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
-                          {new Date(log.timestamp).toLocaleString()}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

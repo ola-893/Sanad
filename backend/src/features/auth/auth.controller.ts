@@ -684,15 +684,19 @@ export const refreshToken = async (req: Request, res: Response) => {
       return res.status(401).json({ message: Error.UNAUTHORIZED });
     }
 
-    // Generate a new access token using the information from the refresh token
+    // Look up the user from DB to get the current role (not stale token role)
+    const user = await getUserDataByToken(refreshToken);
+    const currentRoleName = user?.roleId || verifiedToken.roleName || '';
+
+    // Generate a new access token using the current role from DB
     const newAccessToken = generateAccessToken({
       username: verifiedToken.username,
-      loginType: "EMAIL",
-      roleName: verifiedToken.roleName
+      loginType: verifiedToken.loginType || 'WALLET',
+      roleName: currentRoleName
     });
 
-    // Return the new access token
-    res.status(200).json({ accessToken: newAccessToken });
+    // Return the new access token with current role
+    res.status(200).json({ accessToken: newAccessToken, roleName: currentRoleName });
   } catch (error) {
     console.error('Error refreshing token:', error);
     res.status(500).json({ message: Error.INTERNAL_SERVER_ERROR });

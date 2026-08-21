@@ -113,6 +113,11 @@ export default function BorrowerDashboardPage() {
           <div className="grid gap-4 lg:grid-cols-7">
             <div className="lg:col-span-3">
               <CreditScoreCard walletAddress={walletAddress ?? undefined} />
+              <Link href="/dashboard/borrower/credit" className="mt-2 block">
+                <Button variant="ghost" className="w-full rounded-xl font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#E1BAC2]/10">
+                  View Full Credit Profile →
+                </Button>
+              </Link>
             </div>
             <Card className={`${glass} lg:col-span-4`}>
               <CardHeader>

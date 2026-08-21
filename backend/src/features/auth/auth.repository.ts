@@ -231,9 +231,9 @@ export const getRolePermissionByRoleId = async (roleId: string): Promise<string 
 // ============================================================
 
 export const getUserByWalletAddress = async (walletAddress: string): Promise<UserType | null> => {
-  const lowerAddress = walletAddress.toLowerCase();
-  const users = await db.select().from(User).limit(100);
-  const match = users.find((u) => u.accountId?.toLowerCase() === lowerAddress);
+  const lowerAddress = walletAddress.trim().toLowerCase();
+  const users = await db.select().from(User);
+  const match = users.find((u) => u.accountId?.trim().toLowerCase() === lowerAddress);
   return match ? { ...match, balance: 0 } as UserType : null;
 };
 

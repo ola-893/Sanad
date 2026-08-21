@@ -1,100 +1,87 @@
 "use client"
 
-import { Bell, Search, User } from "lucide-react"
+import { LogOut, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { UserRole } from "@/hooks/use-user-role"
-import { useRouter } from "next/navigation"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
-import { useEffect } from "react"
+import { truncateAddress } from "@/lib/web3"
 
 export function AdminHeader() {
   const [user] = useAtom(userAtom)
-  const role = user?.userInfo?.roleId as string
-  const router = useRouter()
   const { logout } = useAuth()
-  
+
+  const firstName = user?.userInfo?.userFirstName || "Admin"
+  const lastName = user?.userInfo?.userLastName || ""
+  const wallet = user?.userInfo?.accountId || user?.wallet?.address || ""
+  const role = user?.userInfo?.roleId || "ADMIN"
+
+  const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase()
+
   const handleLogout = async () => {
     const promise = logout()
     toast.promise(promise, {
-      loading: 'Logging out...',
-      success: () => 'Logged out successfully',
-      error: 'Failed to log out',
+      loading: "Logging out...",
+      success: () => "Logged out successfully",
+      error: "Failed to log out",
     })
   }
 
   return (
-    <header className="h-16 px-6 flex items-center justify-between border-b border-border bg-card">
-      {/* Left side - Title and Role */}
-      <div className="flex items-center gap-4">
-        <h2 className="font-display text-lg font-medium">Admin Dashboard</h2>
-        <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent-foreground">
-          {role?.toUpperCase() || "ADMIN"}
-        </Badge>
-      </div>
+    <header className="h-14 px-6 flex items-center justify-between border-b border-[#171414]/10 bg-white/80 backdrop-blur-sm">
+      {/* Left — spacer (page title lives in page content) */}
+      <div />
 
-      {/* Right side - Search, Notifications, User */}
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search SAGs, investors, branches..." className="w-80 pl-10 bg-muted/40" />
-        </div>
-
-        {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center p-0">
-            3
-          </Badge>
-        </Button>
-
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
-                <AvatarFallback>AD</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Admin User</p>
-                <p className="text-xs leading-none text-muted-foreground">admin@sanad.finance</p>
-                <p className="text-xs leading-none text-muted-foreground">Role: {role === 'pawnshop' ? 'Ar Rahnu' : role}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* Right — User menu only */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-3 rounded-full px-3 py-1.5 transition-colors hover:bg-[#171414]/5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171414]">
+              <span className="text-xs font-bold text-[#E1BAC2]">{initials}</span>
+            </div>
+            <div className="text-left">
+              <p className="font-display text-sm font-bold text-[#171414]">
+                {firstName} {lastName}
+              </p>
+              {wallet && (
+                <p className="font-mono text-[10px] text-[#4A4A4A]">
+                  {truncateAddress(wallet)}
+                </p>
+              )}
+            </div>
+            <ChevronDown className="h-4 w-4 text-[#4A4A4A]" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end">
+          <div className="px-3 py-2">
+            <p className="font-display text-sm font-bold text-[#171414]">
+              {firstName} {lastName}
+            </p>
+            <p className="font-mono text-[10px] text-[#4A4A4A]">{role}</p>
+            {wallet && (
+              <p className="mt-1 font-mono text-[10px] text-[#4A4A4A] truncate">
+                {wallet}
+              </p>
+            )}
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            <span className="font-display text-sm font-bold">Log out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   )
 }

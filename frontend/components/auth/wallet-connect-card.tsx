@@ -14,7 +14,7 @@ interface WalletConnectCardProps {
   title: string;
   description: string;
   icon: React.ReactNode;
-  registerHref: string;
+  registerHref?: string;
   dashboardPath: string;
   footerLinks?: Array<{ href: string; label: string }>;
 }
@@ -239,12 +239,14 @@ export function WalletConnectCard({
       </CardContent>
 
       <CardFooter className="flex flex-col space-y-3 p-6 pt-0">
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <a href={registerHref} className="font-medium text-primary underline-offset-4 hover:underline">
-            Register
-          </a>
-        </p>
+        {registerHref && (
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <a href={registerHref} className="font-medium text-primary underline-offset-4 hover:underline">
+              Register
+            </a>
+          </p>
+        )}
         {footerLinks.map((link) => (
           <a
             key={link.href}

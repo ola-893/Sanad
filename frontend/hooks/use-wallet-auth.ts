@@ -200,16 +200,23 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
       }
 
       // 4. Store auth tokens in all storage locations
+      // Use the roleName from backend (DB truth) instead of the UI role param
+      const normalize = (r: string) => {
+        const m: Record<string, string> = { SUPER_ADMIN: 'admin', COMPANY_ADMIN: 'admin', PAWNSHOP: 'pawnshop', INVESTOR: 'investor', BORROWER: 'borrower' }
+        return m[r] || r.toLowerCase()
+      }
+      const resolvedRole = normalize(data.roleName || role || '');
+
       sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('refreshToken', data.refreshToken);
       sessionStorage.setItem('expiredAt', data.expiredAt.toString());
-      sessionStorage.setItem('userType', role);
+      sessionStorage.setItem('userType', resolvedRole);
       sessionStorage.setItem('walletAddress', walletAddress);
 
       const authData = {
         isAuthenticated: true,
         token: data.accessToken,
-        userType: role,
+        userType: resolvedRole,
         refreshToken: data.refreshToken,
         walletAddress,
       };

@@ -19,7 +19,7 @@ apiInstance.interceptors.request.use(
       // console.log("ℹ️ Token: ", token);
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;
-        console.log("ℹ️ Token found: ", token);
+        // console.log("ℹ️ Token found: ", token);
       }
     }
     return config;

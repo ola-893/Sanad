@@ -1,12 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import apiInstance from '@/lib/axios-v1'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import apiInstance from "@/lib/axios-v1"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
@@ -16,17 +14,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CreditCard, CheckCircle, AlertTriangle, DollarSign, Calendar, FileText, Wallet, RefreshCw, ExternalLinkIcon } from "lucide-react"
+import {
+  CheckCircle,
+  AlertTriangle,
+  Wallet,
+  RefreshCw,
+  ExternalLink,
+  Loader2,
+  Coins,
+  Clock,
+  TrendingUp,
+} from "lucide-react"
 import { toast } from "sonner"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
-import { TopUpDialog } from "@/components/dashboard/topup-dialog"
 import Link from "next/link"
 import { TokenResponse } from "@/types/sag"
-import { useSocketRepayment } from '@/hooks/use-socket-repayment'
-import { RepaymentProgressTracker } from '@/components/repayment-progress-tracker'
+import { useSocketRepayment } from "@/hooks/use-socket-repayment"
+import { RepaymentProgressTracker } from "@/components/repayment-progress-tracker"
 import { UserProfile } from "@/lib/auth/auth-service"
 
+/* ─── Design tokens ─── */
+const GLASS = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+const LABEL = "font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#171414]/50"
+const VALUE = "font-display text-3xl font-extrabold tabular-nums text-[#171414]"
+const INPUT = "rounded-xl border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2]"
+const BTN = "rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black"
+
+/* ─── Types ─── */
 interface SAGProperties {
   loan?: number
   karat: number
@@ -52,22 +67,14 @@ interface SAG {
   sagProperties: SAGProperties
   sagType: string
   certNo: string
-  status?: 'active' | 'closed'
+  status?: "active" | "closed"
   createdAt?: string
 }
 
 interface SAGResponse {
   success: boolean
-  message: string
   data: SAG[]
-  pagination: {
-    count: number
-    totalCount: number
-    currentPage: number
-    totalPages: number
-    hasNextPage: boolean
-    hasPrevPage: boolean
-  }
+  pagination: { totalCount: number; currentPage: number; totalPages: number }
 }
 
 interface RepaymentData {
@@ -89,44 +96,41 @@ interface RepaymentData {
   tokenId: string
 }
 
-// Helper function to calculate due date based on tenor
+interface WalletBalanceResponse {
+  success: boolean
+  data: { balance: string }
+}
+
+/* ─── Helpers ─── */
 const calculateDueDate = (createdAt: string | undefined, tenorMonths: number): string => {
   if (!createdAt) {
-    // If no creation date, use a mock date
     const today = new Date()
     today.setMonth(today.getMonth() + tenorMonths)
-    return today.toISOString().split('T')[0]
+    return today.toISOString().split("T")[0]
   }
   const date = new Date(createdAt)
   date.setMonth(date.getMonth() + tenorMonths)
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split("T")[0]
 }
 
-// Helper function to calculate days remaining
 const calculateDaysRemaining = (dueDate: string): number => {
   const today = new Date()
   const due = new Date(dueDate)
-  const diffTime = due.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
+  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-// Helper function to determine repayment status
 const getRepaymentStatus = (daysRemaining: number): "on-time" | "early" | "late" => {
   if (daysRemaining < 0) return "late"
   if (daysRemaining > 60) return "early"
   return "on-time"
 }
 
-// Transform SAG data to Repayment data
 const transformSAGToRepayment = (sag: SAG): RepaymentData => {
   const loanAmount = sag.sagProperties.valuation * ((sag.sagProperties.loanPercentage || 70) / 100)
-  const investorReturn = loanAmount * (1 + (sag.sagProperties.investorRoiPercentage / 100))
+  const investorReturn = loanAmount * (1 + sag.sagProperties.investorRoiPercentage / 100)
   const dueDate = calculateDueDate(sag.createdAt, sag.sagProperties.tenorM)
   const daysRemaining = calculateDaysRemaining(dueDate)
   const status = getRepaymentStatus(daysRemaining)
-  
-  // Generate a mock last payment date (1-2 months before due date)
   const lastPaymentDate = new Date(dueDate)
   lastPaymentDate.setMonth(lastPaymentDate.getMonth() - 1)
 
@@ -135,12 +139,12 @@ const transformSAGToRepayment = (sag: SAG): RepaymentData => {
     sagName: sag.sagName,
     arRahnu: sag.sagDescription || "Branch",
     amount: `${sag.sagProperties.currency} ${loanAmount.toLocaleString()}`,
-    dueDate: dueDate,
-    status: status,
-    daysRemaining: daysRemaining,
+    dueDate,
+    status,
+    daysRemaining,
     investorPayout: `${sag.sagProperties.currency} ${investorReturn.toLocaleString()}`,
     invoiceSent: status !== "late",
-    lastPayment: lastPaymentDate.toISOString().split('T')[0],
+    lastPayment: lastPaymentDate.toISOString().split("T")[0],
     assetType: sag.sagProperties.assetType,
     weight: `${sag.sagProperties.weightG}g`,
     karat: sag.sagProperties.karat,
@@ -150,13 +154,16 @@ const transformSAGToRepayment = (sag: SAG): RepaymentData => {
   }
 }
 
-interface WalletBalanceResponse {
-  success: boolean
-  data: {
-    balance: string
-  }
+function StatusBadge({ status }: { status: string }) {
+  if (status === "early") return <Badge className="bg-blue-50 text-blue-600 border-blue-200 font-mono text-[10px]">Early</Badge>
+  if (status === "on-time") return <Badge className="bg-emerald-50 text-emerald-600 border-emerald-200 font-mono text-[10px]">On-Time</Badge>
+  if (status === "late") return <Badge className="bg-red-50 text-red-600 border-red-200 font-mono text-[10px]">Late</Badge>
+  return <Badge variant="secondary" className="font-mono text-[10px]">{status}</Badge>
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   PAGE
+   ════════════════════════════════════════════════════════════════════════ */
 export default function RepaymentPage() {
   const [selectedRepayment, setSelectedRepayment] = useState<RepaymentData | null>(null)
   const [showBuybackProgressTracker, setShowBuybackProgressTracker] = useState(false)
@@ -164,609 +171,257 @@ export default function RepaymentPage() {
   const [user] = useAtom(userAtom)
   const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState(false)
-  const [progress, setProgress] = useState(0)
-  
-  // Fetch user profile from API
-  const { data: userProfile, isLoading: userProfileLoading, error: userProfileError } = useQuery({
-    queryKey: ['user-profile'],
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile"],
     queryFn: async (): Promise<UserProfile> => {
-      const response = await apiInstance.get('/auth/user/profile')
-      return response.data.data.userInfo
-      // return response.data.data
+      const { data } = await apiInstance.get("/auth/user/profile")
+      return data.data.userInfo
     },
   })
 
-  // Extract accountId from user profile
-  // const accountId = userProfile?.userInfo?.accountId
-
-  // Fetch active SAG listings from API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['repayment-sags'],
+  const { data, isLoading } = useQuery({
+    queryKey: ["repayment-sags"],
     queryFn: async (): Promise<SAGResponse> => {
-      const response = await apiInstance.get('/sag?page_size=100&page_number=1&status=active')
-      return response.data
+      const { data } = await apiInstance.get("/sag?page_size=100&page_number=1&status=active")
+      return data
     },
   })
 
-  // Fetch wallet balance from API
   const { data: balanceData, isLoading: balanceLoading, refetch: refetchBalance } = useQuery({
-    queryKey: ['wallet-balance'],
+    queryKey: ["wallet-balance"],
     queryFn: async (): Promise<WalletBalanceResponse> => {
-      const response = await apiInstance.get('/investor/wallet/balance')
-      return response.data
+      const { data } = await apiInstance.get("/investor/wallet/balance")
+      return data
     },
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30_000,
     refetchOnWindowFocus: true,
   })
 
-  const { data: tokenInfo, isLoading: tokenLoading, error: tokenError } = useQuery({
-    queryKey: ['token-info', selectedRepayment?.tokenId],
+  const { data: tokenInfo } = useQuery({
+    queryKey: ["token-info", selectedRepayment?.tokenId],
     queryFn: async (): Promise<TokenResponse> => {
-      const response = await apiInstance.get(`/token/${selectedRepayment?.tokenId}`)
-      return response.data
+      const { data } = await apiInstance.get(`/token/${selectedRepayment?.tokenId}`)
+      return data
     },
-    enabled: !!selectedRepayment?.tokenId, // Only fetch when dialog is open and tokenId exists
+    enabled: !!selectedRepayment?.tokenId,
   })
 
-  // Socket.IO integration for buyback tracking
-  const {
-    isConnected,
-    connect,
-    lastProgress,
-    lastComplete,
-    lastError,
-  } = useSocketRepayment({
-    userId: userProfile?.accountId || '', // Use actual user ID or fallback
-    onProgress: (data) => {
-      console.log('Buyback progress:', data)
-    },
-    onComplete: (data) => {
-      console.log('Buyback complete:', data)
+  const { isConnected, connect, lastProgress, lastComplete, lastError } = useSocketRepayment({
+    userId: userProfile?.accountId || "",
+    onProgress: (data) => console.log("Buyback progress:", data),
+    onComplete: () => {
       setIsProcessing(false)
       setShowBuybackProgressTracker(false)
-      
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['repayment-sags'] })
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] })
-      
-      toast.success('SAG bought back successfully!')
+      queryClient.invalidateQueries({ queryKey: ["repayment-sags"] })
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance"] })
+      toast.success("SAG bought back successfully!")
     },
     onError: (data) => {
-      console.log('Buyback error:', data)
       setIsProcessing(false)
-      toast.error(`Failed to buy back SAG: ${data.error}`)
+      toast.error(`Failed: ${data.error}`)
     },
-    autoConnect: false, // We'll connect manually when needed
+    autoConnect: false,
   })
-
-  useEffect(() => {
-    console.log('Progress', progress)
-  }, [progress])
 
   const sags = data?.data || []
   const repaymentData = sags.map(transformSAGToRepayment)
   const walletBalance = balanceData?.data?.balance ? parseFloat(balanceData.data.balance) : 0
 
-  const handleRefreshBalance = () => {
-    refetchBalance()
-    toast.success('Balance refreshed')
-  }
+  const totalDue = repaymentData.reduce((sum, item) => sum + parseFloat(item.amount.replace(/[^\d.]/g, "")), 0)
+  const onTimeCount = repaymentData.filter((item) => item.status === "on-time" || item.status === "early").length
+  const lateCount = repaymentData.filter((item) => item.status === "late").length
+  const dueTodayCount = repaymentData.filter((item) => item.daysRemaining <= 1 && item.daysRemaining >= 0).length
 
-  // Calculate statistics from real data
-  const totalDue = repaymentData.reduce((sum, item) => {
-    const amount = parseFloat(item.amount.replace(/[^\d.]/g, ''))
-    return sum + amount
-  }, 0)
-
-  const onTimeCount = repaymentData.filter(item => item.status === 'on-time' || item.status === 'early').length
-  const lateCount = repaymentData.filter(item => item.status === 'late').length
-  const dueTodayCount = repaymentData.filter(item => item.daysRemaining <= 1 && item.daysRemaining >= 0).length
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "early":
-        return (
-          <Badge variant="outline" className="bg-muted text-primary">
-            Early
-          </Badge>
-        )
-      case "on-time":
-        return (
-          <Badge variant="outline" className="bg-success/10 text-success">
-            On-Time
-          </Badge>
-        )
-      case "late":
-        return (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive">
-            Late
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
+  const hasSufficientBalance = (investorPayout: string): boolean => {
+    const required = tokenInfo?.data ? parseInt(tokenInfo.data.remainingSupply) : 0
+    return walletBalance >= required
   }
 
   const handleBuyBack = async (sagId: string, tokenId: string, investorPayout: string) => {
     setIsProcessing(true)
-    setIsDialogOpen(false) // Close the dialog when buyback is initiated
-    // Parse the investor payout amount (remove currency symbol and convert to number)
-    const requiredAmount = parseFloat(investorPayout.replace(/[^\d.]/g, ''))
-    
-    // Check if balance is sufficient
+    setIsDialogOpen(false)
+    const requiredAmount = parseFloat(investorPayout.replace(/[^\d.]/g, ""))
     if (walletBalance < requiredAmount) {
-      toast.error('Insufficient Balance', {
-        description: `You need ${investorPayout} but only have CTC ${walletBalance.toLocaleString()}. Please top up your account.`,
+      toast.error("Insufficient Balance", {
+        description: `Need ${investorPayout}, have CTC ${walletBalance.toLocaleString()}. Top up first.`,
         duration: 5000,
       })
       setIsProcessing(false)
       return
     }
-    
     try {
-      // Connect to Socket.IO for real-time buyback tracking
-      await connect();
-      
-      // Show progress tracker
-      setShowBuybackProgressTracker(true);
-
-      const response = await apiInstance.post('/pawnshop/repayment', {
-        sagId: sagId,
-        tokenId: tokenId,
-        pawnshopAccountId: user?.profile?.accountId || (user as any)?.wallet?.address
+      await connect()
+      setShowBuybackProgressTracker(true)
+      await apiInstance.post("/pawnshop/repayment", {
+        sagId,
+        tokenId,
+        pawnshopAccountId: user?.profile?.accountId || (user as any)?.wallet?.address,
       })
-      
-      // The Socket.IO events will handle the success/error states
-      // and update the UI accordingly
-      
     } catch (error) {
-      console.error('Failed to initiate buyback:', error);
-      setIsProcessing(false);
-      setShowBuybackProgressTracker(false);
-      toast.error('Failed to initiate buyback: ' + (error as Error).message);
+      setIsProcessing(false)
+      setShowBuybackProgressTracker(false)
+      toast.error("Failed to initiate buyback")
     }
   }
-  
-  // Helper function to check if user has sufficient balance
-  const hasSufficientBalance = (investorPayout: string): boolean => {
-    // const requiredAmount = parseFloat(investorPayout.replace(/[^\d.]/g, ''))
-    const requiredAmount = tokenInfo?.data ? parseInt(tokenInfo.data.remainingSupply) : 0
-    return walletBalance >= requiredAmount
-  }
-
-  const handleSettlement = () => {
-    // Check settlement
-    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/v1/test/sse`);
-
-    eventSource.onmessage = (event) => {
-      console.log('Settlement', event.data)
-      const data = JSON.parse(event.data);
-    }
-
-    eventSource.onerror = (event) => {
-      console.error('Settlement error', event)
-    }
 
 
-    const promise = new Promise((resolve, reject) => {
-      eventSource.onmessage = (event) => {
-        console.log('Settlement', event.data)
-        const data = JSON.parse(event.data);
-        // setProgress(data.progress);
-
-        if (data.type === 'complete') {
-          setProgress(100);
-          resolve(data)
-        } else {
-          setProgress(Number(data.progress) || 0);
-          console.log('Setting progress', Number(data.progress))
-        }
-
-        // console.log('Progress', progress)
-        // console.log('data', data.message);
-        // console.log('Data', data)
-        // console.log('event', event)
-      }
-    })
-
-    toast.promise(promise, {
-      loading: <><div className="flex items-center gap-2">
-        <div className="w-4 h-4 bg-muted0 rounded-full animate-pulse"></div>
-        <div className="text-sm text-primary">Processing settlement... {progress}%</div>
-      </div></>,
-      success: () => {
-        return 'Settlement processed successfully!'
-      },
-      error: () => {
-        return 'Failed to process settlement!'
-      }
-    })
-  }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Repayment & Settlement</h1>
-          <p className="text-muted-foreground">Monitor repayments and manage settlements</p>
-          <div className="mt-2 flex items-center gap-2">
-            {balanceLoading ? (
-              <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border">
-                <Wallet className="h-3 w-3 mr-1" />
-                Loading balance...
-              </Badge>
-            ) : (
-              <>
-                <Badge variant="outline" className="bg-muted text-primary border-blue-200 text-base py-1.5 px-3">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Wallet Balance: CTC {walletBalance.toLocaleString()}
-                </Badge>
-                <Button 
-                  onClick={handleRefreshBalance} 
-                  variant="ghost" 
-                  size="sm"
-                  disabled={balanceLoading}
-                  className="h-7 w-7 p-0"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${balanceLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </>
-            )}
-          </div>
+          <p className={LABEL}>Settlement & Liquidity</p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+            Repayments
+          </h1>
+          <p className="mt-1 text-sm text-[#4A4A4A]">Monitor repayments and manage settlements</p>
         </div>
-        <div className="flex gap-2">
-          <TopUpDialog />
-          <Button className="bg-primary hover:bg-primary/90">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Process Settlement
-          </Button>
-        </div>
+
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-foreground flex items-center justify-between">
-              Wallet Balance
-              <Wallet className="h-4 w-4 text-primary" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {balanceLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold text-primary">CTC {walletBalance.toLocaleString()}</div>
-            )}
-            <p className="text-xs text-primary mt-1">Available funds</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Due</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold">CTC {(totalDue / 1000000).toFixed(2)}M</div>
-            )}
-            <p className="text-xs text-muted-foreground">Across all SAGs</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">On-Time Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold text-success">{onTimeCount}</div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {repaymentData.length > 0 ? Math.round((onTimeCount / repaymentData.length) * 100) : 0}% success rate
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Late Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold text-destructive">{lateCount}</div>
-            )}
-            <p className="text-xs text-muted-foreground">Require attention</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Settlements Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold text-primary">{dueTodayCount}</div>
-            )}
-            <p className="text-xs text-muted-foreground">To be processed</p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {[
+          { label: "Wallet Balance", value: `CTC ${walletBalance.toLocaleString()}`, icon: Wallet, loading: balanceLoading },
+          { label: "Total Due", value: `CTC ${(totalDue / 1_000_000).toFixed(2)}M`, icon: Coins, loading: isLoading },
+          { label: "On-Time", value: onTimeCount, icon: CheckCircle, color: "text-emerald-600", loading: isLoading },
+          { label: "Late", value: lateCount, icon: AlertTriangle, color: "text-red-500", loading: isLoading },
+          { label: "Due Today", value: dueTodayCount, icon: Clock, color: "text-[#E1BAC2]", loading: isLoading },
+        ].map((s) => (
+          <div key={s.label} className={`${GLASS} p-5`}>
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+              <s.icon className={`h-4 w-4 ${s.color || "text-[#E1BAC2]"}`} />
+            </div>
+            <p className={LABEL}>{s.label}</p>
+            <p className={`mt-1 ${VALUE} text-xl`}>{s.loading ? "—" : s.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Repayment Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Repayment Status</CardTitle>
-          <CardDescription>Monitor all SAG repayments and settlements</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg">
+      <div className={`${GLASS} p-6`}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className={LABEL}>Active Repayments</p>
+            <h3 className="mt-1 font-display text-lg font-bold text-[#171414]">SAG Repayment Schedule</h3>
+          </div>
+          <Button variant="ghost" size="sm" className="rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" onClick={() => refetchBalance()}>
+            <RefreshCw className={`h-3 w-3 mr-1 ${balanceLoading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-[#E1BAC2]" />
+          </div>
+        ) : repaymentData.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+              <Coins className="h-7 w-7 text-[#E1BAC2]" />
+            </div>
+            <p className="font-display text-lg font-bold text-[#171414]">No active repayments</p>
+            <p className="mt-1 text-sm text-[#4A4A4A]">SAG repayment schedules will appear here</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>SAG ID</TableHead>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Days Remaining</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="border-[#171414]/10">
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">SAG</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Amount</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Due Date</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Status</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Days Left</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  // Loading skeleton rows
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={`loading-${i}`}>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-destructive">
-                      Failed to load repayment data. Please try again.
+                {repaymentData.map((repayment) => (
+                  <TableRow key={repayment.sagId} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
+                    <TableCell>
+                      <p className="font-display text-sm font-bold text-[#171414]">{repayment.sagName}</p>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">{repayment.sagId.slice(0, 12)}...</p>
                     </TableCell>
-                  </TableRow>
-                ) : repaymentData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No active SAG listings with repayment schedules found.
+                    <TableCell>
+                      <p className="font-mono text-xs font-bold text-[#171414]">{repayment.amount}</p>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">Payout: {repayment.investorPayout}</p>
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  repaymentData.map((repayment) => (
-                    <TableRow key={repayment.sagId}>
-                      <TableCell className="font-medium">
-                        <div>
-                          <div className="font-medium">{repayment.sagId}</div>
-                          <div className="text-xs text-muted-foreground">{repayment.sagName}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{repayment.arRahnu}</TableCell>
-                      <TableCell>{repayment.amount}</TableCell>
-                      <TableCell>{repayment.dueDate}</TableCell>
-                      <TableCell>{getStatusBadge(repayment.status)}</TableCell>
-                      <TableCell>
-                        <span className={repayment.daysRemaining < 0 ? "text-destructive" : "text-muted-foreground"}>
-                          {repayment.daysRemaining < 0
-                            ? `${Math.abs(repayment.daysRemaining)} days overdue`
-                            : `${repayment.daysRemaining} days`}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 items-center">
-                          {!hasSufficientBalance(repayment.investorPayout) && (
-                            <div className="relative group">
-                              <AlertTriangle className="h-4 w-4 text-destructive" />
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-foreground text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                Insufficient balance
-                              </div>
-                            </div>
-                          )}
-                          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRepayment(repayment)
-                                  setIsDialogOpen(true)
-                                }}
-                                className="bg-transparent"
-                              >
-                                View Details
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>Repayment Details - {selectedRepayment?.sagName}</DialogTitle>
-                                <DialogDescription>Complete repayment and settlement information</DialogDescription>
-                              </DialogHeader>
-                              {selectedRepayment && (
-                                <div className="space-y-6">
-                                  <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                      <label className="text-sm font-medium">SAG ID</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.sagId}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">SAG Name</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.sagName}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Ar Rahnu Branch</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.arRahnu}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Asset Type</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.assetType} - {selectedRepayment.weight} ({selectedRepayment.karat}K)</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Loan Amount</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.amount}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Investor Payout</label>
-                                      <p className="text-sm font-semibold text-success">{selectedRepayment.investorPayout}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">ROI Percentage</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.roiPercentage}%</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Tenor</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.tenor} months</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Due Date</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.dueDate}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Last Payment</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.lastPayment}</p>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Status</label>
-                                      <div className="mt-1">{getStatusBadge(selectedRepayment.status)}</div>
-                                    </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Invoice Status</label>
-                                      <p className="text-sm text-muted-foreground">{selectedRepayment.invoiceSent ? "Sent ✓" : "Not Sent"}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="border-t pt-4">
-                                    <h4 className="font-medium mb-3">Settlement Actions</h4>
-                                    <div className="flex gap-2 flex-wrap">
-                                      <Button onClick={() => handleSettlement()} size="sm" className="bg-primary hover:bg-primary/90">
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Trigger Settlement
-                                      </Button>
-                                      <Button size="sm" variant="outline" className="bg-transparent">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        Adjust Date
-                                      </Button>
-                                      <Button size="sm" variant="outline" className="bg-transparent">
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Send Invoice
-                                      </Button>
-                                      <Button size="sm" variant="outline" className="bg-transparent">
-                                        <DollarSign className="h-4 w-4 mr-2" />
-                                        Adjust Amount
-                                      </Button>
-                                    </div>
-                                  </div>
-
-                                  <div className="border-t pt-4">
-                                    <h4 className="font-medium mb-3">Token/NFT Actions</h4>
-                                    <div className="space-y-3">
-                                      <div className="flex gap-2 items-start">
-                                        <Button 
-                                          onClick={() => handleBuyBack(selectedRepayment.sagId, selectedRepayment.tokenId, selectedRepayment.investorPayout)} 
-                                          size="sm" 
-                                          variant="destructive"
-                                          disabled={!hasSufficientBalance(selectedRepayment.investorPayout) || isProcessing}
-                                          className="flex-1"
-                                        >
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Buy Back & Burn Tokens
-                                        </Button>
-                                        <Button asChild size="sm" variant="outline" className="bg-transparent flex-1">
-                                          <Link href={`${process.env.NEXT_PUBLIC_ENV_URL}/${selectedRepayment.tokenId}`} target="_blank">
-                                            <ExternalLinkIcon className="h-4 w-4 mr-2" />
-                                            View Token Status
-                                          </Link>
-                                        </Button>
-                                      </div>
-                                      
-                                      {!hasSufficientBalance(selectedRepayment.investorPayout) && (
-                                        <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm">
-                                          <div className="flex items-start gap-2">
-                                            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                                            <div className="flex-1">
-                                              <p className="font-medium text-destructive">Insufficient Balance</p>
-                                              <p className="text-destructive mt-1">
-                                                Required: <span className="font-semibold">{selectedRepayment.investorPayout}</span>
-                                              </p>
-                                              <p className="text-destructive">
-                                                Available: <span className="font-semibold">CTC {walletBalance.toLocaleString()}</span>
-                                              </p>
-                                              <p className="text-destructive mt-1">
-                                                Shortfall: <span className="font-semibold">CTC {(parseFloat(selectedRepayment.investorPayout.replace(/[^\d.]/g, '')) - walletBalance).toLocaleString()}</span>
-                                              </p>
-                                              <p className="text-destructive mt-2 text-xs">
-                                                Please top up your account to proceed with the buyback.
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </DialogContent>
-                          </Dialog>
-                          {repayment.status === "late" && (
-                            <Button size="sm" variant="destructive">
-                              <AlertTriangle className="h-4 w-4" />
+                    <TableCell className="font-mono text-xs text-[#171414]">{repayment.dueDate}</TableCell>
+                    <TableCell><StatusBadge status={repayment.status} /></TableCell>
+                    <TableCell>
+                      <span className={`font-mono text-xs ${repayment.daysRemaining < 0 ? "text-red-500 font-bold" : "text-[#4A4A4A]"}`}>
+                        {repayment.daysRemaining < 0 ? `${Math.abs(repayment.daysRemaining)}d overdue` : `${repayment.daysRemaining}d`}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {!hasSufficientBalance(repayment.investorPayout) && (
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                        )}
+                        <Dialog open={isDialogOpen && selectedRepayment?.sagId === repayment.sagId} onOpenChange={setIsDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-8 rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" onClick={() => { setSelectedRepayment(repayment); setIsDialogOpen(true) }}>
+                              View
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                          </DialogTrigger>
+                          <DialogContent className={`${GLASS} sm:max-w-2xl max-h-[85vh] overflow-y-auto`}>
+                            <DialogHeader>
+                              <DialogTitle className="font-display text-xl font-bold text-[#171414]">{selectedRepayment?.sagName}</DialogTitle>
+                              <DialogDescription className="text-[#4A4A4A]">Repayment & settlement details</DialogDescription>
+                            </DialogHeader>
+                            {selectedRepayment && (
+                              <div className="space-y-4 py-2">
+                                <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#171414]/10 p-4 bg-[#FAFAF8]">
+                                  <div><p className={LABEL}>Loan Amount</p><p className="font-mono text-xs font-bold text-[#171414] mt-1">{selectedRepayment.amount}</p></div>
+                                  <div><p className={LABEL}>Investor Payout</p><p className="font-mono text-xs font-bold text-emerald-600 mt-1">{selectedRepayment.investorPayout}</p></div>
+                                  <div><p className={LABEL}>ROI</p><p className="font-mono text-xs text-[#171414] mt-1">{selectedRepayment.roiPercentage}%</p></div>
+                                  <div><p className={LABEL}>Tenor</p><p className="font-mono text-xs text-[#171414] mt-1">{selectedRepayment.tenor} months</p></div>
+                                  <div><p className={LABEL}>Due Date</p><p className="font-mono text-xs text-[#171414] mt-1">{selectedRepayment.dueDate}</p></div>
+                                  <div><p className={LABEL}>Status</p><div className="mt-1"><StatusBadge status={selectedRepayment.status} /></div></div>
+                                  <div><p className={LABEL}>Asset</p><p className="text-xs text-[#171414] mt-1">{selectedRepayment.assetType} · {selectedRepayment.weight} · {selectedRepayment.karat}K</p></div>
+                                  <div><p className={LABEL}>Last Payment</p><p className="font-mono text-xs text-[#171414] mt-1">{selectedRepayment.lastPayment}</p></div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <Button variant="ghost" className="rounded-full font-mono text-[10px] text-red-500 hover:bg-red-50" disabled={!hasSufficientBalance(selectedRepayment.investorPayout) || isProcessing} onClick={() => handleBuyBack(selectedRepayment.sagId, selectedRepayment.tokenId, selectedRepayment.investorPayout)}>
+                                    {isProcessing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                                    Buy Back & Burn
+                                  </Button>
+                                  {selectedRepayment.tokenId && (
+                                    <Button variant="ghost" className="rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" asChild>
+                                      <a href={`${process.env.NEXT_PUBLIC_ENV_URL}/${selectedRepayment.tokenId}`} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-3 w-3 mr-1" /> View Token
+                                      </a>
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {!hasSufficientBalance(selectedRepayment.investorPayout) && (
+                                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                                    <div className="flex items-start gap-2">
+                                      <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                                      <div>
+                                        <p className="font-display text-sm font-bold text-red-600">Insufficient Balance</p>
+                                        <p className="font-mono text-xs text-red-500 mt-1">Required: {selectedRepayment.investorPayout}</p>
+                                        <p className="font-mono text-xs text-red-500">Available: CTC {walletBalance.toLocaleString()}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Bulk Settlement</CardTitle>
-            <CardDescription>Process multiple settlements at once</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-primary hover:bg-primary/90">Process All Due Today</Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Late Payment Alerts</CardTitle>
-            <CardDescription>Send reminders to overdue accounts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full bg-transparent">
-              Send Reminder Emails
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Settlement Reports</CardTitle>
-            <CardDescription>Generate settlement reports</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full bg-transparent">
-              Download Report
-            </Button>
-          </CardContent>
-        </Card>
+        )}
       </div>
 
       {/* Buyback Progress Tracker */}

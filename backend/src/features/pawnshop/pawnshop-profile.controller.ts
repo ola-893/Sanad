@@ -6,6 +6,8 @@ import {
   getPawnshopProfileByUserId,
   updatePawnshopProfile,
   getAllPawnshopProfiles,
+  getPawnshopProfilesByKycStatus,
+  updatePawnshopKycStatus,
 } from './pawnshop-profile.repository.js';
 
 function getToken(req: Request): string {
@@ -142,6 +144,91 @@ export class PawnshopProfileController {
     } catch (error) {
       console.error('Error fetching pawnshop profile:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch profile' });
+    }
+  }
+
+  /**
+   * GET /pawnshop/admin/pawnshops — Admin: List all pawnshop profiles
+   */
+  async adminListPawnshops(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user || !['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(user.roleId || '')) {
+        res.status(403).json({ success: false, error: 'Admin access required' });
+        return;
+      }
+
+      const profiles = await getAllPawnshopProfiles();
+      res.status(200).json({ success: true, data: profiles });
+    } catch (error) {
+      console.error('Error listing pawnshops for admin:', error);
+      res.status(500).json({ success: false, error: 'Failed to list pawnshops' });
+    }
+  }
+
+  /**
+   * GET /pawnshop/admin/pawnshops/pending — Admin: List pawnshops with pending KYC
+   */
+  async adminListPendingPawnshops(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user || !['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(user.roleId || '')) {
+        res.status(403).json({ success: false, error: 'Admin access required' });
+        return;
+      }
+
+      const pending = await getPawnshopProfilesByKycStatus('pending');
+      res.status(200).json({ success: true, data: pending });
+    } catch (error) {
+      console.error('Error listing pending pawnshops:', error);
+      res.status(500).json({ success: false, error: 'Failed to list pending pawnshops' });
+    }
+  }
+
+  /**
+   * POST /pawnshop/admin/pawnshops/:userId/kyc — Admin: Approve or reject pawnshop KYC
+   */
+  async adminReviewPawnshopKyc(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user || !['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(user.roleId || '')) {
+        res.status(403).json({ success: false, error: 'Admin access required' });
+        return;
+      }
+
+      const { userId } = req.params;
+      const { action, rejectionReason } = req.body;
+
+      if (!action || !['approve', 'reject'].includes(action)) {
+        res.status(400).json({ success: false, error: 'Action must be "approve" or "reject"' });
+        return;
+      }
+
+      if (action === 'reject' && !rejectionReason) {
+        res.status(400).json({ success: false, error: 'Rejection reason is required' });
+        return;
+      }
+
+      const profile = await getPawnshopProfileByUserId(userId);
+      if (!profile) {
+        res.status(404).json({ success: false, error: 'Pawnshop profile not found' });
+        return;
+      }
+
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
+      const updated = await updatePawnshopKycStatus(userId, newStatus, rejectionReason);
+
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: `Pawnshop KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
+      });
+    } catch (error) {
+      console.error('Error reviewing pawnshop KYC:', error);
+      res.status(500).json({ success: false, error: 'Failed to review pawnshop KYC' });
     }
   }
 

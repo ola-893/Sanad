@@ -1,15 +1,27 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from '@tanstack/react-query'
-import apiInstance from '@/lib/axios-v1'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useQuery } from "@tanstack/react-query"
+import apiInstance from "@/lib/axios-v1"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, XCircle, Eye, Download, Calendar, ExternalLinkIcon } from "lucide-react"
+import { Search, Eye, CheckCircle, XCircle, Loader2, FileText, ExternalLink } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+/* ─── Design tokens ─── */
+const GLASS = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+const LABEL = "font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#171414]/50"
+const VALUE = "font-display text-3xl font-extrabold tabular-nums text-[#171414]"
+const INPUT = "rounded-xl border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2]"
 
 interface SAGProperties {
   loan?: number
@@ -20,12 +32,8 @@ interface SAGProperties {
   assetType: string
   mintShare: number
   valuation: number
-  enableMinting: boolean
   loanPercentage?: number
-  pawnerInterestP?: number
-  investorFinancingType: string
   investorRoiPercentage: number
-  investorRoiFixedAmount?: number
 }
 
 interface SAG {
@@ -36,462 +44,191 @@ interface SAG {
   sagProperties: SAGProperties
   sagType: string
   certNo: string
-  status?: 'active' | 'closed'
-  createdAt?: string
-  updatedAt?: string
+  status?: string
+  approvalStatus?: string
+  closedAt?: string
 }
 
 interface SAGResponse {
   success: boolean
-  message: string
   data: SAG[]
-  pagination: {
-    count: number
-    totalCount: number
-    currentPage: number
-    totalPages: number
-    hasNextPage: boolean
-    hasPrevPage: boolean
-  }
+  pagination: { totalCount: number; currentPage: number; totalPages: number }
 }
 
+export default function CompletedSagPage() {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedType, setSelectedType] = useState("all")
+  const [viewSag, setViewSag] = useState<SAG | null>(null)
 
-export default function CompletedSAGListingsPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [dateFilter, setDateFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['completed-sags', currentPage, pageSize],
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-completed-sags"],
     queryFn: async (): Promise<SAGResponse> => {
-      const response = await apiInstance.get(`/sag?page_size=${pageSize}&page_number=${currentPage}&status=closed`)
-      return response.data
+      const { data } = await apiInstance.get("/sag?page_size=200&page_number=1&status=closed")
+      return data
     },
   })
 
-  const sags = data?.data || []
-  const pagination = data?.pagination
+  const sags: SAG[] = data?.data || []
+  const total = data?.pagination?.totalCount || sags.length
 
-  const getStatusColor = (sag: SAG) => {
-    // For closed SAGs, we consider them "completed" - they could be approved (with tokenId) or rejected (without tokenId)
-    if (sag.tokenId) {
-      return "bg-success/10 text-success dark:bg-green-900/30 dark:text-green-300"
-    } else {
-      return "bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-300"
-    }
-  }
-
-  const getStatusIcon = (sag: SAG) => {
-    if (sag.tokenId) {
-      return <CheckCircle className="h-4 w-4" />
-    } else {
-      return <XCircle className="h-4 w-4" />
-    }
-  }
-
-  const getStatusText = (sag: SAG) => {
-    return sag.tokenId ? "COMPLETED" : "REJECTED"
-  }
-
-  const filteredListings = sags.filter((sag) => {
-    const matchesSearch =
-      sag.sagName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sag.sagDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sag.sagId.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const sagStatus = sag.tokenId ? "approved" : "rejected"
-    const matchesStatus = statusFilter === "all" || sagStatus === statusFilter
-    
-    return matchesSearch && matchesStatus
+  const filtered = sags.filter((sag) => {
+    const matchType = selectedType === "all" || sag.sagType?.toLowerCase() === selectedType
+    const q = searchQuery.toLowerCase()
+    const matchSearch = !q || sag.sagName.toLowerCase().includes(q) || sag.sagId.toLowerCase().includes(q)
+    return matchType && matchSearch
   })
 
-  const approvedListings = sags.filter((sag) => sag.tokenId) // Has tokenId means approved/completed
-  const rejectedListings = sags.filter((sag) => !sag.tokenId) // No tokenId means rejected
-  const totalApprovedValue = approvedListings.reduce(
-    (sum, sag) => sum + sag.sagProperties.valuation,
-    0,
-  )
-  const totalLoanAmount = approvedListings.reduce(
-    (sum, sag) => sum + (sag.sagProperties.valuation * (sag.sagProperties.loanPercentage ?? 0) / 100),
-    0,
-  )
+  const totalValuation = sags.reduce((sum, s) => sum + (s.sagProperties?.valuation || 0), 0)
+  const totalLoan = sags.reduce((sum, s) => sum + (s.sagProperties?.loan || 0), 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <CheckCircle className="h-6 w-6 text-success" />
-        <h1 className="text-2xl font-bold">Completed SAG Listings</h1>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className={LABEL}>Completed Listings</p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+            Closed SAGs
+          </h1>
+          <p className="mt-1 text-sm text-[#4A4A4A]">
+            Settled and completed gold-backed token listings
+          </p>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Completed</p>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-bold">{pagination?.totalCount || sags.length}</p>
-                )}
-                <p className="text-xs text-primary">Closed SAGs</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-primary" />
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total Closed", value: total, icon: FileText },
+          { label: "Total Valuation", value: `CTC ${totalValuation.toLocaleString()}`, icon: CheckCircle, color: "text-emerald-600" },
+          { label: "Total Loaned", value: `CTC ${totalLoan.toLocaleString()}`, icon: FileText },
+          { label: "Avg ROI", value: sags.length > 0 ? `${(sags.reduce((s, x) => s + (x.sagProperties?.investorRoiPercentage || 0), 0) / sags.length).toFixed(1)}%` : "—", icon: FileText },
+        ].map((s) => (
+          <div key={s.label} className={`${GLASS} p-5`}>
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+              <s.icon className={`h-4 w-4 ${s.color || "text-[#E1BAC2]"}`} />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Approved</p>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-bold text-success">{approvedListings.length}</p>
-                )}
-                {!isLoading && sags.length > 0 && (
-                  <p className="text-xs text-success">
-                    {Math.round((approvedListings.length / sags.length) * 100)}% approval rate
-                  </p>
-                )}
-              </div>
-              <CheckCircle className="h-8 w-8 text-success" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <p className="text-2xl font-bold">CTC {totalApprovedValue.toLocaleString()}</p>
-                )}
-                <p className="text-xs text-success">Approved items</p>
-              </div>
-              <Eye className="h-8 w-8 text-success" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Loans Issued</p>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <p className="text-2xl font-bold">CTC {totalLoanAmount.toLocaleString()}</p>
-                )}
-                <p className="text-xs text-primary">Based on loan percentage</p>
-              </div>
-              <Download className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter & Search</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <Input
-                placeholder="Search by item name, submitter, or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
+            <p className={LABEL}>{s.label}</p>
+            <p className={`mt-1 ${VALUE} text-xl`}>{isLoading ? "—" : s.value}</p>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
 
-      {/* Completed Listings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Completed Listings ({filteredListings.length})</CardTitle>
-          <CardDescription>Processed and finalized SAG listings</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={`loading-${i}`} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <Skeleton className="h-6 w-48 mb-2" />
-                      <Skeleton className="h-4 w-64 mb-1" />
-                      <Skeleton className="h-4 w-56" />
-                    </div>
-                    <div className="text-right">
-                      <Skeleton className="h-6 w-24 mb-1" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-8 w-24" />
-                    <Skeleton className="h-8 w-32" />
-                    <Skeleton className="h-8 w-20" />
-                  </div>
-                </div>
-              ))}
+      {/* Search & Filter */}
+      <div className={`${GLASS} p-6`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+          <div className="relative flex-1 w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A]" />
+            <Input placeholder="Search by name or ID..." className={`pl-10 ${INPUT}`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className={`w-40 ${INPUT}`}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="conventional">Conventional</SelectItem>
+              <SelectItem value="shariah">Shariah</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-[#E1BAC2]" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1BAC2]/10">
+              <FileText className="h-7 w-7 text-[#E1BAC2]" />
             </div>
-          ) : error ? (
-            <div className="text-center py-8 text-destructive">
-              Failed to load completed SAG listings. Please try again.
-            </div>
-          ) : filteredListings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No completed SAG listings found.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredListings.map((sag) => (
-                <div key={sag.sagId} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-foreground dark:text-gray-100">{sag.sagName}</h3>
-                        <Badge className={getStatusColor(sag)}>
-                          {getStatusIcon(sag)}
-                          {getStatusText(sag)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                        ID: {sag.sagId} • {sag.sagDescription}
-                      </p>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                        Certificate: {sag.certNo} • Type: {sag.sagType}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-foreground dark:text-gray-100">
+            <p className="font-display text-lg font-bold text-[#171414]">No completed listings</p>
+            <p className="mt-1 text-sm text-[#4A4A4A]">Closed SAGs will appear here</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#171414]/10">
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">SAG</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Asset</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Valuation</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Terms</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Status</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((sag) => (
+                  <TableRow key={sag.sagId} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
+                    <TableCell>
+                      <p className="font-display text-sm font-bold text-[#171414]">{sag.sagName}</p>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">{sag.sagId.slice(0, 12)}...</p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-xs text-[#171414]">{sag.sagProperties.assetType}</p>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">{sag.sagProperties.weightG}g · {sag.sagProperties.karat}K</p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-mono text-xs font-bold text-[#171414]">
                         {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
                       </p>
-                      {sag.createdAt && (
-                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                          Created: {new Date(sag.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-                    <div>
-                      <p className="text-muted-foreground dark:text-muted-foreground">Asset Type</p>
-                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground dark:text-muted-foreground">Weight</p>
-                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.weightG}g</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground dark:text-muted-foreground">Karat</p>
-                      <p className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.karat}K Gold</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground dark:text-muted-foreground">
-                        {sag.tokenId ? "Loan Amount" : "Status"}
-                      </p>
-                      <p className="font-medium text-foreground dark:text-gray-100">
-                        {sag.tokenId 
-                          ? `${sag.sagProperties.currency} ${(sag.sagProperties.valuation * (sag.sagProperties.loanPercentage ?? 0) / 100).toLocaleString()}`
-                          : "Not Approved"
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  {sag.tokenId && (
-                    <div className="mb-3 p-4 bg-success/10 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p className="text-sm text-success dark:text-green-300">
-                            <strong>Token ID:</strong> {sag.tokenId}
-                          </p>
-                          <p className="text-xs text-success dark:text-success">
-                            Total Available: {sag.sagProperties.mintShare.toLocaleString()} shares at {sag.sagProperties.investorRoiPercentage}% monthly ROI
-                          </p>
-                        </div>
-                        <a 
-                          className="text-primary dark:text-blue-400 hover:underline flex items-center gap-1 text-sm font-medium"
-                          href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          View Token <ExternalLinkIcon className="h-3 w-3" />
-                        </a>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">{sag.sagProperties.loanPercentage}% LTV</p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-mono text-xs text-[#171414]">{sag.sagProperties.investorRoiPercentage}% ROI</p>
+                      <p className="font-mono text-[10px] text-[#4A4A4A]">{sag.sagProperties.tenorM} months</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-red-50 text-red-600 border-red-200 font-mono text-[10px]">Closed</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-8 rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" onClick={() => setViewSag(sag)}>
+                          <Eye className="h-3 w-3 mr-1" /> View
+                        </Button>
+                        {sag.tokenId && (
+                          <Button size="sm" variant="ghost" className="h-8 rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5" asChild>
+                            <a href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3 w-3 mr-1" /> Chain
+                            </a>
+                          </Button>
+                        )}
                       </div>
-                      
-                      {/* ROI Per Share Details */}
-                      <div className="bg-card p-4 rounded-lg border dark:border-gray-600">
-                        <h4 className="text-sm font-semibold text-foreground dark:text-gray-100 mb-3 flex items-center gap-2">
-                          <span className="bg-muted dark:bg-blue-900/30 text-primary dark:text-blue-300 px-2 py-1 rounded text-xs">
-                            ROI Details
-                          </span>
-                          Per Share Breakdown
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* Share Price */}
-                          <div className="bg-muted dark:bg-blue-900/20 p-3 rounded-lg border dark:border-blue-700">
-                            <div className="text-center">
-                              <p className="text-xs font-medium text-primary dark:text-blue-300 mb-1">Share Price</p>
-                              <p className="text-lg font-bold text-primary dark:text-blue-200">
-                                {sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}
-                              </p>
-                              <p className="text-xs text-primary dark:text-blue-400">
-                                {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()} ÷ {sag.sagProperties.mintShare.toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
-                          {/* Monthly ROI per Share */}
-                          <div className="bg-success/10 dark:bg-green-900/20 p-3 rounded-lg border dark:border-green-700">
-                            <div className="text-center">
-                              <p className="text-xs font-medium text-success dark:text-green-300 mb-1">Monthly ROI per Share</p>
-                              <p className="text-lg font-bold text-success dark:text-green-200">
-                                {sag.sagProperties.currency} {((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)).toFixed(2)}
-                              </p>
-                              <p className="text-xs text-success dark:text-success">
-                                {sag.sagProperties.investorRoiPercentage}% of share price
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Total ROI per Share */}
-                          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border dark:border-purple-700">
-                            <div className="text-center">
-                              <p className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Total ROI per Share</p>
-                              <p className="text-lg font-bold text-purple-800 dark:text-purple-200">
-                                {sag.sagProperties.currency} {(((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM).toFixed(2)}
-                              </p>
-                              <p className="text-xs text-primary dark:text-purple-400">
-                                Over {sag.sagProperties.tenorM} months
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* ROI Calculation Breakdown */}
-                        <div className="mt-4 p-3 bg-muted/40 dark:bg-gray-700 rounded-lg">
-                          <h5 className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground mb-2">Investment Returns Calculation:</h5>
-                          <div className="text-xs text-muted-foreground dark:text-muted-foreground space-y-1">
-                            <div className="flex justify-between">
-                              <span>Initial Investment (per share):</span>
-                              <span className="font-medium">{sag.sagProperties.currency} {(sag.sagProperties.valuation / sag.sagProperties.mintShare).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Monthly Return (per share):</span>
-                              <span className="font-medium text-success dark:text-success">
-                                +{sag.sagProperties.currency} {((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)).toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between border-t dark:border-gray-600 pt-1">
-                              <span className="font-medium">Total Return (per share):</span>
-                              <span className="font-bold text-primary dark:text-purple-400">
-                                {sag.sagProperties.currency} {(
-                                  (sag.sagProperties.valuation / sag.sagProperties.mintShare) + 
-                                  (((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM)
-                                ).toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium">Profit per Share:</span>
-                              <span className="font-bold text-success dark:text-success">
-                                {sag.sagProperties.currency} {(((sag.sagProperties.valuation / sag.sagProperties.mintShare) * (sag.sagProperties.investorRoiPercentage / 100)) * sag.sagProperties.tenorM).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* ROI Percentage Summary */}
-                        <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border dark:border-gray-600">
-                          <div className="text-center">
-                            <p className="text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1">Total Return Rate</p>
-                            <p className="text-xl font-bold text-foreground dark:text-gray-100">
-                              {(sag.sagProperties.investorRoiPercentage * sag.sagProperties.tenorM).toFixed(1)}%
-                            </p>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                              {sag.sagProperties.investorRoiPercentage}% × {sag.sagProperties.tenorM} months
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!sag.tokenId && (
-                    <div className="mb-3 p-2 bg-destructive/10 dark:bg-red-900/20 rounded border-l-4 border-red-400">
-                      <p className="text-sm text-destructive dark:text-red-300">
-                        <strong>Status:</strong> This SAG was closed without tokenization
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
-                      <Eye className="mr-1 h-3 w-3" />
-                      View Details
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Download className="mr-1 h-3 w-3" />
-                      Download Report
-                    </Button>
-                    {sag.tokenId && (
-                      <Button size="sm" variant="outline">
-                        View Token
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      Timeline
-                    </Button>
-                  </div>
+      {/* Detail Dialog */}
+      <Dialog open={!!viewSag} onOpenChange={(o) => !o && setViewSag(null)}>
+        <DialogContent className={`${GLASS} sm:max-w-xl`}>
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl font-bold text-[#171414]">{viewSag?.sagName}</DialogTitle>
+            <DialogDescription className="text-[#4A4A4A]">Completed SAG details</DialogDescription>
+          </DialogHeader>
+          {viewSag && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#171414]/10 p-4 bg-[#FAFAF8]">
+                <div><p className={LABEL}>Asset</p><p className="text-xs text-[#171414] mt-1">{viewSag.sagProperties.assetType} · {viewSag.sagProperties.weightG}g · {viewSag.sagProperties.karat}K</p></div>
+                <div><p className={LABEL}>Valuation</p><p className="font-mono text-xs font-bold text-[#171414] mt-1">{viewSag.sagProperties.currency} {viewSag.sagProperties.valuation.toLocaleString()}</p></div>
+                <div><p className={LABEL}>Loan</p><p className="font-mono text-xs text-[#171414] mt-1">{viewSag.sagProperties.currency} {(viewSag.sagProperties.loan || 0).toLocaleString()}</p></div>
+                <div><p className={LABEL}>ROI</p><p className="font-mono text-xs text-[#171414] mt-1">{viewSag.sagProperties.investorRoiPercentage}%</p></div>
+                <div><p className={LABEL}>Tenor</p><p className="font-mono text-xs text-[#171414] mt-1">{viewSag.sagProperties.tenorM} months</p></div>
+                <div><p className={LABEL}>Shares</p><p className="font-mono text-xs text-[#171414] mt-1">{viewSag.sagProperties.mintShare.toLocaleString()}</p></div>
+              </div>
+              {viewSag.closedAt && (
+                <div className="rounded-2xl border border-[#171414]/10 p-4 bg-[#FAFAF8]">
+                  <p className={LABEL}>Closed At</p>
+                  <p className="mt-1 text-xs text-[#171414]">{new Date(viewSag.closedAt).toLocaleDateString()}</p>
                 </div>
-              ))}
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

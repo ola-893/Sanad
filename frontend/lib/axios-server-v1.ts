@@ -17,7 +17,7 @@ apiServerInstance.interceptors.request.use(
     const token = (await cookies()).get('accessToken')?.value;
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
-      console.log("ℹ️ Server Token found: ", token);
+      // console.log("ℹ️ Server Token found: ", token);
     }
     return config;
   },

@@ -3,168 +3,78 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useLanguage } from "@/hooks/use-language"
 import {
   LayoutDashboard,
-  Users,
+  Shield,
   FileText,
   CreditCard,
-  Clock,
-  AlertTriangle,
-  TrendingUp,
-  Building2,
-  Wallet,
-  Shield,
-  BarChart3,
-  Settings,
-  Bell,
-  HelpCircle,
-  Wrench,
-  ArrowLeft,
   LogOut,
   ChevronDown,
-  Brain,
+  Store,
+  Scale,
 } from "lucide-react"
 import { useState } from "react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { UserRole } from "@/hooks/use-user-role"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
+import { truncateAddress } from "@/lib/web3"
 
+/* ─── Only pages that actually work ─── */
 const sidebarItems = [
   {
-    title: "admin.dashboard",
+    title: "Dashboard",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
-    role: "admin,pawnshop",
   },
   {
-    title: "AI Risk & Compliance",
-    href: "/admin/ai-risk-compliance",
-    role: "admin,pawnshop",
-    icon: Brain,
-    children: [
-      { title: "Risk Dashboard", href: "/admin/ai-risk-compliance" },
-      { title: "KYC & AML Intelligence", href: "/admin/ai-risk-compliance/kyc-aml" },
-      { title: "SAG Risk Evaluation", href: "/admin/ai-risk-compliance/sag-risk" },
-      { title: "Wallet Monitoring", href: "/admin/ai-risk-compliance/wallet-monitoring" },
-      { title: "Default Prediction", href: "/admin/ai-risk-compliance/default-prediction" },
-      { title: "Compliance Bot", href: "/admin/ai-risk-compliance/compliance-bot" },
-      { title: "Automated Reporting", href: "/admin/ai-risk-compliance/reporting" },
-      { title: "Audit Logs", href: "/admin/ai-risk-compliance/audit-logs" },
-      { title: "Risk Evaluation", href: "/admin/ai-risk-compliance/risk-evaluation" },
-    ],
-  },
-  {
-    title: "admin.kyc",
+    title: "KYC Review",
     href: "/admin/kyc",
-    icon: Users,
-    role: "admin",
+    icon: Shield,
   },
   {
-    title: "admin.sag",
+    title: "SAG Listings",
     href: "/admin/sag-listings",
     icon: FileText,
     children: [
-      { title: "Active Listings", href: "/admin/sag-listings" },
+      { title: "All Listings", href: "/admin/sag-listings" },
       { title: "Pending Approval", href: "/admin/sag-listings/pending" },
       { title: "Completed", href: "/admin/sag-listings/completed" },
     ],
-    role: "admin,pawnshop",
   },
   {
-    title: "admin.repayment",
+    title: "Pawnshops",
+    href: "/admin/kyc",
+    icon: Store,
+  },
+  {
+    title: "Repayments",
     href: "/admin/repayment",
     icon: CreditCard,
-    role: "admin,pawnshop",
   },
   {
-    title: "admin.extensions",
-    href: "/admin/extensions",
-    icon: Clock,
-    role: "admin",
-  },
-  {
-    title: "admin.defaults",
-    href: "/admin/defaults",
-    icon: AlertTriangle,
-    role: "admin",
-  },
-  {
-    title: "admin.investors",
-    href: "/admin/investors",
-    icon: TrendingUp,
-    role: "admin",
-  },
-  {
-    title: "admin.branches",
-    href: "/admin/branches",
-    icon: Building2,
-  },
-  {
-    title: "admin.wallets",
-    href: "/admin/wallets",
-    icon: Wallet,
-    role: "admin",
-  },
-  {
-    title: "admin.compliance",
+    title: "Compliance",
     href: "/admin/compliance",
-    icon: Shield,
-    role: "admin",
-  },
-  {
-    title: "admin.analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-    role: "admin",
-  },
-  {
-    title: "admin.settings",
-    href: "/admin/settings",
-    icon: Settings,
-    role: "admin",
-  },
-  {
-    title: "admin.notifications",
-    href: "/admin/notifications",
-    icon: Bell,
-    role: "admin",
-  },
-  {
-    title: "admin.support",
-    href: "/admin/support",
-    icon: HelpCircle,
-    role: "admin",
-  },
-  {
-    title: "admin.tools",
-    href: "/admin/tools",
-    icon: Wrench,
-    role: "admin",
+    icon: Scale,
   },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { t } = useLanguage()
   const [openItems, setOpenItems] = useState<string[]>([])
   const [user] = useAtom(userAtom)
-  const rawRole = user?.userInfo?.roleId as string
-  // Normalize backend role names (SUPER_ADMIN, COMPANY_ADMIN → admin, etc.)
-  const roleMap: Record<string, string> = {
-    SUPER_ADMIN: 'admin',
-    COMPANY_ADMIN: 'admin',
-    PAWNSHOP: 'pawnshop',
-    INVESTOR: 'investor',
-    BORROWER: 'investor',
-  }
-  const role = roleMap[rawRole] || (rawRole || '').toLowerCase()
+
+  const firstName = user?.userInfo?.userFirstName || "Admin"
+  const lastName = user?.userInfo?.userLastName || ""
+  const wallet = user?.userInfo?.accountId || user?.wallet?.address || ""
+  const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase()
 
   const handleLogout = () => {
+    try {
+      const { disconnectWallet } = require("@/lib/web3")
+      disconnectWallet()
+    } catch {}
+    localStorage.removeItem("authState")
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("userRole")
     router.push("/admin/login")
@@ -175,34 +85,26 @@ export function AdminSidebar() {
   }
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-card">
-      {/* Header */}
-      <div className="flex h-16 items-center gap-2.5 border-b border-border px-6">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-accent/70">
-          <span className="h-2 w-2 rotate-45 bg-accent" aria-hidden />
+    <div className="flex h-full w-64 flex-col border-r border-[#171414]/10 bg-[#FAFAF8]">
+      {/* ─── Logo ─── */}
+      <div className="flex h-16 items-center gap-3 px-6">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#E1BAC2]/60">
+          <span className="h-2 w-2 rotate-45 bg-[#E1BAC2]" aria-hidden />
         </span>
         <div>
-          <div className="font-display text-base font-medium leading-none">Sanad</div>
-          <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-accent">
+          <div className="font-display text-base font-bold leading-none text-[#171414]">Sanad</div>
+          <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-[#E1BAC2]">
             Admin Panel
           </div>
         </div>
       </div>
 
-      {/* Back to Main Site */}
-      <div className="p-4">
-        <Button variant="outline" size="sm" className="w-full justify-start bg-transparent" asChild>
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("admin.backToMain")}
-          </Link>
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-4 pb-4">
-        {sidebarItems.filter((item) => item.role?.includes(role || '')).map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+      {/* ─── Navigation ─── */}
+      <nav className="flex-1 space-y-1 px-4 pt-4 pb-4">
+        {sidebarItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.children ? item.children.some((c) => pathname === c.href) : pathname.startsWith(item.href + "/"))
           const isOpen = openItems.includes(item.href)
           const Icon = item.icon
 
@@ -210,70 +112,107 @@ export function AdminSidebar() {
             return (
               <Collapsible key={item.href} open={isOpen} onOpenChange={() => toggleItem(item.href)}>
                 <CollapsibleTrigger asChild>
-                  <Button
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn("w-full justify-between", isActive && "bg-accent/10 font-medium text-accent-foreground")}
+                  <button
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all",
+                      isActive
+                        ? "bg-[#171414] font-display font-bold text-[#E1BAC2]"
+                        : "font-display font-medium text-[#171414]/70 hover:bg-[#171414]/5 hover:text-[#171414]"
+                    )}
                   >
-                    <div className="flex items-center">
-                      <Icon className="mr-2 h-4 w-4" />
-                      {item.title.startsWith("admin.") ? t(item.title) : item.title}
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="h-4 w-4" />
+                      {item.title}
                     </div>
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 pl-6">
-                  {item.children.map((child) => (
-                    <Button
-                      key={child.href}
-                      variant={pathname === child.href ? "secondary" : "ghost"}
-                      size="sm"
+                    <ChevronDown
                       className={cn(
-                        "w-full justify-start",
-                        pathname === child.href && "bg-accent/10 font-medium text-accent-foreground",
+                        "h-3.5 w-3.5 transition-transform",
+                        isOpen && "rotate-180"
                       )}
-                      asChild
-                    >
-                      <Link href={child.href}>{child.title}</Link>
-                    </Button>
-                  ))}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-0.5 pl-4 mt-1">
+                  {item.children.map((child) => {
+                    const childActive = pathname === child.href
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "flex w-full items-center rounded-lg px-3 py-2 text-sm transition-all",
+                          childActive
+                            ? "bg-[#E1BAC2]/15 font-display font-bold text-[#171414]"
+                            : "font-display font-medium text-[#4A4A4A] hover:bg-[#171414]/5 hover:text-[#171414]"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mr-2.5 h-1 w-1 rounded-full",
+                            childActive ? "bg-[#E1BAC2]" : "bg-[#171414]/20"
+                          )}
+                        />
+                        {child.title}
+                      </Link>
+                    )
+                  })}
                 </CollapsibleContent>
               </Collapsible>
             )
           }
 
           return (
-            <Button
+            <Link
               key={item.href}
-              variant={isActive ? "secondary" : "ghost"}
-              className={cn("w-full justify-start", isActive && "bg-accent/10 font-medium text-accent-foreground")}
-              asChild
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
+                isActive
+                  ? "bg-[#171414] font-display font-bold text-[#E1BAC2]"
+                  : "font-display font-medium text-[#171414]/70 hover:bg-[#171414]/5 hover:text-[#171414]"
+              )}
             >
-              <Link href={item.href}>
-                <Icon className="mr-2 h-4 w-4" />
-                {item.title.startsWith("admin.") ? t(item.title) : item.title}
-              </Link>
-            </Button>
+              <Icon className="h-4 w-4" />
+              {item.title}
+            </Link>
           )
         })}
       </nav>
 
-      {/* User Role & Logout */}
-      <div className="border-t p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Current Role:</span>
-          <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent-foreground">
-            {role === 'pawnshop' ? 'Ar Rahnu' : role}
-          </Badge>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={handleLogout}
+      {/* ─── Back to site ─── */}
+      <div className="px-4 pb-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-display font-medium text-[#171414]/50 hover:bg-[#171414]/5 hover:text-[#171414] transition-all"
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          {t("admin.logout")}
-        </Button>
+          ← Back to Site
+        </Link>
+      </div>
+
+      {/* ─── User & Logout ─── */}
+      <div className="border-t border-[#171414]/10 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#171414]">
+            <span className="text-xs font-bold text-[#E1BAC2]">{initials}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-sm font-bold text-[#171414] truncate">
+              {firstName} {lastName}
+            </p>
+            {wallet && (
+              <p className="font-mono text-[10px] text-[#4A4A4A] truncate">
+                {truncateAddress(wallet)}
+              </p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-display font-medium text-red-500/80 hover:bg-red-50 hover:text-red-600 transition-all"
+        >
+          <LogOut className="h-4 w-4" />
+          Log out
+        </button>
       </div>
     </div>
   )

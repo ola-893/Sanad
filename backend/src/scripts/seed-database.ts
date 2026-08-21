@@ -223,11 +223,11 @@ async function seed() {
     }
     console.log('✓ Roles seeded.');
 
-    console.log('\n[3/4] Hashing password and seeding test accounts (Password: Password123!)...');
+    console.log('\n[3/3] Seeding Super Admin account (email login fallback)...');
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('Password123!', salt);
 
-    // 1. Super Admin
+    // Super Admin (needed for email-based admin login fallback)
     await client.query(`
       INSERT INTO main.super_admin (
         super_admin_nickname, super_admin_first_name, super_admin_last_name,
@@ -240,123 +240,14 @@ async function seed() {
       ) ON CONFLICT (super_admin_email) DO UPDATE SET super_admin_password = $1;
     `, [passwordHash]);
 
-    // 2. Company Admin (Ar-Rahnu HQ)
-    await client.query(`
-      INSERT INTO main.company_admin (
-        company_admin_first_name, company_admin_last_name,
-        company_admin_email, company_admin_contact_no, company_admin_password,
-        company_id, role_id, status, created_by, updated_by
-      ) VALUES (
-        'HQ', 'Operator',
-        'manager@sanad.finance', '+60120000002', $1,
-        'comp_ar_rahnu_hq', 'COMPANY_ADMIN', 'ACTIVE', 'seeder', 'seeder'
-      ) ON CONFLICT (company_admin_email) DO UPDATE SET company_admin_password = $1;
-    `, [passwordHash]);
-
-    // 3. Pawnshop Operator User
-    await client.query(`
-      INSERT INTO main.user (
-        user_id, user_email, user_contact_no, user_password,
-        ic_no, user_first_name, user_last_name, gender,
-        account_id, wallet_id, role_id, status, created_by, updated_by
-      ) VALUES (
-        'USR_PAWNSHOP_001', 'pawnshop@sanad.finance', '+60120000003', $1,
-        '880101145555', 'Ahmad', 'Pawnshop', 'MALE',
-        '0x2222222222222222222222222222222222222222', '0x2222222222222222222222222222222222222222',
-        'PAWNSHOP', 'ACTIVE', 'seeder', 'seeder'
-      ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
-    `, [passwordHash]);
-
-    // 4. Borrower User
-    await client.query(`
-      INSERT INTO main.user (
-        user_id, user_email, user_contact_no, user_password,
-        ic_no, user_first_name, user_last_name, gender,
-        account_id, wallet_id, role_id, status, created_by, updated_by
-      ) VALUES (
-        'USR_BORROWER_001', 'borrower@sanad.finance', '+60120000004', $1,
-        '920505106666', 'Fatima', 'Borrower', 'FEMALE',
-        '0x3333333333333333333333333333333333333333', '0x3333333333333333333333333333333333333333',
-        'BORROWER', 'ACTIVE', 'seeder', 'seeder'
-      ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
-    `, [passwordHash]);
-
-    // 5. Investor User
-    await client.query(`
-      INSERT INTO main.user (
-        user_id, user_email, user_contact_no, user_password,
-        ic_no, user_first_name, user_last_name, gender,
-        account_id, wallet_id, role_id, status, created_by, updated_by
-      ) VALUES (
-        'USR_INVESTOR_001', 'investor@sanad.finance', '+60120000005', $1,
-        '850303107777', 'Zaid', 'Investor', 'MALE',
-        '0x5555555555555555555555555555555555555555', '0x5555555555555555555555555555555555555555',
-        'INVESTOR', 'ACTIVE', 'seeder', 'seeder'
-      ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
-    `, [passwordHash]);
-
-    // 6. Compliance Officer User
-    await client.query(`
-      INSERT INTO main.user (
-        user_id, user_email, user_contact_no, user_password,
-        ic_no, user_first_name, user_last_name, gender,
-        account_id, wallet_id, role_id, status, created_by, updated_by
-      ) VALUES (
-        'USR_COMPLIANCE_001', 'compliance@sanad.finance', '+60120000006', $1,
-        '800101108888', 'Nadia', 'Compliance', 'FEMALE',
-        '0x7777777777777777777777777777777777777777', '0x7777777777777777777777777777777777777777',
-        'COMPLIANCE', 'ACTIVE', 'seeder', 'seeder'
-      ) ON CONFLICT (user_email) DO UPDATE SET user_password = $1;
-    `, [passwordHash]);
-
-    console.log('✓ All 6 role accounts created/updated.');
-
-    console.log('\n[4/4] Seeding initial KYC submissions and compliance audit log samples...');
-    // Seed approved KYC for borrower, investor, and pawnshop
-    await client.query(`
-      INSERT INTO main.kyc_submission (
-        user_id, status, risk_score, aml_status, document_type, flags,
-        screened_at, reviewed_by, reviewed_at, reviewer_notes,
-        edd_source_of_funds, edd_approved_by, next_review_date
-      ) VALUES
-      ('USR_BORROWER_001', 'approved', 15, 'clear', 'MyKad', '[]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'Verified against MyKad front/back. Identity confirmed.', NULL, NULL, NULL),
-      ('USR_INVESTOR_001', 'approved_with_edd', 45, 'flagged', 'MyKad', '["High-value investor", "PEP association tier 2"]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'EDD completed. Source of wealth confirmed via tax filings.', 'Verified personal business equity and audited dividends', 'Head of Compliance - Dato Rahman', NOW() + INTERVAL '2 years'),
-      ('USR_PAWNSHOP_001', 'approved', 10, 'clear', 'MyKad', '[]'::jsonb, NOW(), 'USR_COMPLIANCE_001', NOW(), 'Ar-Rahnu operator license verified.', NULL, NULL, NULL)
-      ON CONFLICT DO NOTHING;
-
-      INSERT INTO main.compliance_audit_log (
-        user_id, event_type, actor, details, timestamp
-      ) VALUES
-      ('USR_BORROWER_001', 'submitted', 'USR_BORROWER_001', '{"documentType": "MyKad", "icNo": "920505106666"}'::jsonb, NOW() - INTERVAL '2 days'),
-      ('USR_BORROWER_001', 'approved', 'USR_COMPLIANCE_001', '{"riskScore": 15, "amlStatus": "clear", "notes": "Standard CDD approved"}'::jsonb, NOW() - INTERVAL '1 day'),
-      ('USR_INVESTOR_001', 'submitted', 'USR_INVESTOR_001', '{"documentType": "MyKad", "icNo": "850303107777"}'::jsonb, NOW() - INTERVAL '3 days'),
-      ('USR_INVESTOR_001', 'edd_triggered', 'system:kyc-agent', '{"flags": ["High-value investor", "PEP association tier 2"], "riskScore": 45}'::jsonb, NOW() - INTERVAL '2 days'),
-      ('USR_INVESTOR_001', 'approved_with_edd', 'USR_COMPLIANCE_001', '{"eddSourceOfFunds": "Verified personal business equity and audited dividends", "eddApprovedBy": "Head of Compliance - Dato Rahman", "nextReviewDate": "2028-08-20"}'::jsonb, NOW() - INTERVAL '1 day')
-      ON CONFLICT DO NOTHING;
-    `);
-    console.log('✓ KYC submissions and compliance audit logs seeded.');
-    await client.query(`
-      INSERT INTO main.creditcoin_audit_log (
-        event_type, contract_address, transaction_hash, block_number, token_id, details
-      ) VALUES
-      ('COLLATERAL_MINTED', '0x65F4C74d081fB4e42Ff05fa3462d7705D172c74e', '0x88f3a9e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9', 104230, '1', '{"pawnshop": "0x2222222222222222222222222222222222222222", "borrower": "0x3333333333333333333333333333333333333333", "weightGrams": 25.0, "karat": 22, "appraisedValueUSD": "1500.00", "loanAmount": "1000.00"}'),
-      ('LOAN_FUNDED', '0x66B0D5B5A33D0D8D905187e148A14a79a32cCEa6', '0x77e2a8d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8', 104235, '1', '{"pawnshop": "0x2222222222222222222222222222222222222222", "amountUSD": "1000.00"}'),
-      ('REPAYMENT_VERIFIED', '0x66B0D5B5A33D0D8D905187e148A14a79a32cCEa6', '0x66d1a7c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7', 104300, '1', '{"chainKey": 1, "amountUSD": "1000.00", "sourceTxHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}'),
-      ('SURPLUS_RETURNED_TO_BORROWER', '0x66B0D5B5A33D0D8D905187e148A14a79a32cCEa6', '0x55c0a6b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6', 104400, '2', '{"borrower": "0x3333333333333333333333333333333333333333", "amountUSD": "350.00", "pawnshop": "0x2222222222222222222222222222222222222222"}')
-      ON CONFLICT DO NOTHING;
-    `);
-    console.log('✓ Audit logs seeded.');
+    console.log('✓ Super Admin account ready.');
+    console.log('   Skipping demo data — use real wallet-auth accounts instead.');
 
     console.log('\n========================================================================');
-    console.log('🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY!');
+    console.log('🎉 DATABASE MIGRATION COMPLETED SUCCESSFULLY!');
     console.log('========================================================================');
-    console.log('\nDEMO TEST CREDENTIALS:');
-    console.log('------------------------------------------------------------------------');
-    console.log('• Super Admin / Regulator: admin@sanad.finance    / Password123!');
-    console.log('• Company Admin (HQ):      manager@sanad.finance  / Password123!');
-    console.log('• Pawnshop Operator:       pawnshop@sanad.finance / Password123!');
-    console.log('• Borrower (Pledgor):      borrower@sanad.finance / Password123!');
-    console.log('• Investor (LP):           investor@sanad.finance / Password123!');
+    console.log('\nAdmin login: admin@sanad.finance / Password123! (email-based)');
+    console.log('Or use MetaMask wallet auth for any role.');
     console.log('------------------------------------------------------------------------\n');
   } catch (error) {
     console.error('❌ Seeding failed:', error);

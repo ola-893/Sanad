@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
         title="Admin Sign In"
         description="Connect your authorized wallet to access the platform admin console"
         icon={<ShieldCheckIcon className="h-5 w-5" />}
-        registerHref="/admin/login"
+
         dashboardPath="/admin/dashboard"
       />
     </AuthShell>

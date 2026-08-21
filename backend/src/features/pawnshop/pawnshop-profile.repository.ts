@@ -122,3 +122,37 @@ export async function updatePawnshopProfile(
 export async function getAllPawnshopProfiles(): Promise<PawnshopProfileModelType[]> {
   return db.select().from(PawnshopProfileModel);
 }
+
+export async function getPawnshopProfilesByKycStatus(
+  kycStatus: string
+): Promise<PawnshopProfileModelType[]> {
+  return db
+    .select()
+    .from(PawnshopProfileModel)
+    .where(eq(PawnshopProfileModel.kycStatus, kycStatus));
+}
+
+export async function updatePawnshopKycStatus(
+  userId: string,
+  kycStatus: 'pending' | 'approved' | 'rejected',
+  rejectionReason?: string
+): Promise<PawnshopProfileModelType | null> {
+  const updateData: Record<string, unknown> = {
+    kycStatus,
+    updatedAt: new Date(),
+  };
+
+  if (kycStatus === 'approved') {
+    updateData.kycApprovedAt = new Date();
+  }
+  if (kycStatus === 'rejected' && rejectionReason) {
+    updateData.kycRejectionReason = rejectionReason;
+  }
+
+  const [result] = await db
+    .update(PawnshopProfileModel)
+    .set(updateData)
+    .where(eq(PawnshopProfileModel.userId, userId))
+    .returning();
+  return result || null;
+}
