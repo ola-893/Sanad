@@ -140,7 +140,7 @@ async function main() {
   console.log(`  • Total Pool Liquidity: ${ethers.formatEther(finalPoolLiquidity)} tCTC`);
   console.log(`  • Source Tx Replay Protection Recorded: ${isSettled}`);
 
-  if (finalLpBalance - initialLpBalance !== depositAmountUnits) {
+  if ((finalLpBalance - initialLpBalance).toString() !== depositAmountUnits.toString()) {
     throw new Error(`LP Balance mismatch: expected +${depositAmountUnits}, got +${finalLpBalance - initialLpBalance}`);
   }
 

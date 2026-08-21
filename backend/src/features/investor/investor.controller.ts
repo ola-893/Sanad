@@ -23,10 +23,7 @@ export class InvestorController {
    */
   async getPoolStats(req: Request, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.startsWith('Bearer ')
-        ? req.headers.authorization.split(' ')[1]
-        : req.headers.authorization || '';
-      const investorInfo = await getUserDataByToken(token);
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
       const totalLiquidity = await this.poolService.getTotalPoolLiquidity();
       let userLpBalance = '0.0';
       let kycStatus = 'not_started';
@@ -55,16 +52,7 @@ export class InvestorController {
       });
     } catch (error) {
       console.error('Error fetching pool stats:', error);
-      res.status(200).json({
-        success: true,
-        data: {
-          totalPoolLiquidityCTC: '0.0',
-          userLpBalanceCTC: '0.0',
-          kycStatus: 'not_started',
-          isKycApproved: false,
-          network: 'Creditcoin 3 Testnet',
-        }
-      });
+      res.status(500).json({ success: false, error: 'Failed to fetch pool stats' });
     }
   }
 
@@ -73,21 +61,14 @@ export class InvestorController {
    */
   async getInvestorNFTInfo(req: Request, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.startsWith('Bearer ')
-        ? req.headers.authorization.split(' ')[1]
-        : req.headers.authorization || '';
-      const investorInfo = await getUserDataByToken(token);
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
 
       if (!investorInfo) {
         res.status(401).json({ success: false, error: 'Unauthorized' });
         return;
       }
 
-      if (!investorInfo.accountId) {
-        res.status(200).json({ success: true, data: [] });
-        return;
-      }
-
+      // Filter SAGs by the authenticated user's wallet address
       const sags = await db
         .select()
         .from(SagModel)
@@ -104,8 +85,7 @@ export class InvestorController {
         }))
       });
     } catch (error) {
-      console.error('Error fetching investor NFTs:', error);
-      res.status(200).json({ success: true, data: [] });
+      res.status(500).json({ success: false, error: 'Failed to fetch NFT info' });
     }
   }
 
@@ -114,10 +94,7 @@ export class InvestorController {
    */
   async getInvestorWalletBalance(req: Request, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.startsWith('Bearer ')
-        ? req.headers.authorization.split(' ')[1]
-        : req.headers.authorization || '';
-      const investorInfo = await getUserDataByToken(token);
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
 
       if (!investorInfo) {
         res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -135,11 +112,7 @@ export class InvestorController {
         }
       });
     } catch (error) {
-      console.error('Error fetching wallet balance:', error);
-      res.status(200).json({
-        success: true,
-        data: { address: '', balanceCTC: '0.0', network: 'Creditcoin 3 Testnet' }
-      });
+      res.status(500).json({ success: false, error: 'Failed to fetch balance' });
     }
   }
 

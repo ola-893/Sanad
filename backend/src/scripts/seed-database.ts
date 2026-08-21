@@ -144,6 +144,21 @@ async function seed() {
         details JSONB NOT NULL,
         timestamp TIMESTAMP NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS main.pledge_request (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        borrower_id VARCHAR(40) NOT NULL,
+        borrower_wallet VARCHAR(42) NOT NULL,
+        pawnshop_id VARCHAR(40) NOT NULL,
+        pawnshop_wallet VARCHAR(42) NOT NULL,
+        gold_details JSONB NOT NULL DEFAULT '{}',
+        requested_amount VARCHAR(50) DEFAULT '',
+        status VARCHAR(20) DEFAULT 'pending',
+        pawnshop_notes TEXT DEFAULT '',
+        sag_id VARCHAR(40),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     console.log('✓ Tables & schemas verified.');
 

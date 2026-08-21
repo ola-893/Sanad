@@ -13,7 +13,7 @@ export interface SubmitKycParams {
   icNo: string;
   icFrontPicture: string;
   icBackPicture: string;
-  documentType?: 'NIN' | 'Passport' | 'DriverLicense';
+  documentType?: 'MyKad' | 'Passport' | 'DriverLicense';
   nationality?: string;
   address?: string;
   city?: string;
@@ -49,7 +49,7 @@ export class KycService {
    * Updates user identity records and creates/updates KycSubmission
    */
   public async submitKyc(params: SubmitKycParams): Promise<KycSubmissionType> {
-    const documentType = params.documentType || 'NIN';
+    const documentType = params.documentType || 'MyKad';
 
     // 1. Update User row with verified IC information
     try {
@@ -161,7 +161,7 @@ export class KycService {
         status: 'not_started',
         riskScore: 0,
         amlStatus: 'unscreened',
-        documentType: 'NIN',
+        documentType: 'MyKad',
         flags: [],
         submission: null,
         isApproved: false,
@@ -210,7 +210,7 @@ export class KycService {
         status: 'not_started',
         riskScore: 0,
         amlStatus: 'unscreened',
-        documentType: 'NIN',
+        documentType: 'MyKad',
         flags: [],
         submission: null,
         isApproved: false,
@@ -229,7 +229,7 @@ export class KycService {
         status: 'not_started',
         riskScore: 0,
         amlStatus: 'unscreened',
-        documentType: 'NIN',
+        documentType: 'MyKad',
         flags: [],
         submission: null,
         isApproved: false,

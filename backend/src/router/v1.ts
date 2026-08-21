@@ -15,6 +15,7 @@ import { kycRoutes } from '@/features/kyc/index.js';
 import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
 import { creditOracleRoutes, CreditOracleController } from '@/core/credit-bureau/index.js';
+import { pledgeRequestRoutes } from '@/features/pledge-request/index.js';
 
 const v1Router = express.Router();
 
@@ -33,6 +34,9 @@ v1Router.use('/creditcoin', creditcoinRoutes);
 v1Router.use('/credit-oracle', creditOracleRoutes);
 v1Router.post('/loan/repay/prove', (req, res) => new CreditOracleController().proveRepayment(req, res));
 v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveDeposit(req, res));
+
+// Borrower-to-Pawnshop Pledge Requests
+v1Router.use('/pledge-requests', pledgeRequestRoutes);
 
 // RBAC & Admin routes
 v1Router.use('/rbac', rbacRoutes);

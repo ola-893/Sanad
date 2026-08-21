@@ -121,7 +121,7 @@ export default function BorrowerDashboardPage() {
                 <CardDescription>Apply for Shariah-compliant gold-backed loans</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Link href="/register/kyc" className="block">
+                <Link href="/dashboard/borrower/apply" className="block">
                   <Button className="w-full justify-start gap-3 rounded-xl bg-[#171414] text-[#E1BAC2] hover:bg-black">
                     <Plus className="h-4 w-4" />
                     Apply for New Loan
@@ -130,9 +130,10 @@ export default function BorrowerDashboardPage() {
                 <div className="rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
                   <p className="text-xs font-medium text-[#171414] mb-2">How it works:</p>
                   <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-                    <li>Tokenize your gold as SAG NFT collateral</li>
-                    <li>Get Shariah-compliant financing based on gold value</li>
-                    <li>Repay loan to retrieve your gold collateral</li>
+                    <li>Select a pawnshop and submit your gold details</li>
+                    <li>Pawnshop reviews and accepts your request</li>
+                    <li>Meet physically for gold assessment</li>
+                    <li>Funds disbursed and SAG NFT minted</li>
                   </ol>
                 </div>
               </CardContent>

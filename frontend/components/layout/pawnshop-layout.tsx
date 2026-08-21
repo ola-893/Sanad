@@ -14,7 +14,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from '@/components/ui/sidebar'
-import { Building2, LogOut, FileText } from 'lucide-react'
+import { Building2, LogOut, FileText, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Logo } from '../logo'
@@ -29,6 +29,7 @@ export default function PawnshopLayout({ children }: PawnshopLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/pawnshop/dashboard', icon: Building2 },
+    { name: 'Pledge Requests', href: '/pawnshop/requests', icon: Inbox },
     { name: 'My NFTs', href: '/pawnshop/nfts', icon: FileText },
   ]
 
