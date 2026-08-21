@@ -50,8 +50,8 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5';
-    this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x74357E5FED91D6dDdd39847304b8651634693A00';
+    this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }
 
@@ -61,6 +61,20 @@ export class AttestcoinOracleRelayerService {
 
   private getContract(): ethers.Contract {
     return new ethers.Contract(this.oracleContractAddress, SANAD_CREDIT_ORACLE_ABI, this.signer);
+  }
+
+  private async resolveSourceBlockHeight(sourceTxHash: string, chainKey: number): Promise<number | undefined> {
+    try {
+      const rpcUrl = chainKey === 1 
+        ? (process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com')
+        : (process.env.ETHEREUM_MAINNET_RPC_URL || 'https://eth.llamarpc.com');
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const receipt = await provider.getTransactionReceipt(sourceTxHash);
+      return receipt?.blockNumber;
+    } catch (err: any) {
+      console.warn(`[AttestcoinRelayer] Failed to fetch source tx receipt for ${sourceTxHash} on chain ${chainKey}:`, err.message);
+      return undefined;
+    }
   }
 
   /**
@@ -75,6 +89,19 @@ export class AttestcoinOracleRelayerService {
       console.log(`[AttestcoinRelayer] Generating proof for Ethereum Mainnet Tx: ${event.sourceTxHash}`);
       
       const proofBuilder = new proofProvider.service.ProofBuilder(this.sourceChainKey, this.proofApiUrl);
+      
+      const targetHeight = event.blockHeight || await this.resolveSourceBlockHeight(event.sourceTxHash, this.sourceChainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${this.sourceChainKey} to be attested by Attestcoin Prover...`);
+          await proofBuilder.waitUntilHeightAttested(this.sourceChainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
+          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        }
+      }
+
       const proofResult = await proofBuilder.getProof(event.sourceTxHash);
 
       if (!proofResult.success || !proofResult.data) {
@@ -216,6 +243,19 @@ export class AttestcoinOracleRelayerService {
     try {
       console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Repay Tx: ${sourceTxHash}`);
       const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+      
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
+          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        }
+      }
+
       const proofResult = await proofBuilder.getProof(sourceTxHash);
 
       if (!proofResult.success || !proofResult.data) {
@@ -291,6 +331,19 @@ export class AttestcoinOracleRelayerService {
     try {
       console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Deposit Tx: ${sourceTxHash}`);
       const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+      
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
+          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        }
+      }
+
       const proofResult = await proofBuilder.getProof(sourceTxHash);
 
       if (!proofResult.success || !proofResult.data) {

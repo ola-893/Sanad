@@ -380,7 +380,9 @@ The user shouldn't need to manually scan or generate proofs. The Attestcoin inte
 ```
 NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL=https://creditcoin-testnet.blockscout.com
-NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS=0x866d812a57ef13866b85D09a8633218678dAeff3
+NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS=0x74357E5FED91D6dDdd39847304b8651634693A00
+NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS=0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70
+NEXT_PUBLIC_SAG_TOKEN_ADDRESS=0x68359bD39Bf7A683a96808cAD38147d1baFa07f1
 ```
 
 ### Backend (.env)
@@ -388,7 +390,7 @@ NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS=0x866d812a57ef13866b85D09a8633218678dAef
 ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
 ETHERSCAN_API_KEY=your_key_here  # NEEDED — currently empty
 CREDITCOIN_PRIVATE_KEY=0xce44c9cf...  # For CC3 transactions
-CREDITCOIN_PROOF_BUILDER_URL=https://proof-gen-api.cc3-testnet.creditcoin.network
+CREDITCOIN_PROOF_BUILDER_URL=https://prover.cc3-testnet.creditcoin.network
 ```
 
 ---
