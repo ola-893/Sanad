@@ -37,7 +37,7 @@ echo -e "${GREEN}✓ Node.js $(node -v)${NC}"
 echo -e "${YELLOW}[1/5] Cleaning up...${NC}"
 tmux kill-session -t sanad-backend 2>/dev/null || true
 tmux kill-session -t sanad-frontend 2>/dev/null || true
-kill $(lsof -ti :5001 2>/dev/null) 2>/dev/null || true
+kill $(lsof -ti :5002 2>/dev/null) 2>/dev/null || true
 kill $(lsof -ti :3000 2>/dev/null) 2>/dev/null || true
 echo -e "  ${GREEN}✓ Done${NC}"
 
@@ -81,18 +81,18 @@ npm install --silent 2>&1 | tail -1
 echo -e "  ${CYAN}→ Seeding database...${NC}"
 npm run seed 2>&1 | grep -E "✓|COMPLETED|ERROR" || true
 
-echo -e "  ${CYAN}→ Starting backend on port 5001...${NC}"
+echo -e "  ${CYAN}→ Starting backend on port 5002...${NC}"
 tmux new-session -d -s sanad-backend \
   "export NVM_DIR=\$HOME/.nvm && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && nvm use 20 && cd $BACKEND_DIR && npm run dev"
 
 # Wait for backend
 for i in $(seq 1 20); do
-  curl -s http://localhost:5001/ > /dev/null 2>&1 && break
+  curl -s http://localhost:5002/ > /dev/null 2>&1 && break
   sleep 1
 done
 
-if curl -s http://localhost:5001/ > /dev/null 2>&1; then
-  echo -e "  ${GREEN}✓ Backend running on http://localhost:5001${NC}"
+if curl -s http://localhost:5002/ > /dev/null 2>&1; then
+  echo -e "  ${GREEN}✓ Backend running on http://localhost:5002${NC}"
 else
   echo -e "  ${RED}✗ Backend failed to start — check: tmux attach -t sanad-backend${NC}"
 fi
@@ -107,13 +107,13 @@ cd "$FRONTEND_DIR"
 # Create or fix .env.local
 if [ ! -f .env.local ]; then
   cat > .env.local <<EOF
-NEXT_PUBLIC_API_URL=http://localhost:5001
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5001/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:5002
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5002/api/v1
 EOF
   echo -e "  ${CYAN}→ Created .env.local${NC}"
 else
   # Ensure API URL points to the correct backend port
-  sed -i '' 's|http://localhost:[0-9]*|http://localhost:5001|g' .env.local
+  sed -i '' 's|http://localhost:[0-9]*|http://localhost:5002|g' .env.local
   echo -e "  ${CYAN}→ Verified .env.local${NC}"
 fi
 
@@ -153,7 +153,7 @@ echo ""
 echo -e "  ${CYAN}Services:${NC}"
 echo -e "    PostgreSQL  → localhost:15432"
 echo -e "    Redis       → localhost:6379"
-echo -e "    Backend API → http://localhost:5001"
+  echo -e "    Backend API → http://localhost:5002"
 echo -e "    Frontend    → http://localhost:3000"
 echo ""
 echo -e "  ${CYAN}Demo Logins (password: Password123!):${NC}"

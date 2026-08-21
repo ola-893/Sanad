@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { ExternalHeader } from "@/components/external-header"
 import { Header } from "@/components/header"
+import { BorrowerHeader } from "@/components/borrower-header"
 import { Footer } from "@/components/footer"
 import { useState, useEffect } from 'react'
 import { BrandedLoader } from "@/components/branded-loader"
@@ -78,9 +79,11 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
 
   // Authenticated users on other pages — internal header, no footer
   if (authed) {
+    // Use BorrowerHeader for borrower-specific routes
+    const isBorrowerRoute = pathname.startsWith('/dashboard/borrower')
     return (
       <div className="flex flex-col min-h-screen">
-        <Header />
+        {isBorrowerRoute ? <BorrowerHeader /> : <Header />}
         <main className="flex-1">{children}</main>
       </div>
     )

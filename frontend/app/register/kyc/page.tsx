@@ -89,6 +89,7 @@ const tierConfig: Record<string, { color: string; bg: string; border: string }> 
   Silver: { color: "text-slate-500", bg: "bg-slate-50", border: "border-slate-200" },
   Bronze: { color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
   HighRisk: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
+  Unscored: { color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-300" },
 }
 
 export default function KycVerificationPage() {
@@ -124,6 +125,7 @@ export default function KycVerificationPage() {
   const [onChainProfile, setOnChainProfile] = useState<OnChainCreditProfile | null>(null)
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [proofTxHash, setProofTxHash] = useState<string | null>(null)
+  const [noHistoryMessage, setNoHistoryMessage] = useState<string | null>(null)
 
   // 3. ID Verification
   const [idType, setIdType] = useState<IdType>("nin")
@@ -150,12 +152,12 @@ export default function KycVerificationPage() {
     }
   }, [step, walletAddress])
 
-  // Auto-generate proof after scan completes
+  // Auto-generate proof after scan completes (only if events found)
   useEffect(() => {
-    if (step === 2 && discoveredEvents.length > 0 && !creditVerified && !isProvingOnCC3 && !isScanningDeFi) {
+    if (step === 2 && discoveredEvents.length > 0 && !creditVerified && !isProvingOnCC3 && !isScanningDeFi && !noHistoryMessage) {
       handleProveCreditScore()
     }
-  }, [discoveredEvents, step, creditVerified, isProvingOnCC3, isScanningDeFi])
+  }, [discoveredEvents, step, creditVerified, isProvingOnCC3, isScanningDeFi, noHistoryMessage])
 
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -175,13 +177,17 @@ export default function KycVerificationPage() {
     if (!addressToScan || !addressToScan.startsWith("0x")) return
     setIsScanningDeFi(true)
     setErrorMessage(null)
+    setNoHistoryMessage(null)
     setScanStep(1)
+    const scanStartTime = Date.now()
+    const MIN_SCAN_DURATION = 6000 // Minimum 6 seconds for UX feel
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
       // Simulate progress steps while waiting for backend
       const progressTimer = setInterval(() => {
         setScanStep((prev) => (prev < 4 ? prev + 1 : prev))
-      }, 2000)
+      }, 1500)
 
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/discover`, {
         method: "POST",
@@ -191,14 +197,48 @@ export default function KycVerificationPage() {
       clearInterval(progressTimer)
       if (!res.ok) throw new Error(`Failed to discover Ethereum history (${res.status})`)
       const json = await res.json()
-      setDiscoveredEvents(json.data.selectedTopEvents || [])
-      setDiscoverySummary(json.data.summary || null)
-      // Check if this is demo/curated data (same tx hash as known demos)
-      const isDemo = json.data.selectedTopEvents?.some((e: any) =>
-        e.sourceTxHash === '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079'
-      )
-      setIsDemoMode(isDemo)
-      setScanStep(5)
+      const data = json.data
+
+      // Ensure minimum scan duration for UX
+      const elapsed = Date.now() - scanStartTime
+      if (elapsed < MIN_SCAN_DURATION) {
+        await new Promise(resolve => setTimeout(resolve, MIN_SCAN_DURATION - elapsed))
+      }
+
+      // Handle new response shape: { hasVerifiedHistory, events, message, summary }
+      if (data.hasVerifiedHistory === false) {
+        setDiscoveredEvents([])
+        setDiscoverySummary(null)
+        setNoHistoryMessage(data.message || "No proven DeFi history found for this address yet.")
+        setOnChainProfile({
+          borrower: addressToScan,
+          score: 500,
+          tier: "Unscored",
+          totalRepaidUSD: "0",
+          totalLiquidatedUSD: "0",
+          totalDefaultedUSD: "0",
+          cleanRepaymentCount: 0,
+          liquidationCount: 0,
+          defaultCount: 0,
+          provenEventsCount: 0,
+          lastEvaluatedTimestamp: Math.floor(Date.now() / 1000),
+          provenEvents: [],
+        })
+        setCreditVerified(true)
+        setScanStep(5)
+        setIsDemoMode(false)
+      } else {
+        // Legacy or full response with events
+        const events = data.selectedTopEvents || data.events || []
+        setDiscoveredEvents(events)
+        setDiscoverySummary(data.summary || null)
+        // Check if this is demo/curated data (same tx hash as known demos)
+        const isDemo = events.some((e: any) =>
+          e.sourceTxHash === '0x0a597de623ef5ebcd0b99b861cf7a72a3f12658a6f1844ab6157a1b27bbd1079'
+        )
+        setIsDemoMode(isDemo)
+        setScanStep(5)
+      }
     } catch (e: any) {
       console.warn("DeFi scan notice:", e.message)
     } finally {
@@ -271,13 +311,164 @@ export default function KycVerificationPage() {
   }
 
   const handleNextStep = async () => {
+    // Validate Step 1 fields before proceeding
+    if (step === 1) {
+      const requiredFields = [
+        { key: 'firstName', label: 'First Name' },
+        { key: 'lastName', label: 'Last Name' },
+        { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'address', label: 'Address' },
+        { key: 'city', label: 'City' },
+        { key: 'state', label: 'State' },
+        { key: 'postalCode', label: 'Postal Code' },
+        { key: 'dateOfBirth', label: 'Date of Birth' },
+        { key: 'nationality', label: 'Nationality' },
+      ]
+      const missing = requiredFields.find(f => !personalInfo[f.key as keyof typeof personalInfo]?.trim())
+      if (missing) {
+        setErrorMessage(`Please fill in ${missing.label} before proceeding.`)
+        return
+      }
+      setErrorMessage(null)
+    }
+
+    // Validate Step 3 fields before proceeding
+    if (step === 3) {
+      if (!idNumber.trim()) {
+        setErrorMessage(`Please fill in ${idTypes[idType].label} before proceeding.`)
+        return
+      }
+      setErrorMessage(null)
+    }
+
     if (step < 4) {
       setStep(step + 1)
     } else {
       setIsLoading(true)
       setErrorMessage(null)
       try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const docTypeMap: Record<string, "MyKad" | "Passport" | "DriverLicense"> = { nin: "MyKad", passport: "Passport", license: "DriverLicense" }
+        
+        // 1. Register or login the user via wallet auth
+        let registered = false
+        const ethereum = (window as any).ethereum
+        console.log("[KYC] walletAddress:", walletAddress, "ethereum:", !!ethereum, "providers:", ethereum?.providers?.length)
+
+        // Detect if we have a real MetaMask provider (not just evmAsk aggregator)
+        let provider = ethereum
+        if (ethereum?.providers?.length) {
+          provider = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum.providers[0]
+          console.log("[KYC] Using provider:", provider?.isMetaMask ? "MetaMask" : "fallback")
+        }
+
+        if (walletAddress && provider && typeof window !== "undefined") {
+          try {
+            // Check if provider supports personal_sign
+            const testAccounts = await provider.request({ method: "eth_accounts" })
+            console.log("[KYC] eth_accounts:", testAccounts?.length ? "has accounts" : "no accounts")
+
+            if (!testAccounts?.length) {
+              console.log("[KYC] No accounts available - wallet may be locked. Skipping wallet auth.")
+            } else {
+              // Helper: get nonce + sign (with timeout)
+              const getNonceAndSign = async () => {
+                const nonceRes = await fetch(`${apiUrl}/api/v1/auth/wallet/nonce`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ walletAddress }),
+                })
+                const nonceData = await nonceRes.json()
+                const { nonce, message } = nonceData.data
+                const sig = await Promise.race([
+                  provider.request({
+                    method: "personal_sign",
+                    params: [message, walletAddress],
+                  }),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("Signature timed out")), 10000)),
+                ])
+                return { nonce, signature: sig }
+              }
+
+              // Try to register first
+              const { nonce, signature } = await getNonceAndSign()
+              console.log("[KYC] Got signature, registering...")
+              const registerRes = await fetch(`${apiUrl}/api/v1/auth/wallet/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  walletAddress,
+                  signature,
+                  nonce,
+                  role: "BORROWER",
+                  userFirstName: personalInfo.firstName,
+                  userLastName: personalInfo.lastName,
+                  userEmail: personalInfo.email,
+                }),
+              })
+              const registerData = await registerRes.json()
+              console.log("[KYC] Register response:", registerRes.status, registerData)
+
+              if (registerData.success && registerData.data?.accessToken) {
+                sessionStorage.setItem("accessToken", registerData.data.accessToken)
+                sessionStorage.setItem("refreshToken", registerData.data.refreshToken)
+                sessionStorage.setItem("expiredAt", registerData.data.expiredAt.toString())
+                sessionStorage.setItem("userType", "borrower")
+                sessionStorage.setItem("walletAddress", walletAddress)
+                localStorage.setItem("authState", JSON.stringify({
+                  isAuthenticated: true,
+                  token: registerData.data.accessToken,
+                  userType: "borrower",
+                  refreshToken: registerData.data.refreshToken,
+                  walletAddress,
+                }))
+                registered = true
+                console.log("[KYC] Registration successful")
+              } else if (registerRes.status === 409) {
+                // User already exists - get new nonce and login
+                console.log("[KYC] User exists, logging in...")
+                const loginAuth = await getNonceAndSign()
+                const loginRes = await fetch(`${apiUrl}/api/v1/auth/wallet/login`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    walletAddress,
+                    signature: loginAuth.signature,
+                    nonce: loginAuth.nonce,
+                    role: "borrower",
+                  }),
+                })
+                const loginData = await loginRes.json()
+                console.log("[KYC] Login response:", loginRes.status, loginData)
+
+                if (loginData.success && loginData.data?.accessToken) {
+                  sessionStorage.setItem("accessToken", loginData.data.accessToken)
+                  sessionStorage.setItem("refreshToken", loginData.data.refreshToken)
+                  sessionStorage.setItem("expiredAt", loginData.data.expiredAt.toString())
+                  sessionStorage.setItem("userType", "borrower")
+                  sessionStorage.setItem("walletAddress", walletAddress)
+                  localStorage.setItem("authState", JSON.stringify({
+                    isAuthenticated: true,
+                    token: loginData.data.accessToken,
+                    userType: "borrower",
+                    refreshToken: loginData.data.refreshToken,
+                    walletAddress,
+                  }))
+                  registered = true
+                  console.log("[KYC] Login successful")
+                }
+              }
+            }
+          } catch (regErr: any) {
+            console.error("[KYC] Wallet auth error:", regErr.message)
+            setErrorMessage(`Wallet auth failed: ${regErr.message}. Continuing KYC submission...`)
+          }
+        } else {
+          console.log("[KYC] Skipping wallet auth - no wallet connected")
+        }
+
+        // 2. Submit KYC data
         const payload = {
           firstName: personalInfo.firstName, lastName: personalInfo.lastName, email: personalInfo.email,
           phone: personalInfo.phone, address: personalInfo.address, city: personalInfo.city,
@@ -288,16 +479,24 @@ export default function KycVerificationPage() {
           ethereumWalletAddress: walletAddress, creditScore: onChainProfile?.score || 845,
           creditTier: onChainProfile?.tier || "Gold", attestcoinProofTx: proofTxHash,
         }
-        await apiInstance.post("/kyc/submit", payload).catch(() => null)
+        console.log("[KYC] Submitting payload:", payload)
+        const kycRes = await apiInstance.post("/kyc/submit", payload, { timeout: 30000 })
+        console.log("[KYC] Submit response:", kycRes.data)
         setVerificationComplete(true)
-      } catch { setVerificationComplete(true) } finally { setIsLoading(false) }
+      } catch (err: any) {
+        console.error("[KYC] Submission error:", err.message || err)
+        setErrorMessage(err.message || "KYC submission failed")
+        setVerificationComplete(true)
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
   const handlePrevStep = () => { if (step > 1) setStep(step - 1) }
   const handleIdUpload = (side: "front" | "back") => { side === "front" ? setIdFrontUploaded(true) : setIdBackUploaded(true) }
   const handleSelfieUpload = () => setSelfieUploaded(true)
-  const handleComplete = () => router.push("/dashboard")
+  const handleComplete = () => router.push("/dashboard/borrower")
 
   const stepIndicator = (n: number, done: boolean) =>
     `flex h-10 w-10 items-center justify-center rounded-full font-mono text-sm transition-all ${
@@ -428,6 +627,67 @@ export default function KycVerificationPage() {
                     <Input id="postalCode" name="postalCode" value={personalInfo.postalCode} onChange={handlePersonalInfoChange} placeholder="Postal code" className="rounded-xl" />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth" className="text-xs text-muted-foreground">Date of Birth</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="dobDay"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={2}
+                        placeholder="DD"
+                        value={personalInfo.dateOfBirth ? personalInfo.dateOfBirth.split('-')[2] || '' : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          const parts = (personalInfo.dateOfBirth || '').split('-')
+                          const year = parts[0] || ''
+                          const month = parts[1] || ''
+                          setPersonalInfo({ ...personalInfo, dateOfBirth: `${year}-${month}-${val}` })
+                        }}
+                        className="rounded-xl text-center font-mono"
+                      />
+                      <span className="flex items-center text-muted-foreground">/</span>
+                      <Input
+                        id="dobMonth"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={2}
+                        placeholder="MM"
+                        value={personalInfo.dateOfBirth ? personalInfo.dateOfBirth.split('-')[1] || '' : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          const parts = (personalInfo.dateOfBirth || '').split('-')
+                          const year = parts[0] || ''
+                          const day = parts[2] || ''
+                          setPersonalInfo({ ...personalInfo, dateOfBirth: `${year}-${val}-${day}` })
+                        }}
+                        className="rounded-xl text-center font-mono"
+                      />
+                      <span className="flex items-center text-muted-foreground">/</span>
+                      <Input
+                        id="dobYear"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="YYYY"
+                        value={personalInfo.dateOfBirth ? personalInfo.dateOfBirth.split('-')[0] || '' : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 4)
+                          const parts = (personalInfo.dateOfBirth || '').split('-')
+                          const month = parts[1] || ''
+                          const day = parts[2] || ''
+                          setPersonalInfo({ ...personalInfo, dateOfBirth: `${val}-${month}-${day}` })
+                        }}
+                        className="rounded-xl text-center font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nationality" className="text-xs text-muted-foreground">Nationality</Label>
+                    <Input id="nationality" name="nationality" value={personalInfo.nationality} onChange={handlePersonalInfoChange} placeholder="Country" className="rounded-xl" />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -548,6 +808,27 @@ export default function KycVerificationPage() {
                   </div>
                 )}
 
+                {/* No DeFi history found */}
+                {!isScanningDeFi && noHistoryMessage && creditVerified && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
+                      <AlertTriangle className="h-5 w-5" /> No On-Chain History
+                    </div>
+                    <p className="text-xs text-amber-800">{noHistoryMessage}</p>
+                    <p className="text-xs text-muted-foreground">
+                      You'll be assigned a base credit tier. Your score can improve as you build on-chain lending history.
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline" className="text-[10px] font-mono border-amber-300 bg-white text-amber-700">
+                        Tier: Unscored (Base)
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] font-mono border-amber-300 bg-white text-amber-700">
+                        Score: 500 / 1000
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
                 {/* Verified result */}
                 {creditVerified && (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-4">
@@ -556,18 +837,18 @@ export default function KycVerificationPage() {
                         <ShieldCheck className="h-5 w-5" /> Credit Verified
                       </div>
                       <Badge variant="outline" className={`${tierStyle.bg} ${tierStyle.color} ${tierStyle.border} text-xs font-mono`}>
-                        {onChainProfile?.score || 845} / 1000 ({tier})
+                        {onChainProfile?.score || 500} / 1000 ({tier})
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
                         <p className="font-mono text-[9px] uppercase text-muted-foreground">Repaid</p>
-                        <p className="text-sm font-bold tabular-nums text-[#171414]">${Number(onChainProfile?.totalRepaidUSD || 37500).toLocaleString()}</p>
+                        <p className="text-sm font-bold tabular-nums text-[#171414]">${Number(onChainProfile?.totalRepaidUSD || 0).toLocaleString()}</p>
                       </div>
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
                         <p className="font-mono text-[9px] uppercase text-muted-foreground">Clean Repayments</p>
-                        <p className="text-sm font-bold tabular-nums text-emerald-600">{onChainProfile?.cleanRepaymentCount ?? 2}</p>
+                        <p className="text-sm font-bold tabular-nums text-emerald-600">{onChainProfile?.cleanRepaymentCount ?? 0}</p>
                       </div>
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
                         <p className="font-mono text-[9px] uppercase text-muted-foreground">Liquidations</p>
@@ -575,7 +856,7 @@ export default function KycVerificationPage() {
                       </div>
                       <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
                         <p className="font-mono text-[9px] uppercase text-muted-foreground">Proven Events</p>
-                        <p className="text-sm font-bold tabular-nums text-[#171414]">{onChainProfile?.provenEventsCount ?? 1}</p>
+                        <p className="text-sm font-bold tabular-nums text-[#171414]">{onChainProfile?.provenEventsCount ?? 0}</p>
                       </div>
                     </div>
 
@@ -584,9 +865,9 @@ export default function KycVerificationPage() {
                         <Sparkles className="h-3 w-3" /> Unlocked Terms
                       </p>
                       <div className="grid grid-cols-3 gap-2 text-[11px]">
-                        <div><span className="text-muted-foreground">LTV:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : "50%"}</span></div>
-                        <div><span className="text-muted-foreground">Ujrah:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "0.60%" : tier === "Silver" ? "0.85%" : "1.25%"}</span></div>
-                        <div><span className="text-muted-foreground">Approval:</span> <span className="font-bold text-[#171414]">Automated</span></div>
+                        <div><span className="text-muted-foreground">LTV:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : tier === "Unscored" ? "40%" : "50%"}</span></div>
+                        <div><span className="text-muted-foreground">Ujrah:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "0.60%" : tier === "Silver" ? "0.85%" : tier === "Unscored" ? "1.50%" : "1.25%"}</span></div>
+                        <div><span className="text-muted-foreground">Approval:</span> <span className="font-bold text-[#171414]">{tier === "Unscored" ? "Manual Review" : "Automated"}</span></div>
                       </div>
                     </div>
 
@@ -694,12 +975,12 @@ export default function KycVerificationPage() {
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-between p-6 border-t border-[#171414]/10">
-            {step > 1 ? (
+            <CardFooter className="flex justify-between p-6 border-t border-[#171414]/10">
+            {step > 1 && (
               <Button type="button" variant="outline" className="rounded-xl text-xs" onClick={handlePrevStep}>
                 Previous Step
               </Button>
-            ) : <div />}
+            )}
             {verificationComplete ? (
               <Button onClick={handleComplete} className="rounded-full bg-[#171414] text-[#E1BAC2] font-mono text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-black">
                 Go to Dashboard

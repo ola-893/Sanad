@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { KycService, SubmitKycParams, ReviewKycParams } from './kyc.service.js';
-import { getUserDataByToken } from '../auth/auth.repository.js';
+import { getUserDataByToken, getUserByWalletAddress } from '../auth/auth.repository.js';
 
 export class KycController {
   private kycService: KycService;
@@ -48,12 +48,8 @@ export class KycController {
         attestcoinProofTx,
       } = req.body;
 
-      const targetUserId = authenticatedUserId || userId;
-
-      if (!targetUserId) {
-        res.status(400).json({ success: false, error: 'Missing userId parameter' });
-        return;
-      }
+      // Generate userId if not provided (for unauthenticated KYC submissions)
+      const targetUserId = authenticatedUserId || userId || `USR_BORROWER_${Date.now()}`;
 
       if (!icNo) {
         res.status(400).json({ success: false, error: 'Missing required IC number (icNo)' });
@@ -82,6 +78,14 @@ export class KycController {
         creditTier,
         attestcoinProofTx,
       };
+
+      // Link KYC to existing user if wallet address provided
+      if (ethereumWalletAddress) {
+        const existingUser = await getUserByWalletAddress(ethereumWalletAddress);
+        if (existingUser?.userId) {
+          params.userId = existingUser.userId;
+        }
+      }
 
       const result = await this.kycService.submitKyc(params);
 

@@ -14,7 +14,7 @@ tmux kill-session -t sanad-backend 2>/dev/null && echo -e "  ${GREEN}✓ Backend
 tmux kill-session -t sanad-frontend 2>/dev/null && echo -e "  ${GREEN}✓ Frontend stopped${NC}" || echo -e "  ${GREEN}✓ Frontend was not running${NC}"
 
 # Kill any orphan processes on our ports
-kill $(lsof -ti :5001 2>/dev/null) 2>/dev/null || true
+kill $(lsof -ti :5002 2>/dev/null) 2>/dev/null || true
 kill $(lsof -ti :3000 2>/dev/null) 2>/dev/null || true
 
 # Stop Docker containers

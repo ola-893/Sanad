@@ -28,60 +28,59 @@ export function ProtectedRoute({
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // If not authenticated at all, stop checking and let the render handle it
     if (!isAuthenticated) {
       setChecking(false);
       return;
     }
 
-    // If user data already exists, we're good
     if (user) {
       setChecking(false);
       return;
     }
 
-    // Token exists but user atom is empty — fetch profile from API
+    let cancelled = false;
+
     const fetchProfile = async () => {
       try {
         const response = await apiInstance.get('/auth/user/profile');
-        if (response.data.success) {
-          setUser(response.data.data);
-        } else {
-          // Profile fetch failed — token might be expired
-          setUser(null);
+        if (!cancelled) {
+          if (response.data.success) {
+            setUser(response.data.data);
+          } else {
+            setUser(null);
+            router.push(redirectTo || '/login');
+          }
         }
       } catch {
-        setUser(null);
+        if (!cancelled) {
+          setUser(null);
+          router.push(redirectTo || '/login');
+        }
       } finally {
-        setChecking(false);
+        if (!cancelled) setChecking(false);
       }
     };
 
     fetchProfile();
-  }, [isAuthenticated, user, setUser]);
 
-  // Still loading auth state or fetching profile
+    return () => { cancelled = true; };
+  }, [isAuthenticated, user, setUser, redirectTo, router]);
+
   if (!isAuthenticated || checking) {
     return fallback ?? <BrandedLoader message="Verifying access..." />;
   }
 
-  // Not authenticated — redirect to login
   if (!user) {
-    router.push(redirectTo || '/login');
     return <BrandedLoader message="Redirecting..." />;
   }
 
-  /**
-   * Normalize a backend role name to the short lowercase identifier
-   * the frontend uses ("admin", "pawnshop", "investor").
-   */
   const normalize = (role: string) => {
     const map: Record<string, string> = {
       SUPER_ADMIN: 'admin',
       COMPANY_ADMIN: 'admin',
       PAWNSHOP: 'pawnshop',
       INVESTOR: 'investor',
-      BORROWER: 'investor',
+      BORROWER: 'borrower',
     }
     return map[role] || role.toLowerCase()
   }
@@ -103,9 +102,6 @@ export function ProtectedRoute({
   return <>{children}</>
 }
 
-/**
- * HOC for protecting pages
- */
 export function withAuth<T extends object>(
   Component: React.ComponentType<T>,
   options: {
@@ -125,9 +121,6 @@ export function withAuth<T extends object>(
   }
 }
 
-/**
- * HOC for role-based protection
- */
 export function withRole<T extends object>(
   Component: React.ComponentType<T>,
   requiredRole: UserRole

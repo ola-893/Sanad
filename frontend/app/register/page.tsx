@@ -19,18 +19,18 @@ const roles: Array<{
   href: string;
 }> = [
   {
-    id: 'borrower',
-    title: 'Borrower',
-    description: 'Apply for Shariah-compliant gold financing',
-    icon: BriefcaseIcon,
-    href: '/register/kyc',
-  },
-  {
     id: 'investor',
     title: 'Investor',
     description: 'Browse and invest in SAG tokens for yield',
     icon: UserIcon,
     href: '/register/investor',
+  },
+  {
+    id: 'borrower',
+    title: 'Borrower',
+    description: 'Apply for Shariah-compliant gold financing',
+    icon: BriefcaseIcon,
+    href: '/register/kyc',
   },
   {
     id: 'pawnshop',

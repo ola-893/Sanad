@@ -43,6 +43,7 @@ export function Header() {
   const [signingOut, setSigningOut] = useState(false)
 
   const loggedIn = isAuthenticated || !!user
+  const isKycPage = pathname.startsWith('/register/kyc')
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -73,42 +74,44 @@ export function Header() {
         </button>
 
         {/* Pill nav */}
-        <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
-          {loggedIn
-            ? portalNav.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
-                      isActive
-                        ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
-                        : "hover:bg-white/50 hover:text-[#171414]"
-                    }`}
-                  >
-                    <item.icon className="h-3 w-3" />
-                    {item.label}
-                  </Link>
-                )
-              })
-            : marketingNavItems.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`rounded-full px-4 py-2 transition-all duration-200 ${
-                      isActive
-                        ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
-                        : "hover:bg-white/50 hover:text-[#171414]"
-                    }`}
-                  >
-                    {t(item.key)}
-                  </Link>
-                )
-              })}
-        </nav>
+        {!isKycPage && (
+          <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
+            {loggedIn
+              ? portalNav.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
+                        isActive
+                          ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
+                          : "hover:bg-white/50 hover:text-[#171414]"
+                      }`}
+                    >
+                      <item.icon className="h-3 w-3" />
+                      {item.label}
+                    </Link>
+                  )
+                })
+              : marketingNavItems.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`rounded-full px-4 py-2 transition-all duration-200 ${
+                        isActive
+                          ? "bg-[#171414] text-[#E1BAC2] shadow-sm"
+                          : "hover:bg-white/50 hover:text-[#171414]"
+                      }`}
+                    >
+                      {t(item.key)}
+                    </Link>
+                  )
+                })}
+          </nav>
+        )}
 
         <div className="flex items-center gap-2">
           {loggedIn ? (
@@ -155,36 +158,40 @@ export function Header() {
       {/* Mobile nav drawer */}
       {mobileOpen && (
         <div className="absolute left-3 right-3 top-[72px] rounded-2xl border border-[rgba(23,20,20,0.1)] bg-[#F5F5F3] p-2 shadow-[0_24px_64px_rgba(23,20,20,0.12)] md:hidden">
-          {loggedIn
-            ? portalNav.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
-                    pathname === item.href
-                      ? "bg-[#171414] text-[#E1BAC2]"
-                      : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
-                  }`}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                  {item.label}
-                </Link>
-              ))
-            : marketingNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
-                    pathname === item.href
-                      ? "bg-[#171414] text-[#E1BAC2]"
-                      : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
-                  }`}
-                >
-                  {t(item.key)}
-                </Link>
-              ))}
+          {!isKycPage && (
+            <>
+              {loggedIn
+                ? portalNav.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
+                        pathname === item.href
+                          ? "bg-[#171414] text-[#E1BAC2]"
+                          : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
+                      }`}
+                    >
+                      <item.icon className="h-3.5 w-3.5" />
+                      {item.label}
+                    </Link>
+                  ))
+                : marketingNavItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`block rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] transition-all ${
+                        pathname === item.href
+                          ? "bg-[#171414] text-[#E1BAC2]"
+                          : "text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414]"
+                      }`}
+                    >
+                      {t(item.key)}
+                    </Link>
+                  ))}
+            </>
+          )}
           {loggedIn && (
             <button
               onClick={() => { setMobileOpen(false); handleSignOut() }}

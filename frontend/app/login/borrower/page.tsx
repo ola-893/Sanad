@@ -23,7 +23,7 @@ export default function BorrowerLoginPage() {
         description="Connect your MetaMask wallet to access your financing dashboard"
         icon={<WalletIcon className="h-5 w-5" />}
         registerHref="/register"
-        dashboardPath="/dashboard"
+        dashboardPath="/dashboard/borrower"
       />
     </AuthShell>
   );
