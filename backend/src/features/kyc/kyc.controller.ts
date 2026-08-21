@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { KycService, SubmitKycParams, ReviewKycParams } from './kyc.service.js';
-import { getUserDataByToken, getUserByWalletAddress } from '../auth/auth.repository.js';
+import { getUserDataByToken, getUserByWalletAddress, updateUser } from '../auth/auth.repository.js';
 
 export class KycController {
   private kycService: KycService;
@@ -41,6 +41,7 @@ export class KycController {
         postalCode,
         dateOfBirth,
         nationality,
+        gender,
         // Attestcoin Protocol — Credit Bureau fields
         ethereumWalletAddress,
         creditScore,
@@ -56,6 +57,20 @@ export class KycController {
         return;
       }
 
+      // Validate IC number length based on document type
+      const icStr = String(icNo).trim();
+      const docType = documentType || 'NIN';
+      const icRules: Record<string, { pattern: RegExp; error: string }> = {
+        NIN: { pattern: /^\d{11}$/, error: 'NIN must be exactly 11 digits' },
+        Passport: { pattern: /^[A-Za-z0-9]{8,9}$/, error: 'Passport must be 8-9 alphanumeric characters' },
+        DriverLicense: { pattern: /^[A-Za-z0-9]{10,14}$/, error: 'Driver License must be 10-14 alphanumeric characters' },
+      };
+      const rule = icRules[docType];
+      if (rule && !rule.pattern.test(icStr)) {
+        res.status(400).json({ success: false, error: rule.error });
+        return;
+      }
+
       const params: SubmitKycParams = {
         userId: targetUserId,
         firstName,
@@ -65,7 +80,7 @@ export class KycController {
         icNo: String(icNo),
         icFrontPicture: icFrontPicture || 'default_front.jpg',
         icBackPicture: icBackPicture || 'default_back.jpg',
-        documentType: documentType || 'MyKad',
+        documentType: documentType || 'NIN',
         address,
         city,
         state,
@@ -84,6 +99,17 @@ export class KycController {
         const existingUser = await getUserByWalletAddress(ethereumWalletAddress);
         if (existingUser?.userId) {
           params.userId = existingUser.userId;
+          // Update user profile with KYC data (phone, name, IC, gender)
+          console.log('[KYC] Updating user:', existingUser.userId, 'phone:', phone, 'gender:', gender, 'icNo:', icNo);
+          await updateUser(existingUser.userId, {
+            userFirstName: firstName || existingUser.userFirstName,
+            userLastName: lastName || existingUser.userLastName,
+            userContactNo: phone || existingUser.userContactNo,
+            icNo: String(icNo) || existingUser.icNo,
+            gender: gender || existingUser.gender,
+          });
+        } else {
+          console.log('[KYC] No existing user found for wallet:', ethereumWalletAddress);
         }
       }
 

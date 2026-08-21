@@ -15,7 +15,6 @@ import { userAtom } from "@/store/atoms"
 import { UserRole } from "@/hooks/use-user-role"
 import { Menu, X, LayoutDashboard, Wallet, LogOut, User, Search, Loader2 } from "lucide-react"
 
-// Marketing nav — shown to visitors
 const marketingNavItems = [
   { href: "/", key: "nav.home" },
   { href: "/about", key: "nav.aboutUs" },
@@ -25,7 +24,6 @@ const marketingNavItems = [
   { href: "/contact", key: "nav.contact" },
 ]
 
-// Portal nav — shown to logged-in users
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/browse", label: "NFT Listings", icon: Search },
@@ -55,25 +53,27 @@ export function Header() {
   }
 
   return (
-    <header className="site-header sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between rounded-full border border-white/45 bg-white/55 px-2 shadow-[0_18px_50px_rgba(30,30,30,0.08)] backdrop-blur-xl sm:px-3">
-        {/* Logo */}
+    <header className="site-header sticky top-0 z-50 w-full px-2 pt-2 sm:px-3 sm:pt-3 md:px-5 md:pt-4">
+      <div className="mx-auto flex h-12 max-w-7xl items-center justify-between rounded-full border border-white/45 bg-white/55 px-2 shadow-[0_18px_50px_rgba(30,30,30,0.08)] backdrop-blur-xl sm:h-14 sm:px-3">
+        {/* Logo — always visible */}
         <Link
           href="/"
-          className="hidden items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-5 text-[#F5F5F3] transition-colors hover:bg-black sm:flex"
+          className="flex items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-3 text-[#F5F5F3] transition-colors hover:bg-black sm:pr-5"
           aria-label="Sanad home"
         >
           <Logo asLink={false} surface="dark" />
         </Link>
+
+        {/* Mobile hamburger */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[#171414] hover:bg-white/60 sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#171414] hover:bg-white/60 md:hidden"
           aria-label="Menu"
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        {/* Pill nav */}
+        {/* Pill nav — desktop only */}
         {!isKycPage && (
           <nav className="hidden items-center gap-1 rounded-full bg-white/35 p-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] md:flex">
             {loggedIn
@@ -113,25 +113,24 @@ export function Header() {
           </nav>
         )}
 
-        <div className="flex items-center gap-2">
+        {/* Right actions */}
+        <div className="flex items-center gap-1 sm:gap-2">
           {loggedIn ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#4A4A4A] hover:bg-white/50 hover:text-[#171414]"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                title="Sign out"
-              >
-                {signingOut ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <LogOut className="h-3.5 w-3.5" />
-                )}
-                {signingOut ? "Signing out..." : "Sign Out"}
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#4A4A4A] hover:bg-white/50 hover:text-[#171414] sm:px-3"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              title="Sign out"
+            >
+              {signingOut ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LogOut className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">{signingOut ? "Signing out..." : "Sign Out"}</span>
+            </Button>
           ) : (
             <>
               <LanguageToggle />
@@ -139,14 +138,14 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="hidden rounded-full text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414] lg:inline-flex"
+                className="hidden rounded-full text-[10px] font-bold uppercase tracking-[0.15em] text-[#4A4A4A] hover:bg-white/60 hover:text-[#171414] md:inline-flex"
                 asChild
               >
                 <Link href="/login">{t("nav.login")}</Link>
               </Button>
               <Link
                 href="/login"
-                className="flux-pill hidden items-center gap-2 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] sm:inline-flex"
+                className="flux-pill hidden items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.15em] sm:inline-flex sm:px-5 sm:py-2.5"
               >
                 {t("nav.applyNow")}
               </Link>
@@ -157,7 +156,7 @@ export function Header() {
 
       {/* Mobile nav drawer */}
       {mobileOpen && (
-        <div className="absolute left-3 right-3 top-[72px] rounded-2xl border border-[rgba(23,20,20,0.1)] bg-[#F5F5F3] p-2 shadow-[0_24px_64px_rgba(23,20,20,0.12)] md:hidden">
+        <div className="absolute left-2 right-2 top-[60px] rounded-2xl border border-[rgba(23,20,20,0.1)] bg-[#F5F5F3] p-2 shadow-[0_24px_64px_rgba(23,20,20,0.12)] sm:left-3 sm:right-3 sm:top-[68px] md:hidden">
           {!isKycPage && (
             <>
               {loggedIn

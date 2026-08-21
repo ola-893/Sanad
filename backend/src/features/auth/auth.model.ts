@@ -43,7 +43,7 @@ export const User = MainSchema.table('user', {
   userEmail:      varchar('user_email', { length: 100 }).unique().notNull(),
   userContactNo:  varchar('user_contact_no', { length: 20 }).unique().notNull(),
   userPassword:   varchar('user_password', { length: 100 }).notNull(),
-  icNo:           varchar('ic_no', { length: 12 }).notNull(),
+  icNo:           varchar('ic_no', { length: 30 }).notNull(),
   icFrontPicture: text('ic_front_picture').notNull(),
   icBackPicture:  text('ic_back_picture').notNull(),
   userFirstName:  varchar('user_first_name', { length: 50 }).notNull(),

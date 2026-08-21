@@ -12,7 +12,7 @@ export const KycSubmission = MainSchema.table('kyc_submission', {
   status: varchar('status', { length: 20 }).notNull().default('submitted'), // submitted | screening | under_review | approved | approved_with_edd | rejected
   riskScore: integer('risk_score').notNull().default(0),
   amlStatus: varchar('aml_status', { length: 20 }).notNull().default('unscreened'), // unscreened | clear | flagged | watchlist
-  documentType: varchar('document_type', { length: 40 }).notNull().default('MyKad'), // MyKad | Passport | DriverLicense
+  documentType: varchar('document_type', { length: 40 }).notNull().default('NIN'), // NIN | Passport | DriverLicense
   flags: jsonb('flags').notNull().default('[]'), // string[]
   screenedAt: timestamp('screened_at'),
   reviewedBy: varchar('reviewed_by', { length: 40 }), // Reviewer user ID (compliance role)

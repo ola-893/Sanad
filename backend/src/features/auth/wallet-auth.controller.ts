@@ -294,8 +294,10 @@ export const walletRegister = async (req: Request, res: Response) => {
       });
     }
 
-    // Use last 8 chars of wallet address as contact number (max 20 chars for varchar)
-    const walletContact = 'W' + checksumAddress.slice(-8);
+    // Use provided phone or fall back to wallet address fragment
+    console.log('[WALLET-REGISTER] profileData:', JSON.stringify(profileData, null, 2));
+    const walletContact = profileData.userContactNo || ('W' + checksumAddress.slice(-8));
+    console.log('[WALLET-REGISTER] walletContact:', walletContact);
 
     // Create user — use DB defaults for columns that have them
     const userData: UserType = {
