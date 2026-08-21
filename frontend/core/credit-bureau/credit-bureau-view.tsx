@@ -157,11 +157,29 @@ export function CreditBureauView() {
           const accounts = await (window as any).ethereum.request({ method: "eth_accounts" })
           if (accounts && accounts.length > 0 && accounts[0].toLowerCase() === walletAddress.toLowerCase()) {
             setSignatureStatus("Requesting EIP-191 authorization signature...")
-            const msg = `Authorize Sanad Credit Oracle evaluation\nWallet: ${walletAddress}\nContract: ${SANAD_CREDIT_ORACLE_ADDRESS}\nChain: Creditcoin CC3 (102031)`
-            signature = await (window as any).ethereum.request({
-              method: "personal_sign",
-              params: [msg, walletAddress],
+            const cc3Provider = new ethers.JsonRpcProvider(CREDITCOIN_RPC_URL, CREDITCOIN_CHAIN_ID, {
+              staticNetwork: ethers.Network.from(CREDITCOIN_CHAIN_ID),
             })
+            const oracleContract = new ethers.Contract(
+              SANAD_CREDIT_ORACLE_ADDRESS,
+              ["function nonces(address) external view returns (uint256)"],
+              cc3Provider
+            )
+            let currentNonce = 0n
+            try {
+              currentNonce = await oracleContract.nonces(walletAddress)
+            } catch (nonceErr) {
+              console.warn("Could not read on-chain nonce, defaulting to 0:", nonceErr)
+            }
+
+            const innerHash = ethers.solidityPackedKeccak256(
+              ["address", "address", "uint256", "uint256"],
+              [walletAddress, SANAD_CREDIT_ORACLE_ADDRESS, CREDITCOIN_CHAIN_ID, currentNonce]
+            )
+
+            const browserProvider = new ethers.BrowserProvider((window as any).ethereum)
+            const signer = await browserProvider.getSigner()
+            signature = await signer.signMessage(ethers.getBytes(innerHash))
             setSignatureStatus("EIP-191 signature confirmed!")
           }
         } catch (sigErr: any) {

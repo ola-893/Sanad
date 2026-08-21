@@ -100,7 +100,7 @@ export class CreditOracleController {
         sourceChain: 'Ethereum Mainnet (Chain Key: 3)',
         blockProverPrecompile: '0x0000000000000000000000000000000000000FD2',
         chainInfoPrecompile: '0x0000000000000000000000000000000000000fD3',
-        proofApiUrl: 'https://prover.cc3-testnet.creditcoin.network',
+        proofApiUrl: CREDITCOIN_CONFIG.proofBuilderUrl,
         explorerUrl: `https://creditcoin-testnet.blockscout.com/address/${this.relayerService.getOracleAddress()}`,
       }
     });
