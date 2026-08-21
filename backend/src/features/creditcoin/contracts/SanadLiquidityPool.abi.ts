@@ -37,5 +37,13 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function auctions(uint256 tokenId) external view returns (tuple(uint256 tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 startTime, uint256 endTime, bool active))",
   "function gracePeriod() external view returns (uint256)",
   "function auctionDuration() external view returns (uint256)",
-  "function setGracePeriod(uint256 _gracePeriod) external"
+  "function setGracePeriod(uint256 _gracePeriod) external",
+  "function repaymentGatewayAddress() external view returns (address)",
+  "function setRepaymentGatewayAddress(address _repaymentGateway) external",
+  "event RepaymentGatewayUpdated(address indexed oldGateway, address indexed newGateway)",
+  "function investorVaultAddress() external view returns (address)",
+  "function setInvestorVaultAddress(address _investorVault) external",
+  "event InvestorVaultUpdated(address indexed oldVault, address indexed newVault)",
+  "function verifyAndRecordDeposit(uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 claimedAmount) external returns (bool)",
+  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 newLpBalance, uint256 timestamp)"
 ] as const;

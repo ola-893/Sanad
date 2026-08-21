@@ -105,4 +105,48 @@ export class CreditOracleController {
       }
     });
   }
+
+  /**
+   * POST /api/v1/credit-oracle/prove-repayment OR /api/v1/loan/repay/prove
+   * Cryptographically verifies an Ethereum Sepolia repayment tx and settles the loan on CC3
+   */
+  public async proveRepayment(req: Request, res: Response): Promise<void> {
+    try {
+      const { tokenId, txHash, sourceTxHash, chainKey } = req.body;
+      const targetHash = txHash || sourceTxHash;
+
+      if (!tokenId || !targetHash) {
+        res.status(400).json({
+          success: false,
+          message: 'tokenId and txHash (or sourceTxHash) are required'
+        });
+        return;
+      }
+
+      const result = await this.relayerService.proveAndSettleSepoliaRepayment(
+        Number(tokenId),
+        targetHash,
+        chainKey ? Number(chainKey) : 1
+      );
+
+      if (!result.success) {
+        res.status(500).json({
+          success: false,
+          message: result.error || 'Failed to prove and settle repayment on Creditcoin'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err: any) {
+      console.error('[CreditOracleController] proveRepayment error:', err);
+      res.status(500).json({
+        success: false,
+        message: err.message || 'Failed to prove and settle cross-chain repayment'
+      });
+    }
+  }
 }

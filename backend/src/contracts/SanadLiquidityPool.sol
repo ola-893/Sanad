@@ -198,8 +198,120 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         emit LoanFunded(tokenId, pawnshop, amount);
     }
 
+    // Deployed Repayment Gateway Address on Sepolia (ChainKey: 1)
+    address public repaymentGatewayAddress;
+    // Deployed Investor Vault Address on Sepolia (ChainKey: 1)
+    address public investorVaultAddress;
+
+    event RepaymentGatewayUpdated(address indexed oldGateway, address indexed newGateway);
+    event InvestorVaultUpdated(address indexed oldVault, address indexed newVault);
+    event CrossChainDepositVerified(
+        address indexed investor,
+        uint64 indexed chainKey,
+        bytes32 indexed sourceTxHash,
+        uint256 amount,
+        uint256 newLpBalance,
+        uint256 timestamp
+    );
+
+    function setRepaymentGatewayAddress(address _repaymentGateway) external onlyOwner {
+        require(_repaymentGateway != address(0), "Invalid gateway address");
+        emit RepaymentGatewayUpdated(repaymentGatewayAddress, _repaymentGateway);
+        repaymentGatewayAddress = _repaymentGateway;
+    }
+
+    function setInvestorVaultAddress(address _investorVault) external onlyOwner {
+        require(_investorVault != address(0), "Invalid vault address");
+        emit InvestorVaultUpdated(investorVaultAddress, _investorVault);
+        investorVaultAddress = _investorVault;
+    }
+
     /**
-     * @notice Verifies an Attestcoin inclusion proof on-chain and marks the loan repaid
+     * @notice Verifies an Attestcoin inclusion proof on-chain for a Sepolia investor deposit and credits LP share.
+     * @dev Decodes chunks[0] for target contract binding (to == investorVaultAddress),
+     *      function selector (0xb6b55f25 = deposit(uint256)), and extracts sender + amount.
+     *      Decodes chunks[last] for receiptStatus == 1 (revert protection).
+     *      Enforces replay protection against sourceTxHash.
+     */
+    function verifyAndRecordDeposit(
+        uint64 chainKey,
+        uint64 headerNumber,
+        bytes calldata encodedTransaction,
+        IBlockProver.MerkleProof calldata merkleProof,
+        IBlockProver.ContinuityProof calldata continuityProof,
+        bytes32 sourceTxHash,
+        uint256 claimedAmount
+    ) external returns (bool) {
+        require(!processedSourceTransactions[sourceTxHash], "Deposit transaction already settled");
+
+        // 1. Execute verification against Creditcoin's native BlockProver (0xFD2)
+        IBlockProver blockProver = IBlockProver(BLOCK_PROVER_PRECOMPILE);
+        bool isValid = blockProver.verify(chainKey, headerNumber, encodedTransaction, merkleProof, continuityProof);
+        require(isValid, "Invalid Attestcoin cross-chain proof");
+
+        // 2. Decode outer ABI structure (uint8 txType, bytes[] chunks)
+        (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length >= 2, "Malformed encodedTransaction chunks");
+        require(txType <= 4, "Invalid transaction type");
+
+        // 3. Decode Chunk 0 (Common EVM transaction fields)
+        (
+            /* uint64 nonce */,
+            /* uint64 gasLimit */,
+            address from,
+            bool toIsNull,
+            address to,
+            /* uint256 value */,
+            bytes memory data
+        ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
+
+        require(!toIsNull, "Target contract cannot be null");
+        if (investorVaultAddress != address(0)) {
+            require(to == investorVaultAddress, "Target contract does not match InvestorVault");
+        }
+        require(data.length >= 36, "Invalid calldata length for deposit(uint256)");
+
+        // 4. Validate Function Selector (deposit(uint256) = 0xb6b55f25)
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+        require(selector == 0xb6b55f25, "Invalid function selector for deposit(uint256)");
+
+        // 5. Decode Calldata Parameters (amount)
+        uint256 calldataAmount;
+        assembly {
+            calldataAmount := mload(add(data, 36))
+        }
+        require(calldataAmount > 0, "Deposit amount must be greater than zero");
+        if (claimedAmount > 0) {
+            require(calldataAmount >= claimedAmount, "Decoded calldata amount is less than claimedAmount");
+        }
+        uint256 effectiveDepositAmount = claimedAmount > 0 ? claimedAmount : calldataAmount;
+
+        // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
+        uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
+        require(receiptStatus == 1, "Source transaction was reverted on Ethereum Sepolia");
+
+        // 7. Mark source transaction as settled to prevent replay
+        processedSourceTransactions[sourceTxHash] = true;
+
+        // 8. Credit the investor's LP share balance on Creditcoin
+        lpBalances[from] += effectiveDepositAmount;
+        totalPoolLiquidity += effectiveDepositAmount;
+
+        emit CrossChainDepositVerified(from, chainKey, sourceTxHash, effectiveDepositAmount, lpBalances[from], block.timestamp);
+        emit LiquidityDeposited(from, effectiveDepositAmount, totalPoolLiquidity);
+
+        return true;
+    }
+
+    /**
+     * @notice Verifies an Attestcoin inclusion proof on-chain and marks the loan repaid.
+     * @dev Decodes chunks[0] for target contract binding (to == repaymentGatewayAddress),
+     *      function selector (0xd8aed145 = repay(uint256,uint256)), and extracts tokenId + repaidAmount.
+     *      Decodes chunks[last] for receiptStatus == 1 (revert protection).
+     *      Enforces replay protection against sourceTxHash.
      */
     function verifyAndSettleRepayment(
         uint256 tokenId,
@@ -218,24 +330,71 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         address owner = sagToken.ownerOf(tokenId);
         require(!sagToken.frozenAddress(owner), "Compliance: Owner address is frozen");
 
-        // Execute verification against Creditcoin's native BlockProver (0xFD2)
+        // 1. Execute verification against Creditcoin's native BlockProver (0xFD2)
         IBlockProver blockProver = IBlockProver(BLOCK_PROVER_PRECOMPILE);
         bool isValid = blockProver.verify(chainKey, headerNumber, encodedTransaction, merkleProof, continuityProof);
         require(isValid, "Invalid Attestcoin cross-chain proof");
 
-        // Mark source transaction as settled to prevent replay
+        // 2. Decode outer ABI structure (uint8 txType, bytes[] chunks)
+        (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length >= 2, "Malformed encodedTransaction chunks");
+        require(txType <= 4, "Invalid transaction type");
+
+        // 3. Decode Chunk 0 (Common EVM transaction fields)
+        (
+            /* uint64 nonce */,
+            /* uint64 gasLimit */,
+            /* address from */,
+            bool toIsNull,
+            address to,
+            /* uint256 value */,
+            bytes memory data
+        ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
+
+        require(!toIsNull, "Target contract cannot be null");
+        if (repaymentGatewayAddress != address(0)) {
+            require(to == repaymentGatewayAddress, "Target contract does not match RepaymentGateway");
+        }
+        require(data.length >= 68, "Invalid calldata length for repay(uint256,uint256)");
+
+        // 4. Validate Function Selector (repay(uint256,uint256) = 0xd8aed145)
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+        require(selector == 0xd8aed145, "Invalid function selector for repay(uint256,uint256)");
+
+        // 5. Decode Calldata Parameters (tokenId, amount)
+        uint256 calldataTokenId;
+        uint256 calldataAmount;
+        assembly {
+            calldataTokenId := mload(add(data, 36))
+            calldataAmount := mload(add(data, 68))
+        }
+        require(calldataTokenId == tokenId, "Token ID in calldata does not match claimed tokenId");
+        require(calldataAmount > 0, "Repayment amount must be greater than zero");
+        if (repaidAmountUSD > 0) {
+            require(calldataAmount >= repaidAmountUSD, "Decoded calldata amount is less than claimed repaidAmountUSD");
+        }
+        uint256 effectiveRepaidAmount = repaidAmountUSD > 0 ? repaidAmountUSD : calldataAmount;
+
+        // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
+        uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
+        require(receiptStatus == 1, "Source transaction was reverted on Ethereum Sepolia");
+
+        // 7. Mark source transaction as settled to prevent replay
         processedSourceTransactions[sourceTxHash] = true;
 
-        if (tokenLoanBalance[tokenId] <= repaidAmountUSD) {
+        if (tokenLoanBalance[tokenId] <= effectiveRepaidAmount) {
             tokenLoanBalance[tokenId] = 0;
             sagToken.settleLoan(tokenId);
 
             emit CollateralUnlocked(tokenId, owner, block.timestamp);
         } else {
-            tokenLoanBalance[tokenId] -= repaidAmountUSD;
+            tokenLoanBalance[tokenId] -= effectiveRepaidAmount;
         }
 
-        emit CrossChainRepaymentVerified(tokenId, chainKey, sourceTxHash, repaidAmountUSD, block.timestamp);
+        emit CrossChainRepaymentVerified(tokenId, chainKey, sourceTxHash, effectiveRepaidAmount, block.timestamp);
 
         return true;
     }

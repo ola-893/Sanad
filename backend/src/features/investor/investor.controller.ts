@@ -142,6 +142,38 @@ export class InvestorController {
       });
     }
   }
+
+  /**
+   * Cryptographically prove a Sepolia investor deposit transaction and credit LP balance on CC3
+   * POST /api/v1/investor/deposit/prove
+   */
+  async proveDeposit(req: Request, res: Response): Promise<void> {
+    try {
+      const { sourceTxHash, chainKey = 1 } = req.body;
+      if (!sourceTxHash) {
+        res.status(400).json({ success: false, error: 'sourceTxHash is required' });
+        return;
+      }
+
+      const { AttestcoinOracleRelayerService } = await import('@/core/credit-bureau/attestcoin-oracle-relayer.service.js');
+      const relayerService = new AttestcoinOracleRelayerService();
+      const result = await relayerService.proveAndRecordSepoliaDeposit(sourceTxHash, Number(chainKey));
+
+      if (!result.success) {
+        res.status(400).json({ success: false, error: result.error });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Sepolia deposit verified and LP balance credited successfully on Creditcoin CC3',
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('Error proving Sepolia deposit:', error);
+      res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+    }
+  }
 }
 
 export const investorController = new InvestorController();

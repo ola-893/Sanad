@@ -14,7 +14,7 @@ The **Sanad On-Chain Credit Bureau** is the primary core component for vetting b
    - Requests Merkle inclusion proofs and continuity proofs for Ethereum Mainnet transactions (`chainKey: 3`).
    - Packages proof tuples and submits them to the `SanadCreditOracle` smart contract on Creditcoin CC3.
 
-3. **On-Chain Credit Oracle (`SanadCreditOracle.sol` at `0xCf53eD8DdA72D2E65ADa72c26916647d9E437Eea`):**
+3. **On-Chain Credit Oracle (`SanadCreditOracle.sol` at `0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5`):**
    - Cryptographically verifies external Ethereum transactions using CC3 native `BlockProver` precompile (`0x0000000000000000000000000000000000000FD2`) and queries `ChainInfo` precompile (`0x0000000000000000000000000000000000000fD3`).
    - Maintains on-chain credit profiles, trust scores (0-1000), and credit tiers (Gold, Silver, Bronze, HighRisk).
    - Provides replay protection (`provenTxHashes`) to prevent double-counting historical events.

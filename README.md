@@ -84,11 +84,23 @@ npx tsx src/scripts/test-failure-paths.ts
 
 ## 📜 Contract & Network Reference
 
-| Network | Chain ID | Contract / RPC | Explorer |
+### Smart Contracts on Creditcoin 3 Testnet (`102031`) & Ethereum Sepolia
+| Contract | Deployed Address | Network | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **Creditcoin 3 Testnet** | `102031` (`0x18e8f`) | `https://rpc.cc3-testnet.creditcoin.network` | [Blockscout Explorer](https://creditcoin-testnet.blockscout.com/) |
-| **Ethereum Sepolia** | `11155111` (`0xaa36a7`) | `https://ethereum-sepolia-rpc.publicnode.com` | [Etherscan](https://sepolia.etherscan.io/) |
-| **Attestcoin Prover** | `ChainKey: 1` | `https://prover.cc3-testnet.creditcoin.network` | Native `0xFD2` Precompile |
+| **`SanadCreditOracle.sol`** | `0x74357E5FED91D6dDdd39847304b8651634693A00` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x74357E5FED91D6dDdd39847304b8651634693A00) |
+| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
+| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
+| **`RepaymentGateway.sol`** | `0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162) |
+| **`InvestorVault.sol`** | `0xE037A229aF3886D0181B7727e8252F72B1d3d45B` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B) |
+
+### Network & Prover Endpoints
+| Component | Identifier | Endpoint |
+| :--- | :--- | :--- |
+| **Creditcoin 3 Testnet** | Chain ID `102031` | `https://rpc.cc3-testnet.creditcoin.network` |
+| **Blockscout Explorer** | CC3 Testnet | `https://creditcoin-testnet.blockscout.com/` |
+| **Attestcoin Prover** | ChainKey `3` (Mainnet) | `https://prover.cc3-testnet.creditcoin.network` |
+| **Precompile: BlockProver** | `0x0000000000000000000000000000000000000FD2` | Native L1 Precompile |
+| **Precompile: ChainInfo** | `0x0000000000000000000000000000000000000fD3` | Native L1 Precompile |
 
 ---
 

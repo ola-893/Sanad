@@ -105,6 +105,21 @@ export async function deployToTestnet() {
   await tx2.wait();
   console.log(`  ✅ Granted MINTER_ROLE to Deployer (Tx: ${tx2.hash})`);
 
+  // Set Sepolia RepaymentGateway and InvestorVault addresses if configured
+  const sepoliaGateway = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162';
+  if (sepoliaGateway) {
+    const gwTx = await (poolContract as any).setRepaymentGatewayAddress(sepoliaGateway);
+    await gwTx.wait();
+    console.log(`  ✅ Configured Sepolia RepaymentGateway (${sepoliaGateway}) on SanadLiquidityPool (Tx: ${gwTx.hash})`);
+  }
+
+  const sepoliaVault = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || '0xE037A229aF3886D0181B7727e8252F72B1d3d45B';
+  if (sepoliaVault) {
+    const vaultTx = await (poolContract as any).setInvestorVaultAddress(sepoliaVault);
+    await vaultTx.wait();
+    console.log(`  ✅ Configured Sepolia InvestorVault (${sepoliaVault}) on SanadLiquidityPool (Tx: ${vaultTx.hash})`);
+  }
+
   // 5. Test Native CTC Deposit against new SanadLiquidityPool
   console.log('\n[4/4] Executing Real Native CTC Deposit against new SanadLiquidityPool...');
   const depositAmount = ethers.parseEther('5.0'); // 5 tCTC

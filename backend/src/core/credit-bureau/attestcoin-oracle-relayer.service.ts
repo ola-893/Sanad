@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 import dotenv from 'dotenv';
 import { CREDITCOIN_CONFIG } from '@/features/creditcoin/creditcoin.config.js';
+import { SANAD_LIQUIDITY_POOL_ABI } from '@/features/creditcoin/contracts/SanadLiquidityPool.abi.js';
 import { DiscoveredDeFiEvent, Protocol, EventType } from './defi-discovery.service.js';
 
 dotenv.config();
@@ -49,7 +50,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x866d812a57ef13866b85D09a8633218678dAeff3';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }
@@ -237,6 +238,156 @@ export class AttestcoinOracleRelayerService {
     } catch (err: any) {
       console.error(`[AttestcoinRelayer] Failed to fetch credit profile for ${borrowerAddress}:`, err);
       throw err;
+    }
+  }
+
+  /**
+   * Prove a cross-chain Ethereum Sepolia (chainKey: 1) repayment transaction on Creditcoin CC3.
+   * Cryptographically verifies the transaction via Attestcoin BlockProver (0xFD2),
+   * decodes chunks[0] to bind to RepaymentGateway, checks selector and amount,
+   * verifies receiptStatus == 1, and marks the loan settled.
+   */
+  public async proveAndSettleSepoliaRepayment(
+    tokenId: number,
+    sourceTxHash: string,
+    chainKey: number = 1
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    blockNumber?: number;
+    explorerUrl?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Repay Tx: ${sourceTxHash}`);
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      }
+
+      const proofData = proofResult.data;
+      const poolContract = new ethers.Contract(
+        CREDITCOIN_CONFIG.contracts.liquidityPoolAddress,
+        SANAD_LIQUIDITY_POOL_ABI,
+        this.signer
+      );
+
+      const merkleProofTuple = {
+        root: proofData.merkleProof.root,
+        siblings: proofData.merkleProof.siblings.map((s: any) => ({
+          hash: s.hash,
+          isLeft: s.isLeft,
+        })),
+      };
+
+      const continuityProofTuple = {
+        lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
+        roots: proofData.continuityProof.roots,
+      };
+
+      console.log(`[AttestcoinRelayer] Calling verifyAndSettleRepayment for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
+      const tx = await poolContract.verifyAndSettleRepayment(
+        tokenId,
+        proofData.chainKey,
+        proofData.headerNumber,
+        proofData.txBytes,
+        merkleProofTuple,
+        continuityProofTuple,
+        sourceTxHash,
+        0 // 0 allows pool to derive exact amount from decoded calldata
+      );
+
+      console.log(`[AttestcoinRelayer] Repayment Settlement broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+      };
+    } catch (err: any) {
+      console.error(`[AttestcoinRelayer] Error proving Sepolia repayment:`, err);
+      return {
+        success: false,
+        error: err.message || 'Failed to submit repayment proof to Creditcoin',
+      };
+    }
+  }
+
+  /**
+   * Prove a cross-chain Ethereum Sepolia (chainKey: 1) investor deposit transaction on Creditcoin CC3.
+   * Cryptographically verifies the transaction via Attestcoin BlockProver (0xFD2),
+   * decodes chunks[0] to bind to InvestorVault, checks selector (deposit(uint256)) and amount,
+   * verifies receiptStatus == 1, and credits the investor's LP share balance on Creditcoin.
+   */
+  public async proveAndRecordSepoliaDeposit(
+    sourceTxHash: string,
+    chainKey: number = 1
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    blockNumber?: number;
+    explorerUrl?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Deposit Tx: ${sourceTxHash}`);
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      }
+
+      const proofData = proofResult.data;
+      const poolContract = new ethers.Contract(
+        CREDITCOIN_CONFIG.contracts.liquidityPoolAddress,
+        SANAD_LIQUIDITY_POOL_ABI,
+        this.signer
+      );
+
+      const merkleProofTuple = {
+        root: proofData.merkleProof.root,
+        siblings: proofData.merkleProof.siblings.map((s: any) => ({
+          hash: s.hash,
+          isLeft: s.isLeft,
+        })),
+      };
+
+      const continuityProofTuple = {
+        lowerEndpointDigest: proofData.continuityProof.lowerEndpointDigest,
+        roots: proofData.continuityProof.roots,
+      };
+
+      console.log(`[AttestcoinRelayer] Calling verifyAndRecordDeposit on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
+      const tx = await poolContract.verifyAndRecordDeposit(
+        proofData.chainKey,
+        proofData.headerNumber,
+        proofData.txBytes,
+        merkleProofTuple,
+        continuityProofTuple,
+        sourceTxHash,
+        0 // 0 allows pool to derive exact amount from decoded calldata
+      );
+
+      console.log(`[AttestcoinRelayer] Deposit Settlement broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+      };
+    } catch (err: any) {
+      console.error(`[AttestcoinRelayer] Error proving Sepolia deposit:`, err);
+      return {
+        success: false,
+        error: err.message || 'Failed to submit deposit proof to Creditcoin',
+      };
     }
   }
 }

@@ -290,31 +290,103 @@ export class DefiDiscoveryService {
     }
 
     const discovered: DiscoveredDeFiEvent[] = [];
-    const url = `https://api.etherscan.io/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`;
+    const SELECTOR_MAP: Record<string, { eventType: EventType; name: string; score: number }> = {
+      // Repayments
+      '0x573ade81': { eventType: EventType.CleanRepayment, name: 'Clean Repayment', score: 35 },
+      '0xee3e210b': { eventType: EventType.CleanRepayment, name: 'Clean Repayment (aTokens)', score: 35 },
+      '0x89c4b5f0': { eventType: EventType.CleanRepayment, name: 'Clean Repayment (Permit)', score: 35 },
+      '0x1a879e5f': { eventType: EventType.CleanRepayment, name: 'Clean Repayment', score: 35 },
+      '0x4b666199': { eventType: EventType.CleanRepayment, name: 'Clean Repayment (Wipe)', score: 35 },
+      '0x78248407': { eventType: EventType.CleanRepayment, name: 'Clean Repayment (Frob)', score: 35 },
+      '0x48a58e57': { eventType: EventType.CleanRepayment, name: 'Clean Repayment', score: 35 },
+      '0x4e07b5a0': { eventType: EventType.CleanRepayment, name: 'Clean Repayment (Desk)', score: 35 },
 
-    const res = await axios.get(url, { timeout: 8000 });
-    if (res.data?.status === '1' && Array.isArray(res.data.result)) {
-      for (const tx of res.data.result.slice(0, 20)) {
-        const to = (tx.to || '').toLowerCase();
-        for (const [addr, meta] of Object.entries(ETHEREUM_DEFI_ADDRESSES)) {
-          if (to === addr.toLowerCase()) {
-            discovered.push({
-              sourceTxHash: tx.hash,
-              blockHeight: Number(tx.blockNumber),
-              protocol: meta.protocol,
-              protocolName: meta.name,
-              eventType: EventType.CleanRepayment,
-              eventTypeName: 'Clean Repayment',
-              volumeUSD: Math.round(Number(tx.value) / 1e6) || 1000,
-              timestamp: Number(tx.timeStamp),
-              description: `Settled ${tx.tokenSymbol} position on ${meta.name}`,
-              weightScore: 25,
-              etherscanUrl: `https://etherscan.io/tx/${tx.hash}`,
-            });
+      // Collateral Supplies
+      '0x617ba037': { eventType: EventType.CollateralSupply, name: 'Collateral Supply', score: 20 },
+      '0xe8aec7da': { eventType: EventType.CollateralSupply, name: 'Collateral Supply (Permit)', score: 20 },
+      '0xf2b9fdb8': { eventType: EventType.CollateralSupply, name: 'Collateral Supply', score: 20 },
+      '0x474cf53d': { eventType: EventType.CollateralSupply, name: 'Collateral Supply (To)', score: 20 },
+      '0x27ec1e69': { eventType: EventType.CollateralSupply, name: 'Collateral Supply (From)', score: 20 },
+      '0x0c0a769b': { eventType: EventType.CollateralSupply, name: 'Collateral Supply', score: 20 },
+      '0xa83da3d2': { eventType: EventType.CollateralSupply, name: 'Collateral Supply', score: 20 },
+      '0x8a974b93': { eventType: EventType.CollateralSupply, name: 'Collateral Lock', score: 20 },
+      '0x6e553f65': { eventType: EventType.CollateralSupply, name: 'Collateral Deposit', score: 20 },
+      '0xb6b55f25': { eventType: EventType.CollateralSupply, name: 'Collateral Deposit', score: 20 },
+      '0xa04c0d0f': { eventType: EventType.CollateralSupply, name: 'Collateral Supply', score: 20 },
+
+      // Liquidations
+      '0x00a718a9': { eventType: EventType.OvercollateralizedLiquidation, name: 'Liquidation Call', score: -35 },
+      '0x4515cef3': { eventType: EventType.OvercollateralizedLiquidation, name: 'Liquidation Call', score: -35 },
+      '0xa4a4c9f0': { eventType: EventType.OvercollateralizedLiquidation, name: 'Liquidation Call', score: -35 },
+      '0x0e5a6a68': { eventType: EventType.OvercollateralizedLiquidation, name: 'Liquidation Call', score: -35 },
+      '0x438645a2': { eventType: EventType.OvercollateralizedLiquidation, name: 'Liquidation Call', score: -35 },
+    };
+
+    try {
+      // 1. Query ERC-20 token transfers
+      const tokentxUrl = `https://api.etherscan.io/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`;
+      const res = await axios.get(tokentxUrl, { timeout: 8000 });
+
+      if (res.data?.status === '1' && Array.isArray(res.data.result)) {
+        for (const tx of res.data.result.slice(0, 30)) {
+          const to = (tx.to || '').toLowerCase();
+          const from = (tx.from || '').toLowerCase();
+
+          for (const [addr, meta] of Object.entries(ETHEREUM_DEFI_ADDRESSES)) {
+            const poolAddr = addr.toLowerCase();
+            const isToPool = to === poolAddr;
+            const isFromPool = from === poolAddr;
+
+            if (isToPool || isFromPool) {
+              const decimals = Number(tx.tokenDecimal) || 18;
+              const symbol = (tx.tokenSymbol || '').toUpperCase();
+              const rawAmount = BigInt(tx.value || '0');
+
+              if (rawAmount === 0n) continue;
+
+              // Derive volumeUSD accurately according to token decimals and asset price
+              let volumeUSD = 0;
+              const stablecoins = ['USDC', 'USDT', 'DAI', 'USDE', 'GHO', 'FRAX', 'USDS', 'PYUSD', 'LUSD', 'BUSD'];
+              if (stablecoins.includes(symbol) || decimals === 6) {
+                volumeUSD = decimals === 6 
+                  ? Math.round(Number(rawAmount) / 1e6) 
+                  : Math.round(Number(rawAmount) / 1e18);
+              } else if (['WETH', 'ETH', 'STETH', 'WSTETH', 'RETH'].includes(symbol)) {
+                volumeUSD = Math.round((Number(rawAmount) / 1e18) * 2700);
+              } else if (['WBTC', 'BTC', 'CBBTC', 'TBTC'].includes(symbol)) {
+                volumeUSD = Math.round((Number(rawAmount) / Math.pow(10, decimals)) * 95000);
+              } else {
+                volumeUSD = Math.round(Number(rawAmount) / Math.pow(10, decimals));
+              }
+
+              if (volumeUSD <= 0) volumeUSD = 1;
+
+              // Determine event type: transfers TO pool represent repayments or collateral deposits
+              const eventType = isToPool ? EventType.CleanRepayment : EventType.CollateralSupply;
+              const eventTypeName = EVENT_TYPE_NAMES[eventType];
+              const score = eventType === EventType.CleanRepayment ? 35 : 20;
+
+              discovered.push({
+                sourceTxHash: tx.hash,
+                blockHeight: Number(tx.blockNumber),
+                protocol: meta.protocol,
+                protocolName: meta.name,
+                eventType,
+                eventTypeName,
+                volumeUSD,
+                timestamp: Number(tx.timeStamp),
+                description: `${eventTypeName}: $${volumeUSD.toLocaleString()} ${tx.tokenSymbol} on ${meta.name}`,
+                weightScore: score,
+                etherscanUrl: `https://etherscan.io/tx/${tx.hash}`,
+              });
+            }
           }
         }
       }
+    } catch (err: any) {
+      console.warn(`[DefiDiscovery] Etherscan live query notice: ${err.message}`);
     }
+
     return discovered;
   }
 }
