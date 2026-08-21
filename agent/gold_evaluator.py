@@ -565,7 +565,7 @@ def send_to_creditcoin_audit_log(api_base: str, event_type: str, message: Any, e
         url = f"{target_api}/api/v1/creditcoin/audit-logs"
         payload = {
             "eventType": event_type,
-            "contractAddress": os.getenv("SAG_TOKEN_ADDRESS", "0xf42849633719B421Bae3cad1e8315A6a8E31128D"),
+            "contractAddress": os.getenv("SAG_TOKEN_ADDRESS", "0xC005Db1A74d39073367925FC53D3B85b635A7DD5"),
             "transactionHash": "0x" + hashlib.sha256(msg_str.encode('utf-8')).hexdigest()[:64],
             "blockNumber": 0,
             "details": {

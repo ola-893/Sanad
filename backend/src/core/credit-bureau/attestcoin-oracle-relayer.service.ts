@@ -49,7 +49,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x866d812a57ef13866b85D09a8633218678dAeff3';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x69E427dA9D4Fe741a9341e65a5e3DB6C5ae18eb5';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = 3; // Ethereum Mainnet
   }
