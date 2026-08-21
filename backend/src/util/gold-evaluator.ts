@@ -7,6 +7,9 @@ interface GoldEvaluatorInput {
   gold_weight_g: number;
   purity: number;
   tenure_days: number;
+  borrower_address?: string;
+  credit_tier?: 'Gold' | 'Silver' | 'Bronze' | 'HighRisk' | 'Unscored';
+  credit_score?: number;
 }
 
 interface RiskMetrics {
@@ -18,12 +21,18 @@ interface RiskMetrics {
   principal_myr: number;
   ltv: number;
   risk_level: 'VERY_LOW' | 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+  base_max_safe_ltv: number;
+  credit_tier_ltv_delta: number;
   max_safe_ltv: number;
   margin_call_ltv: number;
+  max_recommended_loan_myr: number;
   vol_window_days: number;
   gold_volatility: number | null;
   fx_usd_myr: number | null;
   shop_rating: string | null;
+  credit_tier: string;
+  credit_score: number;
+  requires_compliance_review: boolean;
 }
 
 interface LLMRecommendation {
@@ -53,21 +62,30 @@ export interface GoldEvaluatorOutput {
 
 /**
  * Get the Python executable command
- * Tries different common Python commands in order
+ * Checks local virtualenv first, then PYTHON_EXECUTABLE, then system python3
  */
 function getPythonCommand(): string {
-  // Check environment variable first
   if (process.env.PYTHON_EXECUTABLE) {
     return process.env.PYTHON_EXECUTABLE;
   }
   
-  // Default attempts in order of preference
-  // Use python3 for consistency across platforms (especially in Docker)
-  // On Windows: try python3 first, then py
-  // On Unix: try python3
-  const isWindows = process.platform === 'win32';
-  // In Docker/Linux containers, python3 is standard
-  // On Windows, prefer python3 if available, fallback to py
+  const venvPaths = [
+    path.join(process.cwd(), 'agent', '.venv', 'bin', 'python3'),
+    path.join(process.cwd(), '..', 'agent', '.venv', 'bin', 'python3'),
+    path.join(process.cwd(), 'agent', '.venv', 'bin', 'python'),
+    path.join(process.cwd(), '..', 'agent', '.venv', 'bin', 'python'),
+  ];
+
+  for (const vp of venvPaths) {
+    try {
+      if (fs.existsSync(vp)) {
+        return vp;
+      }
+    } catch {
+      // Continue to next check
+    }
+  }
+
   return 'python3';
 }
 

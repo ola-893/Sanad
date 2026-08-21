@@ -89,64 +89,40 @@ def get_loan_details(loan_id: str) -> dict:
 #    Docs: https://metalpriceapi.com/
 # ------------------------------------------------------------------------------
 def get_gold_price_usd() -> float:
-    """
-    Fetch latest gold spot price in USD per troy ounce.
-
-    Environment:
-        METALPRICE_API_KEY
-    Returns:
-        float: gold price (USD/oz)
-    """
     api_key = os.getenv("METALPRICE_API_KEY")
-    url = f"https://api.metalpriceapi.com/v1/latest?api_key={api_key}&base=USD&currencies=XAU"
-
-    try:
-        # resp = requests.get(url, timeout=15)
-        # resp.raise_for_status()
-        # data = resp.json()
-        # # The API returns something like {"rates": {"XAU": 0.00044}, "base": "USD"}
-        # rate_xau = data["rates"]["XAU"]
-        # if rate_xau == 0:
-        #     raise ValueError("Invalid XAU rate (0)")
-        # gold_price_usd_per_oz = 1.0 / rate_xau
-        # return gold_price_usd_per_oz
-        return 592.48 
-    except Exception as e:
-        print(f"[ERROR] Could not fetch gold price: {e}")
-        # Fallback to a safe default (approx)
-        return 592.48  # USD/oz
+    if api_key:
+        url = f"https://api.metalpriceapi.com/v1/latest?api_key={api_key}&base=USD&currencies=XAU"
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.ok:
+                data = resp.json()
+                rate_xau = data.get("rates", {}).get("XAU", 0)
+                if rate_xau > 0:
+                    return round(1.0 / rate_xau, 2)
+        except Exception as e:
+            pass
+    # Fallback to realistic spot price (~$2650/oz USD)
+    return 2650.00
 
 
 # ------------------------------------------------------------------------------
 # 3. Get FX rate USD→MYR from FastForex.io
-#    Docs: https://www.fastforex.io/documentation
 # ------------------------------------------------------------------------------
 def get_fx_rate(pair: str = "USD/MYR") -> float:
-    """
-    Fetch latest FX rate (USD to MYR).
-
-    Environment:
-        FASTFOREX_API_KEY
-    Returns:
-        float: exchange rate (1 USD = ? MYR)
-    """
     api_key = os.getenv("FASTFOREX_API_KEY")
-    if not api_key:
-        raise ValueError("FASTFOREX_API_KEY not set in .env.local")
-
-    base, quote = pair.split("/")
-    url = f"https://api.fastforex.io/fetch-one?from={base}&to={quote}&api_key={api_key}"
-
-    try:
-        # resp = requests.get(url, timeout=10)
-        # resp.raise_for_status()
-        # data = resp.json()
-        # rate = float(data["result"][quote])
-        # return rate
-        return 4.70
-    except Exception as e:
-        print(f"[ERROR] Could not fetch FX rate {pair}: {e}")
-        return 4.70  # safe default (USD→MYR)
+    if api_key:
+        base, quote = pair.split("/")
+        url = f"https://api.fastforex.io/fetch-one?from={base}&to={quote}&api_key={api_key}"
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.ok:
+                data = resp.json()
+                rate = float(data.get("result", {}).get(quote, 4.45))
+                return round(rate, 4)
+        except Exception as e:
+            pass
+    # Safe default market rate (1 USD = 4.45 MYR)
+    return 4.45
 
 
 # ------------------------------------------------------------------------------
@@ -202,7 +178,7 @@ def get_yesterday_gold_price_myr() -> Optional[float]:
         #     print(f"[WARN] Invalid response from yesterday gold price API: {data}")
         #     return None
 
-        return 90.00
+        return 375.00
             
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
