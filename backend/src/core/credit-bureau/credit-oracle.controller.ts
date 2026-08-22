@@ -64,6 +64,39 @@ export class CreditOracleController {
   }
 
   /**
+   * POST /api/credit-oracle/fetch-proof
+   * Fetches Attestcoin proof for an Ethereum Mainnet tx WITHOUT submitting to CC3.
+   */
+  public async fetchProof(req: Request, res: Response): Promise<void> {
+    const { sourceTxHash, blockHeight, chainKey } = req.body;
+    if (!sourceTxHash || typeof sourceTxHash !== 'string' || !sourceTxHash.startsWith('0x')) {
+      res.status(400).json({ success: false, message: 'Valid sourceTxHash required (0x...)' });
+      return;
+    }
+
+    // Allow overriding chainKey per-request (1 = Sepolia, 3 = Mainnet)
+    const originalChainKey = this.relayerService.sourceChainKey;
+    if (chainKey) {
+      this.relayerService.sourceChainKey = Number(chainKey);
+    }
+
+    try {
+      const result = await this.relayerService.fetchProof(sourceTxHash, blockHeight);
+      if (!result.success) {
+        res.status(500).json({ success: false, message: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      console.error('[CreditOracleController] fetchProof error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Failed to fetch proof' });
+    } finally {
+      // Always restore original chain key
+      this.relayerService.sourceChainKey = originalChainKey;
+    }
+  }
+
+  /**
    * GET /api/credit-oracle/profile/:address
    * Fetches on-chain CreditProfile and proven events from CC3
    */
@@ -98,7 +131,7 @@ export class CreditOracleController {
         oracleAddress: this.relayerService.getOracleAddress(),
         network: 'Creditcoin 3 Testnet',
         chainId: 102031,
-        sourceChain: 'Ethereum Mainnet (Chain Key: 3)',
+        sourceChain: 'Ethereum Sepolia (Chain Key: 1) — Mainnet supported via chainKey override',
         blockProverPrecompile: '0x0000000000000000000000000000000000000FD2',
         chainInfoPrecompile: '0x0000000000000000000000000000000000000fD3',
         proofApiUrl: CREDITCOIN_CONFIG.proofBuilderUrl,

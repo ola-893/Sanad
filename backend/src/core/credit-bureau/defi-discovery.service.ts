@@ -133,6 +133,11 @@ export const ETHEREUM_DEFI_ADDRESSES: Record<string, { protocol: Protocol; name:
     name: 'Aave v3',
     category: 'Pooled Lending',
   },
+  '0x6ae43d3271ff6888e7fc43fd7321a503ff738951': {
+    protocol: Protocol.AaveV3,
+    name: 'Aave v3 (Sepolia)',
+    category: 'Pooled Lending',
+  },
   '0xc3d688b66703497daa19211eedff47f25384cdc3': {
     protocol: Protocol.CompoundV3,
     name: 'Compound v3',
@@ -234,6 +239,9 @@ export const STATIC_TOKEN_METADATA: Record<string, { symbol: string; decimals: n
   '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', decimals: 8, referencePriceUSD: 95000.0 },
   '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', decimals: 18, referencePriceUSD: 18.0 },
   '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': { symbol: 'AAVE', decimals: 18, referencePriceUSD: 125.0 },
+  // Sepolia Testnet Tokens
+  '0xff34b3d4aee8ddcd6f9afffb6fe49bd371b8a357': { symbol: 'DAI', decimals: 18, referencePriceUSD: 1.0 },
+  '0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c': { symbol: 'WETH', decimals: 18, referencePriceUSD: 2700.0 },
 };
 
 // ─── Live Price Feed (CoinGecko) ───────────────────────────────────────

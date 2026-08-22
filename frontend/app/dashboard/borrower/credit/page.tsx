@@ -129,6 +129,7 @@ export default function BorrowerCreditPage() {
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null)
   const [provingEvent, setProvingEvent] = useState<string | null>(null)
   const [proofResult, setProofResult] = useState<{ txHash?: string; score?: string; tier?: string; message?: string } | null>(null)
+  const [proofModal, setProofModal] = useState<{ open: boolean; event?: any; step: 'idle' | 'attesting' | 'fetched' | 'submitting' | 'done'; proofData?: any; error?: string }>({ open: false, step: 'idle' })
 
   /* ─── Fetch on-chain credit profile ─── */
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -167,26 +168,39 @@ export default function BorrowerCreditPage() {
   }
   const handleDiscover = () => handleDiscoverWithAddress(discoverAddress)
 
-  /* ─── Prove an event (MetaMask signature → backend → CC3) ─── */
-  const handleProveEvent = async (event: any) => {
+  /* ─── Fetch Attestcoin proof (step 2+3: attestation + proof generation) ─── */
+  const handleFetchProof = async (event: any) => {
+    setProofModal({ open: true, event, step: 'attesting' })
     try {
-      setProvingEvent(event.sourceTxHash)
-      setProofResult(null)
+      // Pass chainKey: 1 for Sepolia, 3 for Mainnet (sample wallets are Mainnet)
+      const isSepolia = event.etherscanUrl?.includes('sepolia') || event.network === 'sepolia'
+      const { data } = await apiInstance.post('/credit-oracle/fetch-proof', {
+        sourceTxHash: event.sourceTxHash,
+        blockHeight: event.blockHeight,
+        chainKey: isSepolia ? 1 : 3,
+      })
+      const proofData = data?.data || data
+      setProofModal(prev => ({ ...prev, step: 'fetched', proofData }))
+    } catch (err: any) {
+      setProofModal(prev => ({ ...prev, step: 'idle', error: err.response?.data?.message || err.message || 'Failed to fetch proof' }))
+    }
+  }
 
-      // Request MetaMask signature
-      if (!window.ethereum) {
-        throw new Error('MetaMask not found — please install MetaMask')
-      }
+  /* ─── Submit proof to CC3 (step 4: MetaMask signature + contract call) ─── */
+  const handleSubmitToCC3 = async () => {
+    const { event, proofData } = proofModal
+    if (!event || !proofData) return
+    setProofModal(prev => ({ ...prev, step: 'submitting', error: undefined }))
+    try {
+      if (!window.ethereum) throw new Error('MetaMask not found')
 
       const message = `Sanad Protocol: Verify DeFi credit event for ${discoverAddress}\nEvent: ${event.eventTypeName || 'DeFi Event'}\nTxHash: ${event.sourceTxHash}\nTimestamp: ${event.timestamp}`
       const signature = await (window.ethereum as any).request({
         method: 'personal_sign',
         params: [message, discoverAddress],
       })
+      if (!signature) throw new Error('Signature rejected')
 
-      if (!signature) throw new Error('Signature was rejected')
-
-      // Submit to backend → Attestcoin Prover → CC3
       const { data } = await apiInstance.post('/credit-oracle/prove-event', {
         address: discoverAddress,
         event: {
@@ -201,23 +215,13 @@ export default function BorrowerCreditPage() {
       })
 
       const result = data?.data || data
-      setProofResult({
-        txHash: result.transactionHash,
-        score: result.score,
-        tier: result.tier,
-        message: result.success ? `Proof submitted! Score: ${result.score} (${result.tier})` : result.error,
-      })
-
-      // Refresh credit profile
+      setProofModal(prev => ({ ...prev, step: 'done', proofData: { ...prev.proofData, submitResult: result } }))
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['credit-profile', walletAddress] })
         queryClient.invalidateQueries({ queryKey: ['proven-events', walletAddress] })
       }
     } catch (err: any) {
-      console.error('Proof error:', err)
-      setProofResult({ message: err.message || 'Proof failed — see console for details' })
-    } finally {
-      setProvingEvent(null)
+      setProofModal(prev => ({ ...prev, step: 'fetched', error: err.message }))
     }
   }
 
@@ -434,14 +438,9 @@ export default function BorrowerCreditPage() {
                                 <Button
                                   size="sm"
                                   className={BTN + " text-[9px] px-3 py-1"}
-                                  onClick={() => handleProveEvent(event)}
-                                  disabled={provingEvent === event.sourceTxHash}
+                                  onClick={() => handleFetchProof(event)}
                                 >
-                                  {provingEvent === event.sourceTxHash ? (
-                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Proving...</>
-                                  ) : (
-                                    <><Shield className="h-3 w-3 mr-1" /> Prove</>
-                                  )}
+                                  <Shield className="h-3 w-3 mr-1" /> Verify
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -655,7 +654,7 @@ export default function BorrowerCreditPage() {
                                     <Button
                                       size="sm"
                                       className="rounded-full bg-[#171414] font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black px-3 py-1"
-                                      onClick={() => handleProveEvent(event)}
+                                      onClick={() => handleFetchProof(event)}
                                       disabled={provingEvent === event.sourceTxHash}
                                     >
                                       {provingEvent === event.sourceTxHash ? (
@@ -665,9 +664,13 @@ export default function BorrowerCreditPage() {
                                       )}
                                     </Button>
                                   ) : (
-                                    <span className="font-mono text-[9px] text-[#4A4A4A] italic">
-                                      Demo only
-                                    </span>
+                                    <Button
+                                      size="sm"
+                                      className="rounded-full bg-[#171414]/80 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2]/80 hover:bg-[#171414] px-3 py-1"
+                                      onClick={() => handleFetchProof(event)}
+                                    >
+                                      <Shield className="h-3 w-3 mr-1" /> Prove
+                                    </Button>
                                   )}
                                 </TableCell>
                               </TableRow>
@@ -682,6 +685,214 @@ export default function BorrowerCreditPage() {
             </TabsContent>
           </Tabs>
         </>
+      )}
+
+      {/* ─── Attestcoin Proof Modal ─── */}
+      {proofModal.open && proofModal.event && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setProofModal({ open: false, step: 'idle' })}>
+          <div className="glass-panel w-full max-w-lg mx-4 p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#171414]/10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#171414]">
+                  <Fingerprint className="h-4.5 w-4.5 text-[#E1BAC2]" />
+                </div>
+                <div>
+                  <p className="font-display text-sm font-bold text-[#171414]">Attestcoin Proof</p>
+                  <p className="font-mono text-[10px] text-[#4A4A4A]">{proofModal.event.sourceTxHash?.slice(0, 18)}...</p>
+                </div>
+              </div>
+              <button onClick={() => setProofModal({ open: false, step: 'idle' })} className="rounded-full p-1.5 hover:bg-[#171414]/5">
+                <span className="sr-only">Close</span>
+                <svg className="h-4 w-4 text-[#4A4A4A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Event Summary */}
+            <div className="px-6 py-4 bg-[#FAFAF8] border-b border-[#171414]/5">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className={LABEL}>Event</p>
+                  <p className="font-display text-sm font-bold text-[#171414]">{proofModal.event.eventTypeName}</p>
+                </div>
+                <div>
+                  <p className={LABEL}>Token</p>
+                  <p className="font-display text-sm font-bold text-[#171414]">{proofModal.event.tokenSymbol || '—'}</p>
+                </div>
+                <div>
+                  <p className={LABEL}>Value</p>
+                  <p className="font-display text-sm font-bold text-[#171414]">{formatVolume(proofModal.event.volumeUSD)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Step Progress */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Step 1: Attestation */}
+              <div className="flex items-start gap-3">
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'attesting' ? 'bg-[#171414] animate-pulse' : proofModal.step !== 'idle' ? 'bg-emerald-500' : 'bg-[#171414]/10'}`}>
+                  {proofModal.step !== 'idle' ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-white" />
+                  ) : (
+                    <span className="font-mono text-[10px] font-bold text-[#171414]">1</span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-display text-sm font-bold text-[#171414]">Block Attestation</p>
+                  <p className="text-xs text-[#4A4A4A]">
+                    {proofModal.step === 'attesting'
+                      ? 'Waiting for Ethereum block to be attested by Attestcoin Prover...'
+                      : proofModal.step !== 'idle'
+                      ? `Block #${proofModal.event.blockHeight} attested ✓`
+                      : 'Pending'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2: Proof Generation */}
+              <div className="flex items-start gap-3">
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done' ? 'bg-emerald-500' : proofModal.step === 'attesting' ? 'bg-[#171414] animate-pulse' : 'bg-[#171414]/10'}`}>
+                  {proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done' ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-white" />
+                  ) : (
+                    <span className="font-mono text-[10px] font-bold text-[#171414]">2</span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-display text-sm font-bold text-[#171414]">Proof Generated</p>
+                  <p className="text-xs text-[#4A4A4A]">
+                    {proofModal.step === 'attesting'
+                      ? 'Waiting for attestation...'
+                      : proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done'
+                      ? `Merkle proof + continuity proof ready ✓`
+                      : 'Pending'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3: Submit to CC3 */}
+              <div className="flex items-start gap-3">
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'done' ? 'bg-emerald-500' : proofModal.step === 'submitting' ? 'bg-[#171414] animate-pulse' : 'bg-[#171414]/10'}`}>
+                  {proofModal.step === 'done' ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-white" />
+                  ) : (
+                    <span className="font-mono text-[10px] font-bold text-[#171414]">3</span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-display text-sm font-bold text-[#171414]">Submit to CC3</p>
+                  <p className="text-xs text-[#4A4A4A]">
+                    {proofModal.step === 'submitting'
+                      ? 'Submitting proof to SanadCreditOracle on CC3...'
+                      : proofModal.step === 'done'
+                      ? 'Proof recorded on-chain ✓'
+                      : proofModal.step === 'fetched'
+                      ? 'Ready to submit — requires MetaMask signature'
+                      : 'Pending'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Proof Data (when fetched) */}
+              {proofModal.proofData && proofModal.step !== 'attesting' && (
+                <div className="rounded-xl border border-[#171414]/10 bg-[#171414] p-4 space-y-2">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2]/60">Proof Data</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Chain Key</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.chainKey} (Ethereum Mainnet)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Block Height</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2]">#{proofModal.proofData.blockHeight}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Merkle Root</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2] truncate ml-4">{proofModal.proofData.merkleProof?.root?.slice(0, 22)}...</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Merkle Siblings</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.merkleProof?.siblings?.length || 0} hashes</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Continuity Roots</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.continuityProof?.roots?.length || 0} roots</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error */}
+              {proofModal.error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                  <p className="text-xs text-red-600">{proofModal.error}</p>
+                </div>
+              )}
+
+              {/* CC3 submission result */}
+              {proofModal.step === 'done' && proofModal.proofData?.submitResult && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    <p className="text-xs font-bold text-emerald-700">Proof Recorded on CC3</p>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#4A4A4A]">Credit Score</span>
+                      <span className="font-mono text-[10px] font-bold text-[#171414]">{proofModal.proofData.submitResult.score}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[10px] text-[#4A4A4A]">Tier</span>
+                      <span className="font-mono text-[10px] font-bold text-[#171414]">{proofModal.proofData.submitResult.tier}</span>
+                    </div>
+                    {proofModal.proofData.submitResult.transactionHash && (
+                      <a
+                        href={`https://creditcoin-testnet.blockscout.com/tx/${proofModal.proofData.submitResult.transactionHash}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-[10px] text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                      >
+                        {proofModal.proofData.submitResult.transactionHash.slice(0, 20)}... <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-6 py-4 border-t border-[#171414]/10 flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full font-mono text-[10px] text-[#4A4A4A]"
+                onClick={() => setProofModal({ open: false, step: 'idle' })}
+              >
+                Close
+              </Button>
+              {proofModal.step === 'fetched' && (
+                <Button
+                  size="sm"
+                  className="rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black px-4"
+                  onClick={handleSubmitToCC3}
+                >
+                  <Shield className="h-3 w-3 mr-1.5" /> Submit to CC3
+                </Button>
+              )}
+              {proofModal.step === 'submitting' && (
+                <Button
+                  size="sm"
+                  disabled
+                  className="rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] px-4"
+                >
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> Submitting...
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -41,8 +41,8 @@ contract SanadCreditOracle is Ownable {
     IBlockProver public immutable blockProver;
     IChainInfo public immutable chainInfo;
 
-    // Supported Source Chain Key (3 = Ethereum Mainnet on CC3 Testnet)
-    uint64 public primarySourceChainKey = 3;
+    // Supported Source Chain Key (1 = Ethereum Sepolia, 3 = Ethereum Mainnet on CC3 Testnet)
+    uint64 public primarySourceChainKey = 1;
 
     enum Protocol {
         AaveV3,        // 0
@@ -143,9 +143,10 @@ contract SanadCreditOracle is Ownable {
         blockProver = IBlockProver(BLOCK_PROVER_ADDRESS);
         chainInfo = IChainInfo(CHAIN_INFO_ADDRESS);
 
-        // 1. Aave v3 Pool (Singleton)
-        _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
-        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Aave v3 Pool fallback
+        // 1. Aave v3 Pool — Sepolia + Mainnet
+        _registerProtocol(Protocol.AaveV3, 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951); // Sepolia Pool
+        _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2); // Mainnet Pool
+        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Mainnet Pool fallback
 
         // 2. Compound v3 (Comet USDC, WETH, USDT)
         _registerProtocol(Protocol.CompoundV3, 0xc3d688B66703497DAA19211EEdff47f25384cdc3); // Comet USDC
@@ -347,13 +348,17 @@ contract SanadCreditOracle is Ownable {
         }
     }
 
-    // Known Ethereum Mainnet Stablecoin Token Addresses for Strict Volume Decimals Verification
+    // Known Stablecoin Token Addresses (Mainnet + Sepolia) for Strict Volume Decimals Verification
+    // Mainnet
     address private constant USDC_TOKEN = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // 6 decimals
     address private constant USDT_TOKEN = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // 6 decimals
     address private constant DAI_TOKEN  = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // 18 decimals
     address private constant GHO_TOKEN  = 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; // 18 decimals
     address private constant USDe_TOKEN = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; // 18 decimals
     address private constant FRAX_TOKEN = 0x853d955aCEf822Db058eb8505911ED77F175b99e; // 18 decimals
+    // Sepolia
+    address private constant DAI_SEPOLIA  = 0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357; // 18 decimals
+    address private constant WETH_SEPOLIA = 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c; // 18 decimals
 
     /**
      * @notice Validates that the calldata amount parameter is consistent with claimed volumeUSD.
@@ -398,9 +403,9 @@ contract SanadCreditOracle is Ownable {
             return;
         }
 
-        // 2. Stablecoins with 18 decimals (DAI, GHO, USDe, FRAX)
+        // 2. Stablecoins with 18 decimals (DAI, GHO, USDe, FRAX + Sepolia DAI)
         // rawAmount is in 10^18 units, normalized to 10^6 units by dividing by 10^12
-        if (asset == DAI_TOKEN || asset == GHO_TOKEN || asset == USDe_TOKEN || asset == FRAX_TOKEN) {
+        if (asset == DAI_TOKEN || asset == GHO_TOKEN || asset == USDe_TOKEN || asset == FRAX_TOKEN || asset == DAI_SEPOLIA) {
             uint256 expectedUSD = rawAmount / 1e12;
             if (expectedUSD > 0) {
                 require(
@@ -438,8 +443,8 @@ contract SanadCreditOracle is Ownable {
                 // Aave/Spark liquidationCall: 0x00a718a9
                 require(selector == 0x00a718a9, "Invalid selector for Aave/Spark Liquidation");
             } else if (eventType == EventType.CollateralSupply) {
-                // Aave/Spark supply: 0x617ba037, supplyWithPermit: 0x02c205f0, legacy: 0xe8aec7da
-                require(selector == 0x617ba037 || selector == 0x02c205f0 || selector == 0xe8aec7da, "Invalid selector for Aave/Spark Supply");
+                // Aave/Spark supply: 0x617ba037, supplyWithPermit: 0x02c205f0, legacy: 0xe8aec7da, depositETH: 0x474cf53d
+                require(selector == 0x617ba037 || selector == 0x02c205f0 || selector == 0xe8aec7da || selector == 0x474cf53d, "Invalid selector for Aave/Spark Supply");
             }
         } else if (protocol == Protocol.CompoundV3) {
             if (eventType == EventType.CleanRepayment) {

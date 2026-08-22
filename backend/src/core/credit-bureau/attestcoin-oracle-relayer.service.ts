@@ -30,12 +30,24 @@ export const SANAD_CREDIT_ORACLE_ABI = [
   'event DeFiEventProven(address indexed borrower, bytes32 indexed sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 blockHeight)'
 ];
 
+export interface FetchProofResult {
+  success: boolean;
+  chainKey?: number;
+  headerNumber?: number;
+  txBytes?: string;
+  merkleProof?: { root: string; siblings: { hash: string; isLeft: boolean }[] };
+  continuityProof?: { lowerEndpointDigest: string; roots: string[] };
+  sourceTxHash?: string;
+  blockHeight?: number;
+  error?: string;
+}
+
 export class AttestcoinOracleRelayerService {
   private cc3Provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
   private oracleContractAddress: string;
   private proofApiUrl: string;
-  private sourceChainKey: number;
+  sourceChainKey: number;
 
   constructor() {
     const rpcUrl = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
@@ -52,11 +64,58 @@ export class AttestcoinOracleRelayerService {
     // Deployed SanadCreditOracle address
     this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x74357E5FED91D6dDdd39847304b8651634693A00';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
-    this.sourceChainKey = 3; // Ethereum Mainnet
+    this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
   }
 
   public getOracleAddress(): string {
     return this.oracleContractAddress;
+  }
+
+  /**
+   * Fetch an Attestcoin proof for an Ethereum Mainnet transaction WITHOUT submitting to CC3.
+   * This is steps 2+3 only: wait for attestation + fetch cryptographic proof.
+   */
+  public async fetchProof(
+    sourceTxHash: string,
+    blockHeight?: number,
+  ): Promise<FetchProofResult> {
+    try {
+      console.log(`[AttestcoinRelayer] Fetching proof for tx: ${sourceTxHash}`);
+
+      const proofBuilder = new proofProvider.service.ProofBuilder(this.sourceChainKey, this.proofApiUrl);
+
+      const targetHeight = blockHeight || await this.resolveSourceBlockHeight(sourceTxHash, this.sourceChainKey);
+      if (targetHeight) {
+        console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} to be attested...`);
+        try {
+          await proofBuilder.waitUntilHeightAttested(this.sourceChainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} attested!`);
+        } catch (waitErr: any) {
+          throw new Error(`Block #${targetHeight} not yet attested. Please try again shortly.`);
+        }
+      }
+
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(proofResult.error || 'Proof not available');
+      }
+
+      const p = proofResult.data;
+      return {
+        success: true,
+        chainKey: p.chainKey,
+        headerNumber: p.headerNumber,
+        txBytes: p.txBytes,
+        merkleProof: p.merkleProof,
+        continuityProof: p.continuityProof,
+        sourceTxHash,
+        blockHeight: targetHeight,
+      };
+    } catch (err: any) {
+      console.error(`[AttestcoinRelayer] fetchProof error:`, err.message);
+      return { success: false, error: err.message || 'Failed to fetch proof' };
+    }
   }
 
   private getContract(): ethers.Contract {
