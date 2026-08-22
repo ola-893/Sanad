@@ -52,6 +52,6 @@ export const CREDITCOIN_CONFIG: CreditcoinNetworkConfig = {
   contracts: {
     sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0x68359bD39Bf7A683a96808cAD38147d1baFa07f1',
     liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70',
-    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x74357E5FED91D6dDdd39847304b8651634693A00',
+    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xa441351Ff94b45c3Da3456744798A86a782d2F34',
   },
 };
