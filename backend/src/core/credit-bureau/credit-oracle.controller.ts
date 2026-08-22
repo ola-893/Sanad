@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { DefiDiscoveryService } from './defi-discovery.service.js';
 import { AttestcoinOracleRelayerService } from './attestcoin-oracle-relayer.service.js';
+import { CREDITCOIN_CONFIG } from '@/features/creditcoin/creditcoin.config.js';
 
 export class CreditOracleController {
   private discoveryService: DefiDiscoveryService;
