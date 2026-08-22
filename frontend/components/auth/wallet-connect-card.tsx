@@ -83,7 +83,7 @@ export function WalletConnectCard({
       router.push(dashboardPath);
     } else if (result.needsRegistration) {
       toast.info('No account found. Redirecting to registration...');
-      router.push(registerHref);
+      router.push(registerHref || '/register');
     } else {
       toast.error(result.error || 'Login failed');
     }

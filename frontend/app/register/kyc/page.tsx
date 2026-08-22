@@ -273,7 +273,7 @@ export default function KycVerificationPage() {
               ["function nonces(address) external view returns (uint256)"],
               cc3Provider
             )
-            let currentNonce = 0n
+            let currentNonce = BigInt(0)
             try {
               currentNonce = await oracleContract.nonces(walletAddress)
             } catch (nonceErr) {
@@ -890,7 +890,9 @@ export default function KycVerificationPage() {
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={`text-[8px] font-mono ${
                               ev.eventType === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-red-200 bg-red-50 text-red-700"
+                              : ev.eventType === 1 || ev.eventType === 2 ? "border-red-200 bg-red-50 text-red-700"
+                              : ev.eventType === 4 ? "border-blue-200 bg-blue-50 text-blue-700"
+                              : "border-[#171414]/20 bg-[#171414]/5 text-[#171414]"
                             }`}>{ev.eventTypeName}</Badge>
                             <span className="text-[#171414]">{ev.protocolName}</span>
                           </div>
