@@ -337,8 +337,9 @@ export default function BorrowerCreditPage() {
                               </TableCell>
                               <TableCell>
                                 <Badge className={`font-mono text-[10px] ${
-                                  isRepayment ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                                  isLiquidation ? "bg-red-50 text-red-600 border-red-200" :
+                                  event.eventType === 0 ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                                  event.eventType === 1 || event.eventType === 2 ? "bg-red-50 text-red-600 border-red-200" :
+                                  event.eventType === 4 ? "bg-blue-50 text-blue-600 border-blue-200" :
                                   "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
                                 }`}>
                                   {EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
@@ -437,7 +438,9 @@ export default function BorrowerCreditPage() {
                                 <TableCell>
                                   <Badge className={`font-mono text-[10px] ${
                                     event.eventType === 0 ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                                    "bg-red-50 text-red-600 border-red-200"
+                                    event.eventType === 1 || event.eventType === 2 ? "bg-red-50 text-red-600 border-red-200" :
+                                    event.eventType === 4 ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                    "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
                                   }`}>
                                     {event.eventTypeName || EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
                                   </Badge>

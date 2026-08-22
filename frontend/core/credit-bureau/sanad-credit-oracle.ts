@@ -59,7 +59,7 @@ export const SUPPORTED_ETHEREUM_PROTOCOLS: ProtocolMeta[] = [
     id: Protocol.EulerV2,
     name: 'Euler v2',
     category: 'Modular Vaults',
-    address: '0x27182842E096f60E3D516A691568344305922615',
+    address: '0x0C9a3dd6b8F28529d72d7f9cE918D493519EE383',
     badgeColor: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
     iconName: 'Euler',
   },

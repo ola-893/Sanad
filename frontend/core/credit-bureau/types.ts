@@ -11,6 +11,22 @@ export enum Protocol {
   Fraxlend = 9,
 }
 
+export enum EventType {
+  CleanRepayment = 0,
+  OvercollateralizedLiquidation = 1,
+  UndercollateralizedDefault = 2,
+  CollateralSupply = 3,
+  ActiveBorrowPosition = 4,
+}
+
+export const EVENT_TYPE_NAMES: Record<EventType, string> = {
+  [EventType.CleanRepayment]: 'Clean Repayment',
+  [EventType.OvercollateralizedLiquidation]: 'Liquidation Call',
+  [EventType.UndercollateralizedDefault]: 'Undercollateralized Default',
+  [EventType.CollateralSupply]: 'Collateral Supply',
+  [EventType.ActiveBorrowPosition]: 'Active Borrow Position',
+};
+
 export interface DeFiEvent {
   sourceTxHash: string;
   blockHeight: number;
@@ -35,9 +51,12 @@ export interface AddressSecurityInfo {
 
 export interface DiscoverySummary {
   cleanRepaymentsCount: number;
+  activeBorrowsCount?: number;
   liquidationsCount: number;
   defaultsCount: number;
   totalVolumeUSD: number;
+  totalRepaidUSD?: number;
+  totalBorrowedUSD?: number;
   estimatedTier: string;
   activeProtocolsCount?: number;
   securityInfo?: AddressSecurityInfo;
@@ -50,9 +69,11 @@ export interface OnChainCreditProfile {
   totalRepaidUSD: string;
   totalLiquidatedUSD: string;
   totalDefaultedUSD: string;
+  totalBorrowedUSD?: string;
   cleanRepaymentCount: number;
   liquidationCount: number;
   defaultCount: number;
+  activeBorrowCount?: number;
   provenEventsCount: number;
   lastEvaluatedTimestamp: number;
   provenEvents: any[];

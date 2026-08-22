@@ -61,7 +61,8 @@ contract SanadCreditOracle is Ownable {
         CleanRepayment,                  // 0: Positive credit signal (+25 to +175 pts)
         OvercollateralizedLiquidation,  // 1: Risk penalty signal (-35 pts)
         UndercollateralizedDefault,     // 2: Severe default penalty signal (-150 pts)
-        CollateralSupply                // 3: Capital capacity signal (+15 pts)
+        CollateralSupply,               // 3: Capital capacity signal (+15 pts)
+        ActiveBorrowPosition            // 4: Active credit usage / capacity signal (+10 pts, capped at +30)
     }
 
     enum CreditTier {
@@ -88,9 +89,11 @@ contract SanadCreditOracle is Ownable {
         uint256 totalRepaidUSD;    // 6 decimals
         uint256 totalLiquidatedUSD;
         uint256 totalDefaultedUSD;
+        uint256 totalBorrowedUSD;
         uint32 cleanRepaymentCount;
         uint32 liquidationCount;
         uint32 defaultCount;
+        uint32 activeBorrowCount;
         uint64 lastEvaluatedTimestamp;
         uint32 provenEventsCount;
     }
@@ -159,9 +162,9 @@ contract SanadCreditOracle is Ownable {
         _registerProtocol(Protocol.MakerDAO, 0x5ef30b9986345249bc32d8928B7ee64DE9435E39);
         _registerProtocol(Protocol.MakerDAO, 0x08638165E3170EBe131C03b1fE42D72ebA3b5f7E); // Vat
 
-        // 6. Euler v2 (Vault & Factory)
+        // 6. Euler v2 (EVC & Vaults)
+        _registerProtocol(Protocol.EulerV2, 0x0C9a3dd6b8F28529d72d7f9cE918D493519EE383);
         _registerProtocol(Protocol.EulerV2, 0x27182842E096f60E3D516A691568344305922615);
-        _registerProtocol(Protocol.EulerV2, 0x0000000000004946C0e9f43f4DEE607B0Ef1FE1c);
 
         // 7. Fluid (Instadapp Liquidity Layer)
         _registerProtocol(Protocol.Fluid, 0x52Aa899454998Be5b000Ad077a46Bbe360F4e497);
@@ -423,68 +426,119 @@ contract SanadCreditOracle is Ownable {
     ) internal pure {
         if (protocol == Protocol.AaveV3 || protocol == Protocol.SparkProtocol) {
             if (eventType == EventType.CleanRepayment) {
-                // Aave/Spark repay: 0x573ade81, repayWithATokens: 0xee3e210b, repayWithPermit: 0x89c4b5f0
+                // Aave/Spark repay: 0x573ade81, repayWithATokens: 0x2dad97d4, repayWithPermit: 0xee3e210b, legacy permit: 0x89c4b5f0
                 require(
-                    selector == 0x573ade81 || selector == 0xee3e210b || selector == 0x89c4b5f0,
+                    selector == 0x573ade81 || selector == 0xee3e210b || selector == 0x2dad97d4 || selector == 0x89c4b5f0,
                     "Invalid selector for Aave/Spark Repayment"
                 );
+            } else if (eventType == EventType.ActiveBorrowPosition) {
+                // Aave/Spark borrow(address,uint256,uint256,uint16,address): 0xa415bcad
+                require(selector == 0xa415bcad, "Invalid selector for Aave/Spark Borrow");
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
                 // Aave/Spark liquidationCall: 0x00a718a9
                 require(selector == 0x00a718a9, "Invalid selector for Aave/Spark Liquidation");
             } else if (eventType == EventType.CollateralSupply) {
-                // Aave/Spark supply: 0x617ba037, supplyWithPermit: 0xe8aec7da
-                require(selector == 0x617ba037 || selector == 0xe8aec7da, "Invalid selector for Aave/Spark Supply");
+                // Aave/Spark supply: 0x617ba037, supplyWithPermit: 0x02c205f0, legacy: 0xe8aec7da
+                require(selector == 0x617ba037 || selector == 0x02c205f0 || selector == 0xe8aec7da, "Invalid selector for Aave/Spark Supply");
             }
         } else if (protocol == Protocol.CompoundV3) {
-            if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply) {
-                // Compound v3 supply: 0xf2b9fdb8, supplyTo: 0x474cf53d, supplyFrom: 0x27ec1e69
+            if (eventType == EventType.CleanRepayment) {
+                // Compound v3 base asset supply / repay: 0xf2b9fdb8, supplyTo: 0x4232cd63 / 0x474cf53d
                 require(
-                    selector == 0xf2b9fdb8 || selector == 0x474cf53d || selector == 0x27ec1e69,
-                    "Invalid selector for Compound v3"
+                    selector == 0xf2b9fdb8 || selector == 0x4232cd63 || selector == 0x474cf53d || selector == 0x27ec1e69,
+                    "Invalid selector for Compound v3 Repayment"
+                );
+            } else if (eventType == EventType.ActiveBorrowPosition) {
+                // Compound v3 base asset withdraw / borrow: 0xf3fef3a3, withdrawTo: 0xc3b35a7e / 0x6caae000
+                require(
+                    selector == 0xf3fef3a3 || selector == 0xc3b35a7e || selector == 0x6caae000,
+                    "Invalid selector for Compound v3 Borrow"
+                );
+            } else if (eventType == EventType.CollateralSupply) {
+                // Compound v3 collateral supply: 0xf2b9fdb8, supplyTo: 0x4232cd63 / 0x474cf53d
+                require(
+                    selector == 0xf2b9fdb8 || selector == 0x4232cd63 || selector == 0x474cf53d || selector == 0x27ec1e69,
+                    "Invalid selector for Compound v3 Supply"
                 );
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Compound v3 absorb: 0x4515cef3
-                require(selector == 0x4515cef3, "Invalid selector for Compound v3 Liquidation");
+                // Compound v3 absorb: 0xc3cecfd2, 0x4515cef3
+                require(selector == 0xc3cecfd2 || selector == 0x4515cef3, "Invalid selector for Compound v3 Liquidation");
             }
         } else if (protocol == Protocol.MorphoBlue) {
             if (eventType == EventType.CleanRepayment) {
-                // Morpho Blue repay: 0x1a879e5f
-                require(selector == 0x1a879e5f, "Invalid selector for Morpho Blue Repay");
+                // Morpho Blue repay: 0x20b76e81, legacy: 0x1a879e5f
+                require(selector == 0x20b76e81 || selector == 0x1a879e5f, "Invalid selector for Morpho Blue Repay");
+            } else if (eventType == EventType.ActiveBorrowPosition) {
+                // Morpho Blue borrow: 0x50d8cd4b, legacy: 0xcc8c3bf9
+                require(selector == 0x50d8cd4b || selector == 0xcc8c3bf9, "Invalid selector for Morpho Blue Borrow");
             } else if (eventType == EventType.CollateralSupply) {
-                // Morpho Blue supply: 0x0c0a769b, supplyCollateral: 0xa83da3d2
-                require(selector == 0x0c0a769b || selector == 0xa83da3d2, "Invalid selector for Morpho Blue Supply");
+                // Morpho Blue supplyCollateral: 0x238d6579 / 0xa83da3d2, supply: 0xa99aad89 / 0x0c0a769b
+                require(
+                    selector == 0x238d6579 || selector == 0xa99aad89 || selector == 0x0c0a769b || selector == 0xa83da3d2,
+                    "Invalid selector for Morpho Blue Supply"
+                );
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
-                // Morpho Blue liquidate: 0xa4a4c9f0
-                require(selector == 0xa4a4c9f0, "Invalid selector for Morpho Blue Liquidation");
+                // Morpho Blue liquidate: 0xd8eabcb8, legacy: 0xa4a4c9f0
+                require(selector == 0xd8eabcb8 || selector == 0xa4a4c9f0, "Invalid selector for Morpho Blue Liquidation");
             }
         } else if (protocol == Protocol.MakerDAO) {
             if (eventType == EventType.CleanRepayment) {
-                // MakerDAO wipe: 0x4b666199, frob: 0x78248407
-                require(selector == 0x4b666199 || selector == 0x78248407, "Invalid selector for MakerDAO Repay");
+                // MakerDAO wipe: 0x4b666199, 0x73b38101, 0x036a2395, frob: 0x78248407 / 0x5a984ded
+                require(
+                    selector == 0x4b666199 || selector == 0x73b38101 || selector == 0x036a2395 || selector == 0x78248407 || selector == 0x5a984ded,
+                    "Invalid selector for MakerDAO Repay"
+                );
+            } else if (eventType == EventType.ActiveBorrowPosition) {
+                // MakerDAO draw: 0x9f6f3d5b, 0x440f19ba, lockETHAndDraw: 0x1c02d846, lockGemAndDraw: 0xcbd4be3f, frob: 0x78248407 / 0x5a984ded
+                require(
+                    selector == 0x9f6f3d5b || selector == 0x440f19ba || selector == 0x1c02d846 || selector == 0xcbd4be3f || selector == 0x78248407 || selector == 0x5a984ded,
+                    "Invalid selector for MakerDAO Draw"
+                );
             } else if (eventType == EventType.CollateralSupply) {
-                // MakerDAO lock: 0x8a974b93, frob: 0x78248407
-                require(selector == 0x8a974b93 || selector == 0x78248407, "Invalid selector for MakerDAO Collateral");
+                // MakerDAO lock: 0xb3b77a51, 0x8a974b93, frob: 0x78248407 / 0x5a984ded
+                require(
+                    selector == 0xb3b77a51 || selector == 0x8a974b93 || selector == 0x78248407 || selector == 0x5a984ded,
+                    "Invalid selector for MakerDAO Collateral"
+                );
             }
         } else if (protocol == Protocol.EulerV2 || protocol == Protocol.Fraxlend) {
             if (eventType == EventType.CleanRepayment) {
-                // Euler/Fraxlend repay: 0x48a58e57, 0x573ade81
-                require(selector == 0x48a58e57 || selector == 0x573ade81, "Invalid selector for Euler/Fraxlend Repay");
+                // Euler/Fraxlend repay: 0xacb70815, 0x48a58e57, 0x573ade81, EVC batch: 0xc16ae7a4
+                require(
+                    selector == 0xacb70815 || selector == 0x48a58e57 || selector == 0x573ade81 || selector == 0xc16ae7a4,
+                    "Invalid selector for Euler/Fraxlend Repay"
+                );
+            } else if (eventType == EventType.ActiveBorrowPosition) {
+                // Euler/Fraxlend borrow: 0x4b3fd148, 0x6a0c4974, EVC batch: 0xc16ae7a4
+                require(
+                    selector == 0x4b3fd148 || selector == 0x6a0c4974 || selector == 0xc16ae7a4,
+                    "Invalid selector for Euler/Fraxlend Borrow"
+                );
             } else if (eventType == EventType.CollateralSupply) {
-                // Euler/Fraxlend deposit: 0x6e553f65, 0xb6b55f25
-                require(selector == 0x6e553f65 || selector == 0xb6b55f25, "Invalid selector for Euler/Fraxlend Deposit");
+                // Euler/Fraxlend deposit: 0x6e553f65, 0xb6b55f25, EVC batch: 0xc16ae7a4
+                require(
+                    selector == 0x6e553f65 || selector == 0xb6b55f25 || selector == 0xc16ae7a4,
+                    "Invalid selector for Euler/Fraxlend Deposit"
+                );
             } else if (eventType == EventType.OvercollateralizedLiquidation) {
                 // Euler/Fraxlend liquidate: 0x0e5a6a68, 0x438645a2
                 require(selector == 0x0e5a6a68 || selector == 0x438645a2, "Invalid selector for Liquidation");
             }
         } else if (protocol == Protocol.Fluid) {
-            if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply) {
-                // Fluid operate: 0xa04c0d0f, supply: 0x617ba037
-                require(selector == 0xa04c0d0f || selector == 0x617ba037 || selector == 0xf2b9fdb8, "Invalid selector for Fluid");
+            if (eventType == EventType.CleanRepayment || eventType == EventType.CollateralSupply || eventType == EventType.ActiveBorrowPosition) {
+                // Fluid operate: 0xad967e15, 0x1b2bfcd2, 0xa04c0d0f, supply: 0x617ba037
+                require(
+                    selector == 0xad967e15 || selector == 0x1b2bfcd2 || selector == 0xa04c0d0f || selector == 0x617ba037 || selector == 0xf2b9fdb8,
+                    "Invalid selector for Fluid"
+                );
             }
         } else if (protocol == Protocol.MapleFinance || protocol == Protocol.Goldfinch) {
-            if (eventType == EventType.CleanRepayment) {
-                // Maple/Goldfinch settlement: 0x4e07b5a0, 0xb6b55f25, 0x573ade81
-                require(selector == 0x4e07b5a0 || selector == 0xb6b55f25 || selector == 0x573ade81, "Invalid selector for Credit Desk");
+            if (eventType == EventType.CleanRepayment || eventType == EventType.ActiveBorrowPosition) {
+                // Maple/Goldfinch settlement/draw: 0x4e07b5a0, 0xb6b55f25, 0x573ade81, 0xa415bcad
+                require(
+                    selector == 0x4e07b5a0 || selector == 0xb6b55f25 || selector == 0x573ade81 || selector == 0xa415bcad,
+                    "Invalid selector for Credit Desk"
+                );
             }
         }
     }
@@ -536,6 +590,9 @@ contract SanadCreditOracle is Ownable {
         if (eventData.eventType == EventType.CleanRepayment) {
             profile.cleanRepaymentCount++;
             profile.totalRepaidUSD += eventData.volumeUSD;
+        } else if (eventData.eventType == EventType.ActiveBorrowPosition) {
+            profile.activeBorrowCount++;
+            profile.totalBorrowedUSD += eventData.volumeUSD;
         } else if (eventData.eventType == EventType.OvercollateralizedLiquidation) {
             profile.liquidationCount++;
             profile.totalLiquidatedUSD += eventData.volumeUSD;
@@ -588,13 +645,17 @@ contract SanadCreditOracle is Ownable {
         if (volumeBonus > 200) volumeBonus = 200;
         cleanRepayBonus += volumeBonus;
 
-        // 2. Penalties for liquidations (Aave/Compound/Morpho/Spark risk signal)
+        // 2. Modest points for active borrow positions (capacity & credit activity confirmation)
+        int256 borrowBonus = int256(uint256(profile.activeBorrowCount)) * 10;
+        if (borrowBonus > 30) borrowBonus = 30; // Capped at +30 pts max
+
+        // 3. Penalties for liquidations (Aave/Compound/Morpho/Spark risk signal)
         int256 liquidationPenalty = int256(uint256(profile.liquidationCount)) * 35;
 
-        // 3. Severe penalties for uncollateralized defaults (Maple/Goldfinch)
+        // 4. Severe penalties for uncollateralized defaults (Maple/Goldfinch)
         int256 defaultPenalty = int256(uint256(profile.defaultCount)) * 150;
 
-        computedScore = computedScore + cleanRepayBonus - liquidationPenalty - defaultPenalty;
+        computedScore = computedScore + cleanRepayBonus + borrowBonus - liquidationPenalty - defaultPenalty;
 
         // Bound score between 0 and 1000
         if (computedScore < 0) {
@@ -606,14 +667,16 @@ contract SanadCreditOracle is Ownable {
         }
 
         // Determine tier
-        if (profile.score < 350) {
+        if (profile.score < 350 || profile.defaultCount > 0 || profile.liquidationCount >= 2) {
             profile.tier = CreditTier.HighRisk;
-        } else if (profile.score < 550) {
-            profile.tier = CreditTier.Bronze;
-        } else if (profile.score < 750) {
-            profile.tier = CreditTier.Silver;
-        } else {
+        } else if (profile.score >= 750 && profile.cleanRepaymentCount >= 2) {
             profile.tier = CreditTier.Gold;
+        } else if (profile.score >= 550 && profile.cleanRepaymentCount >= 1) {
+            profile.tier = CreditTier.Silver;
+        } else if (profile.activeBorrowCount >= 1 || profile.score >= 500) {
+            profile.tier = CreditTier.Bronze;
+        } else {
+            profile.tier = CreditTier.Unscored;
         }
 
         emit CreditScoreUpdated(borrower, oldScore, profile.score, profile.tier, triggerTxHash);
