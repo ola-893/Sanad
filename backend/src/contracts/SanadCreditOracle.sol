@@ -41,8 +41,9 @@ contract SanadCreditOracle is Ownable {
     IBlockProver public immutable blockProver;
     IChainInfo public immutable chainInfo;
 
-    // Supported Source Chain Key (1 = Ethereum Sepolia, 3 = Ethereum Mainnet on CC3 Testnet)
-    uint64 public primarySourceChainKey = 1;
+    // Supported Source Chain Keys: 1 = Sepolia, 3 = Ethereum Mainnet on CC3 Testnet
+    mapping(uint64 => bool) public isSupportedChainKey;
+    event SupportedChainKeyUpdated(uint64 indexed chainKey, bool supported);
 
     enum Protocol {
         AaveV3,        // 0
@@ -58,19 +59,19 @@ contract SanadCreditOracle is Ownable {
     }
 
     enum EventType {
-        CleanRepayment,                  // 0: Positive credit signal (+25 to +175 pts)
-        OvercollateralizedLiquidation,  // 1: Risk penalty signal (-35 pts)
-        UndercollateralizedDefault,     // 2: Severe default penalty signal (-150 pts)
-        CollateralSupply,               // 3: Capital capacity signal (+15 pts)
-        ActiveBorrowPosition            // 4: Active credit usage / capacity signal (+10 pts, capped at +30)
+        CleanRepayment,              // 0
+        OvercollateralizedLiquidation, // 1
+        UndercollateralizedDefault,   // 2
+        CollateralSupply,            // 3
+        ActiveBorrowPosition         // 4
     }
 
     enum CreditTier {
-        Unscored,  // 0: Neutral / Base (500 pts)
-        HighRisk,  // 1: Score < 350
-        Bronze,    // 2: Score 350 - 549
-        Silver,    // 3: Score 550 - 749
-        Gold       // 4: Score 750 - 1000
+        Unscored, // 0 (Score: 500 default)
+        Bronze,   // 1 (Score: 550 - 649)
+        Silver,   // 2 (Score: 650 - 749)
+        Gold,     // 3 (Score: 750 - 1000)
+        HighRisk  // 4 (Score: 0 - 549)
     }
 
     struct ProvenEvent {
@@ -106,47 +107,53 @@ contract SanadCreditOracle is Ownable {
         uint64 timestamp;
     }
 
-    // Protocol Primary Contract Addresses on Source Chain (Ethereum Mainnet)
+    // Protocol Primary Contract Addresses on Source Chains
     mapping(Protocol => address) public protocolAddresses;
-
-    // Multi-contract / Factory pool registry for protocols with multiple isolated markets
+    // Multi-contract protocol registry (e.g. Compound market addresses, Euler vaults, Sepolia testnet pools)
     mapping(Protocol => mapping(address => bool)) public isProtocolContract;
 
-    // Storage
-    mapping(address => CreditProfile) private _creditProfiles;
-    mapping(address => ProvenEvent[]) private _borrowerEvents;
+    // Proven Transaction Hashes (Anti-Replay)
     mapping(bytes32 => bool) public provenTxHashes;
+
+    // Borrower Nonces for EIP-712/EIP-191 Replay Protection
     mapping(address => uint256) public nonces;
 
+    // Historical borrower event records
+    mapping(address => ProvenEvent[]) private _borrowerEvents;
+    mapping(address => CreditProfile) private _creditProfiles;
+
     // Events
+    event EventProven(
+        address indexed borrower,
+        bytes32 indexed sourceTxHash,
+        Protocol protocol,
+        EventType eventType,
+        uint256 volumeUSD,
+        uint64 blockHeight
+    );
+
     event CreditScoreUpdated(
         address indexed borrower,
         uint256 oldScore,
         uint256 newScore,
         CreditTier tier,
-        bytes32 indexed txHash
-    );
-
-    event DeFiEventProven(
-        address indexed borrower,
-        bytes32 indexed sourceTxHash,
-        uint8 protocol,
-        uint8 eventType,
-        uint256 volumeUSD,
-        uint64 blockHeight
+        bytes32 triggerTxHash
     );
 
     event ProtocolContractRegistered(Protocol indexed protocol, address indexed contractAddress, bool active);
-    event PrimarySourceChainUpdated(uint64 oldChainKey, uint64 newChainKey);
 
     constructor() Ownable(msg.sender) {
         blockProver = IBlockProver(BLOCK_PROVER_ADDRESS);
         chainInfo = IChainInfo(CHAIN_INFO_ADDRESS);
 
-        // 1. Aave v3 Pool — Sepolia + Mainnet
-        _registerProtocol(Protocol.AaveV3, 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951); // Sepolia Pool
+        // Supported Source Chain Keys: 1 = Sepolia, 3 = Ethereum Mainnet
+        isSupportedChainKey[1] = true;
+        isSupportedChainKey[3] = true;
+
+        // 1. Aave v3 Pool (Mainnet & Sepolia)
         _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2); // Mainnet Pool
-        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Mainnet Pool fallback
+        _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Mainnet Pool V3.0
+        _registerProtocol(Protocol.AaveV3, 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951); // Sepolia Pool
 
         // 2. Compound v3 (Comet USDC, WETH, USDT)
         _registerProtocol(Protocol.CompoundV3, 0xc3d688B66703497DAA19211EEdff47f25384cdc3); // Comet USDC
@@ -202,21 +209,21 @@ contract SanadCreditOracle is Ownable {
     }
 
     /**
-     * @notice Set primary source chain key (e.g. 3 for Ethereum Mainnet on CC3 Testnet)
+     * @notice Configure supported source chain key (1 = Sepolia, 3 = Ethereum Mainnet)
      */
-    function setPrimarySourceChainKey(uint64 newChainKey) external onlyOwner {
-        emit PrimarySourceChainUpdated(primarySourceChainKey, newChainKey);
-        primarySourceChainKey = newChainKey;
+    function setSupportedChainKey(uint64 chainKey, bool supported) external onlyOwner {
+        isSupportedChainKey[chainKey] = supported;
+        emit SupportedChainKeyUpdated(chainKey, supported);
     }
 
     /**
-     * @notice Cryptographically verify a single historical Ethereum transaction and update credit profile.
+     * @notice Cryptographically verify a single historical DeFi transaction and update credit profile.
      * @dev Validates:
      *      1. Cryptographic proof via BlockProver precompile (0xFD2).
      *      2. Decodes transaction calldata to verify target contract and borrower involvement.
-     *      3. Validates function selector against claimed eventType.
-     *      4. Validates calldata amount against claimed volumeUSD.
-     *      5. Enforces EIP-191 borrower authorization.
+     *      3. Validates function selector matches claimed event type.
+     *      4. Binds claimed USD volume within mathematical tolerance.
+     *      5. Updates on-chain credit score dynamically based on proven history.
      */
     function submitSingleProof(
         uint64 chainKey,
@@ -229,7 +236,7 @@ contract SanadCreditOracle is Ownable {
         bytes calldata borrowerSignature
     ) external returns (bool) {
         require(borrower != address(0), "Invalid borrower address");
-        require(chainKey == primarySourceChainKey, "Unsupported source chain key");
+        require(isSupportedChainKey[chainKey], "Unsupported source chain key");
         _validateBorrowerAuthorization(borrower, borrowerSignature);
 
         // 1. Verify cryptographic proof via native BlockProver precompile at 0xFD2
@@ -267,7 +274,7 @@ contract SanadCreditOracle is Ownable {
         bytes calldata borrowerSignature
     ) external returns (bool) {
         require(borrower != address(0), "Invalid borrower address");
-        require(chainKey == primarySourceChainKey, "Unsupported source chain key");
+        require(isSupportedChainKey[chainKey], "Unsupported source chain key");
         require(heights.length == encodedTransactions.length, "Array length mismatch: heights/encodedTx");
         require(heights.length == merkleProofs.length, "Array length mismatch: heights/merkleProofs");
         require(heights.length == eventsData.length, "Array length mismatch: heights/eventsData");
@@ -309,7 +316,7 @@ contract SanadCreditOracle is Ownable {
         require(chunks.length > 0, "Malformed encodedTransaction: empty chunks");
         require(txType <= 4, "Invalid EVM transaction type");
 
-        // Step B: Decode Chunk 0 (Common EVM transaction fields)
+        // Step B: Decode Transaction Fields from Chunk 0
         (
             /* uint64 nonce */,
             /* uint64 gasLimit */,
@@ -348,17 +355,15 @@ contract SanadCreditOracle is Ownable {
         }
     }
 
-    // Known Stablecoin Token Addresses (Mainnet + Sepolia) for Strict Volume Decimals Verification
-    // Mainnet
-    address private constant USDC_TOKEN = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // 6 decimals
-    address private constant USDT_TOKEN = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // 6 decimals
-    address private constant DAI_TOKEN  = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // 18 decimals
-    address private constant GHO_TOKEN  = 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; // 18 decimals
-    address private constant USDe_TOKEN = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; // 18 decimals
-    address private constant FRAX_TOKEN = 0x853d955aCEf822Db058eb8505911ED77F175b99e; // 18 decimals
-    // Sepolia
-    address private constant DAI_SEPOLIA  = 0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357; // 18 decimals
-    address private constant WETH_SEPOLIA = 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c; // 18 decimals
+    // Known Ethereum Mainnet & Sepolia Stablecoin Token Addresses for Strict Volume Decimals Verification
+    address private constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // 6 decimals
+    address private constant USDT_MAINNET = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // 6 decimals
+    address private constant DAI_MAINNET  = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // 18 decimals
+    address private constant GHO_MAINNET  = 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; // 18 decimals
+    address private constant USDe_MAINNET = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; // 18 decimals
+    address private constant FRAX_MAINNET = 0x853d955aCEf822Db058eb8505911ED77F175b99e; // 18 decimals
+    address private constant USDC_SEPOLIA = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8; // 6 decimals
+    address private constant DAI_SEPOLIA  = 0xFf34B3d4AEe8ddCd6F9DcFB6Fe49bd371B8a3575; // 18 decimals
 
     /**
      * @notice Validates that the calldata amount parameter is consistent with claimed volumeUSD.
@@ -393,7 +398,7 @@ contract SanadCreditOracle is Ownable {
 
         // 1. Stablecoins with 6 decimals (USDC, USDT)
         // rawAmount is in 10^6 units, directly matching claimedVolumeUSD (6 decimals)
-        if (asset == USDC_TOKEN || asset == USDT_TOKEN) {
+        if (asset == USDC_MAINNET || asset == USDT_MAINNET || asset == USDC_SEPOLIA) {
             uint256 expectedUSD = rawAmount;
             require(
                 claimedVolumeUSD >= (expectedUSD * 80) / 100 &&
@@ -405,7 +410,7 @@ contract SanadCreditOracle is Ownable {
 
         // 2. Stablecoins with 18 decimals (DAI, GHO, USDe, FRAX + Sepolia DAI)
         // rawAmount is in 10^18 units, normalized to 10^6 units by dividing by 10^12
-        if (asset == DAI_TOKEN || asset == GHO_TOKEN || asset == USDe_TOKEN || asset == FRAX_TOKEN || asset == DAI_SEPOLIA) {
+        if (asset == DAI_MAINNET || asset == GHO_MAINNET || asset == USDe_MAINNET || asset == FRAX_MAINNET || asset == DAI_SEPOLIA) {
             uint256 expectedUSD = rawAmount / 1e12;
             if (expectedUSD > 0) {
                 require(
@@ -618,11 +623,11 @@ contract SanadCreditOracle is Ownable {
             timestamp: eventData.timestamp
         }));
 
-        emit DeFiEventProven(
+        emit EventProven(
             borrower,
             txHash,
-            uint8(eventData.protocol),
-            uint8(eventData.eventType),
+            eventData.protocol,
+            eventData.eventType,
             eventData.volumeUSD,
             height
         );
@@ -691,8 +696,8 @@ contract SanadCreditOracle is Ownable {
      * @notice Validates borrower signature or direct caller
      */
     function _validateBorrowerAuthorization(address borrower, bytes calldata signature) internal {
-        if (msg.sender == borrower) {
-            return; // Direct caller is the borrower
+        if (msg.sender == borrower || msg.sender == owner()) {
+            return; // Direct caller is the borrower or protocol relayer
         }
         require(signature.length == 65, "Invalid signature length");
         
