@@ -53,6 +53,7 @@ export interface DiscoveredDeFiEvent {
   protocolName: string;
   eventType: EventType;
   eventTypeName: string;
+  tokenSymbol: string;
   volumeUSD: number; // in USD
   timestamp: number;
   description: string;
@@ -224,7 +225,7 @@ export const STATIC_TOKEN_METADATA: Record<string, { symbol: string; decimals: n
   '0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f': { symbol: 'GHO', decimals: 18, referencePriceUSD: 1.0 },
   '0x6c3ea9036406852006290770bedfcaba0e23a0e8': { symbol: 'PYUSD', decimals: 6, referencePriceUSD: 1.0 },
   '0x4c9edd5852cd905f086c759e8383e09bff1e68b3': { symbol: 'USDe', decimals: 18, referencePriceUSD: 1.0 },
-  '0x1abaea1f7c830bd89acc67ec4af516284b1bc33c': { symbol: 'crvUSD', decimals: 18, referencePriceUSD: 1.0 },
+  '0x1abaea1f7c830bd89acc67ec4af516284b1bc33c': { symbol: 'EURC', decimals: 6, referencePriceUSD: 1.17 },
   // Volatile / Collateral Assets (Snapshot reference prices)
   '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', decimals: 18, referencePriceUSD: 2700.0 },
   '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0': { symbol: 'wstETH', decimals: 18, referencePriceUSD: 3150.0 },
@@ -232,7 +233,56 @@ export const STATIC_TOKEN_METADATA: Record<string, { symbol: string; decimals: n
   '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf': { symbol: 'cbBTC', decimals: 8, referencePriceUSD: 95000.0 },
   '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', decimals: 8, referencePriceUSD: 95000.0 },
   '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', decimals: 18, referencePriceUSD: 18.0 },
+  '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': { symbol: 'AAVE', decimals: 18, referencePriceUSD: 125.0 },
 };
+
+// ─── Live Price Feed (CoinGecko) ───────────────────────────────────────
+const priceCache = new Map<string, { price: number; fetchedAt: number }>();
+const PRICE_CACHE_TTL = 60_000; // 60 seconds
+
+/**
+ * Fetch live USD prices from CoinGecko for a set of token addresses.
+ * Falls back to static reference prices on failure.
+ */
+async function fetchLivePrices(addresses: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  const uncached: string[] = [];
+
+  const now = Date.now();
+  for (const addr of addresses) {
+    const cached = priceCache.get(addr);
+    if (cached && now - cached.fetchedAt < PRICE_CACHE_TTL) {
+      result.set(addr, cached.price);
+    } else {
+      uncached.push(addr);
+    }
+  }
+
+  if (uncached.length === 0) return result;
+
+  try {
+    // CoinGecko free tier: 1 address per request. Fetch up to 5 in parallel.
+    const CONCURRENCY = 5;
+    for (let i = 0; i < uncached.length; i += CONCURRENCY) {
+      const batch = uncached.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map(async (addr) => {
+          const url = `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${addr}&vs_currencies=usd`;
+          const res = await axios.get(url, { timeout: 3000 });
+          const price = res.data?.[addr]?.usd;
+          if (typeof price === 'number' && price > 0) {
+            result.set(addr, price);
+            priceCache.set(addr, { price, fetchedAt: now });
+          }
+        })
+      );
+    }
+  } catch {
+    // Fall back to static prices
+  }
+
+  return result;
+}
 
 // Curated demo profiles with real, provable Ethereum Mainnet DeFi activity
 export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
@@ -245,6 +295,7 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
+      tokenSymbol: 'USDS',
       volumeUSD: 4000,
       timestamp: 1740000000,
       description: 'Repaid $4,000 USDS on Aave v3 Pool (0% default rate)',
@@ -262,6 +313,7 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CleanRepayment,
       eventTypeName: 'Clean Repayment',
+      tokenSymbol: 'USDC',
       volumeUSD: 60,
       timestamp: 1739500000,
       description: 'Repaid $59.80 USDC on Aave v3 Pool',
@@ -279,6 +331,7 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave V2',
       eventType: EventType.OvercollateralizedLiquidation,
       eventTypeName: 'Liquidation Call',
+      tokenSymbol: 'USDC',
       volumeUSD: 36,
       timestamp: 1755788507,
       description: 'Liquidated $36 USDC collateral on Aave V2 — position fell below health factor 1.0',
@@ -296,6 +349,7 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
       protocolName: 'Aave v3',
       eventType: EventType.CollateralSupply,
       eventTypeName: 'Collateral Supply',
+      tokenSymbol: 'USDC',
       volumeUSD: 600,
       timestamp: 1739800000,
       description: 'Supplied $597.67 USDC collateral to Aave v3 Pool',
@@ -323,15 +377,52 @@ function safeVolumeUSD(rawAmount: bigint | number, decimals: number, referencePr
   const MAX_UINT256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
   if (bigVal >= MAX_UINT256 / 2n) return 0;
 
-  // Divide by 10^decimals using BigInt first (avoids overflow for 18-decimal tokens)
-  // then convert the quotient to Number for the final price multiplication.
-  const divisor = 10n ** BigInt(decimals);
-  const tokenAmount = Number(bigVal / divisor);
+  // Convert to Number after the MAX_UINT guard (safe for all realistic amounts).
+  // BigInt division truncates (e.g. 276000n / 10^8n = 0n for WBTC),
+  // so we convert first to preserve fractional token amounts.
+  const tokenAmount = Number(bigVal) / Math.pow(10, decimals);
   const result = tokenAmount * referencePriceUSD;
 
   // Sanity cap: nothing over $1B from discovery
   if (!isFinite(result) || result < 0 || result > 1_000_000_000) return 0;
   return Math.round(result);
+}
+
+const MAX_UINT256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+
+/**
+ * When Aave/Compound use type(uint256).max in calldata, the real amount
+ * isn't in the calldata. We fetch the actual ERC-20 Transfer event from
+ * Blockscout's transaction detail endpoint.
+ * @param direction - 'from' for repay/supply (borrower sends), 'to' for borrow (borrower receives)
+ */
+async function resolveActualAmount(
+  rawAmount: bigint | number,
+  sourceTxHash: string,
+  assetAddr: string,
+  walletAddress: string,
+  direction: 'from' | 'to' = 'from',
+): Promise<bigint> {
+  const bigVal = typeof rawAmount === 'bigint' ? rawAmount : BigInt(Math.round(Number(rawAmount)));
+  if (bigVal < MAX_UINT256 / 2n) return bigVal; // normal amount, no resolution needed
+  try {
+    const txDetail = await axios.get(
+      `https://eth.blockscout.com/api/v2/transactions/${sourceTxHash}`,
+      { timeout: 5000 },
+    );
+    const transfers = txDetail.data?.token_transfers || [];
+    const match = transfers.find((tt: any) => {
+      const ttFrom = (tt.from?.hash || '').toLowerCase();
+      const ttTo = (tt.to?.hash || '').toLowerCase();
+      const ttToken = (tt.token?.address_hash || tt.token?.address || '').toLowerCase();
+      if (ttToken !== assetAddr) return false;
+      return direction === 'from' ? ttFrom === walletAddress : ttTo === walletAddress;
+    });
+    if (match?.total?.value) {
+      return BigInt(match.total.value);
+    }
+  } catch {}
+  return bigVal;
 }
 
 export class DefiDiscoveryService {
@@ -527,6 +618,15 @@ export class DefiDiscoveryService {
   private async _queryLiveEvents(walletAddress: string): Promise<DiscoveredDeFiEvent[]> {
     const discovered: DiscoveredDeFiEvent[] = [];
 
+    // Fetch live prices for all known tokens from CoinGecko
+    const allTokenAddresses = Object.keys(STATIC_TOKEN_METADATA);
+    const livePrices = await fetchLivePrices(allTokenAddresses);
+    // Apply live prices to the static metadata (mutates referencePriceUSD)
+    for (const [addr, price] of livePrices) {
+      const entry = STATIC_TOKEN_METADATA[addr];
+      if (entry) entry.referencePriceUSD = price;
+    }
+
     // Protocol Interfaces for exact parameter decoding
     const aaveIface = new ethers.Interface([
       'function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)',
@@ -604,7 +704,9 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
+              // For max-uint borrows, actual amount comes from pool→borrower transfer
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'to');
+              const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -613,6 +715,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.ActiveBorrowPosition,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Active Borrow: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on ${protoMeta.name}`,
@@ -630,29 +733,9 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const isKnownToken = !!STATIC_TOKEN_METADATA[assetAddr];
-
-              // For type(uint256).max "repay all" calls, fetch the full tx to get token transfer amounts
-              const MAX_UINT = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-              let effectiveAmount = rawAmount;
-              if (BigInt(String(rawAmount)) >= MAX_UINT / 2n) {
-                try {
-                  const txDetail = await axios.get(`https://eth.blockscout.com/api/v2/transactions/${sourceTxHash}`, { timeout: 5000 });
-                  const transfers = txDetail.data?.token_transfers || [];
-                  const matchingTransfer = transfers.find((tt: any) => {
-                    const ttFrom = (tt.from?.hash || '').toLowerCase();
-                    const ttToken = (tt.token?.address_hash || tt.token?.address || '').toLowerCase();
-                    return ttToken === assetAddr && ttFrom === walletAddress;
-                  });
-                  if (matchingTransfer?.total?.value) {
-                    effectiveAmount = BigInt(matchingTransfer.total.value);
-                  }
-                } catch (e: any) {
-                }
-              }
-
+              // For max-uint "repay all" calls, resolve actual amount from token transfers
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from');
               const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
-
 
               discovered.push({
                 sourceTxHash,
@@ -661,6 +744,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CleanRepayment,
                 eventTypeName: isPermit ? 'Clean Repayment (Permit)' : 'Clean Repayment',
+              tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Clean Repayment: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on ${protoMeta.name}`,
@@ -678,7 +762,9 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
+              // For max-uint supply calls, resolve actual amount from token transfers
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from');
+              const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -687,6 +773,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CollateralSupply,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Collateral Supply: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on ${protoMeta.name}`,
@@ -703,6 +790,7 @@ export class DefiDiscoveryService {
               protocolName: protoMeta.name,
               eventType: EventType.OvercollateralizedLiquidation,
               eventTypeName: EVENT_TYPE_NAMES[EventType.OvercollateralizedLiquidation],
+              tokenSymbol: '—',
               volumeUSD: 1000,
               timestamp,
               description: `Liquidation Call on ${protoMeta.name}`,
@@ -732,6 +820,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.ActiveBorrowPosition,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Active Borrow: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on Morpho Blue`,
@@ -755,6 +844,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CleanRepayment,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.CleanRepayment],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Clean Repayment: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on Morpho Blue`,
@@ -781,6 +871,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CollateralSupply,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `Collateral Supply: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on Morpho Blue`,
@@ -816,6 +907,7 @@ export class DefiDiscoveryService {
                   protocolName: protoMeta.name,
                   eventType: EventType.ActiveBorrowPosition,
                   eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                  tokenSymbol: tokenInfo.symbol,
                   volumeUSD,
                   timestamp,
                   description: `Active Borrow: $${volumeUSD.toLocaleString()} USDC on Compound v3`,
@@ -843,6 +935,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType,
                 eventTypeName: EVENT_TYPE_NAMES[eventType],
+                tokenSymbol: tokenInfo.symbol,
                 volumeUSD,
                 timestamp,
                 description: `${EVENT_TYPE_NAMES[eventType]}: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on Compound v3`,
@@ -873,6 +966,7 @@ export class DefiDiscoveryService {
                   protocolName: protoMeta.name,
                   eventType: EventType.ActiveBorrowPosition,
                   eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: '—',
                   volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                   timestamp,
                   description: `Active Borrow: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Fluid`,
@@ -888,6 +982,7 @@ export class DefiDiscoveryService {
                   protocolName: protoMeta.name,
                   eventType: EventType.CleanRepayment,
                   eventTypeName: EVENT_TYPE_NAMES[EventType.CleanRepayment],
+                tokenSymbol: '—',
                   volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                   timestamp,
                   description: `Clean Repayment: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Fluid`,
@@ -903,6 +998,7 @@ export class DefiDiscoveryService {
                   protocolName: protoMeta.name,
                   eventType: EventType.CollateralSupply,
                   eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: '—',
                   volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                   timestamp,
                   description: `Collateral Supply: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Fluid`,
@@ -927,6 +1023,7 @@ export class DefiDiscoveryService {
               protocolName: protoMeta.name,
               eventType: EventType.ActiveBorrowPosition,
               eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: '—',
               volumeUSD: 5000,
               timestamp,
               description: `Active Borrow: DAI/USDS draw on MakerDAO`,
@@ -942,6 +1039,7 @@ export class DefiDiscoveryService {
               protocolName: protoMeta.name,
               eventType: EventType.CleanRepayment,
               eventTypeName: EVENT_TYPE_NAMES[EventType.CleanRepayment],
+                tokenSymbol: '—',
               volumeUSD: 5000,
               timestamp,
               description: `Clean Repayment: DAI/USDS wipe on MakerDAO`,
@@ -993,6 +1091,7 @@ export class DefiDiscoveryService {
                       protocolName: 'Euler v2',
                       eventType: EventType.ActiveBorrowPosition,
                       eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: '—',
                       volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                       timestamp,
                       description: `Active Borrow: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} from Euler v2 Vault (${targetVault.slice(0, 8)}...) via EVC`,
@@ -1026,6 +1125,7 @@ export class DefiDiscoveryService {
                       protocolName: 'Euler v2',
                       eventType: EventType.CleanRepayment,
                       eventTypeName: EVENT_TYPE_NAMES[EventType.CleanRepayment],
+                tokenSymbol: '—',
                       volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                       timestamp,
                       description: `Clean Repayment: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} to Euler v2 Vault (${targetVault.slice(0, 8)}...) via EVC`,
@@ -1059,6 +1159,7 @@ export class DefiDiscoveryService {
                       protocolName: 'Euler v2',
                       eventType: EventType.CollateralSupply,
                       eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: '—',
                       volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                       timestamp,
                       description: `Collateral Supply: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} to Euler v2 Vault (${targetVault.slice(0, 8)}...) via EVC`,
@@ -1081,6 +1182,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.ActiveBorrowPosition,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.ActiveBorrowPosition],
+                tokenSymbol: '—',
                 volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                 timestamp,
                 description: `Active Borrow: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Euler v2`,
@@ -1100,6 +1202,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CleanRepayment,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.CleanRepayment],
+                tokenSymbol: '—',
                 volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                 timestamp,
                 description: `Clean Repayment: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Euler v2`,
@@ -1119,6 +1222,7 @@ export class DefiDiscoveryService {
                 protocolName: protoMeta.name,
                 eventType: EventType.CollateralSupply,
                 eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: '—',
                 volumeUSD: volumeUSD > 0 ? volumeUSD : 1000,
                 timestamp,
                 description: `Collateral Supply: $${(volumeUSD > 0 ? volumeUSD : 1000).toLocaleString()} on Euler v2`,

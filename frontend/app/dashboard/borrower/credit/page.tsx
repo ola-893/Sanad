@@ -608,6 +608,7 @@ export default function BorrowerCreditPage() {
                             <TableRow className="border-[#171414]/10">
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Protocol</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Token</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Value (USD)</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Weight</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx</TableHead>
@@ -630,6 +631,11 @@ export default function BorrowerCreditPage() {
                                     "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
                                   }`}>
                                     {event.eventTypeName || EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="font-mono text-[10px] border-[#171414]/15">
+                                    {event.tokenSymbol || '—'}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="font-mono text-xs font-bold text-[#171414] whitespace-nowrap">
