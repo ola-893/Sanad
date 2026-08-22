@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import apiInstance from "@/lib/axios-v1"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -111,9 +111,12 @@ export default function BorrowerCreditPage() {
   const walletAddress = user?.userInfo?.accountId || user?.wallet?.address || ""
 
   const [activeTab, setActiveTab] = useState("score")
+  const queryClient = useQueryClient()
   const [discoverAddress, setDiscoverAddress] = useState(walletAddress)
   const [discovering, setDiscovering] = useState(false)
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null)
+  const [provingEvent, setProvingEvent] = useState<string | null>(null)
+  const [proofResult, setProofResult] = useState<{ txHash?: string; score?: string; tier?: string; message?: string } | null>(null)
 
   /* ─── Fetch on-chain credit profile ─── */
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -152,6 +155,60 @@ export default function BorrowerCreditPage() {
   }
   const handleDiscover = () => handleDiscoverWithAddress(discoverAddress)
 
+  /* ─── Prove an event (MetaMask signature → backend → CC3) ─── */
+  const handleProveEvent = async (event: any) => {
+    try {
+      setProvingEvent(event.sourceTxHash)
+      setProofResult(null)
+
+      // Request MetaMask signature
+      if (!window.ethereum) {
+        throw new Error('MetaMask not found — please install MetaMask')
+      }
+
+      const message = `Sanad Protocol: Verify DeFi credit event for ${discoverAddress}\nEvent: ${event.eventTypeName || 'DeFi Event'}\nTxHash: ${event.sourceTxHash}\nTimestamp: ${event.timestamp}`
+      const signature = await (window.ethereum as any).request({
+        method: 'personal_sign',
+        params: [message, discoverAddress],
+      })
+
+      if (!signature) throw new Error('Signature was rejected')
+
+      // Submit to backend → Attestcoin Prover → CC3
+      const { data } = await apiInstance.post('/credit-oracle/prove-event', {
+        address: discoverAddress,
+        event: {
+          sourceTxHash: event.sourceTxHash,
+          blockHeight: event.blockHeight,
+          protocol: event.protocol,
+          eventType: event.eventType,
+          volumeUSD: event.volumeUSD,
+          timestamp: event.timestamp,
+        },
+        signature,
+      })
+
+      const result = data?.data || data
+      setProofResult({
+        txHash: result.transactionHash,
+        score: result.score,
+        tier: result.tier,
+        message: result.success ? `Proof submitted! Score: ${result.score} (${result.tier})` : result.error,
+      })
+
+      // Refresh credit profile
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['credit-profile', walletAddress] })
+        queryClient.invalidateQueries({ queryKey: ['proven-events', walletAddress] })
+      }
+    } catch (err: any) {
+      console.error('Proof error:', err)
+      setProofResult({ message: err.message || 'Proof failed — see console for details' })
+    } finally {
+      setProvingEvent(null)
+    }
+  }
+
   const score = profile ? Number(profile.score) : 0
   const tier = profile ? Number(profile.tier) : 0
   const tierInfo = TIER_INFO[tier] || TIER_INFO[0]
@@ -162,6 +219,8 @@ export default function BorrowerCreditPage() {
   const liquidations = profile?.liquidationCount || 0
   const defaults = profile?.defaultCount || 0
   const provenCount = profile?.provenEventsCount || 0
+
+  const isOwnWallet = discoverAddress && walletAddress && discoverAddress.toLowerCase() === walletAddress.toLowerCase()
 
   const scoreColor = score >= 800 ? "text-emerald-600" : score >= 600 ? "text-amber-600" : score >= 400 ? "text-orange-600" : "text-red-500"
   const scoreRing = score >= 800 ? "stroke-emerald-500" : score >= 600 ? "stroke-amber-500" : score >= 400 ? "stroke-orange-500" : "stroke-red-500"
@@ -358,6 +417,20 @@ export default function BorrowerCreditPage() {
                                   <ExternalLink className="inline h-3 w-3 ml-1" />
                                 </a>
                               </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  className={BTN + " text-[9px] px-3 py-1"}
+                                  onClick={() => handleProveEvent(event)}
+                                  disabled={provingEvent === event.sourceTxHash}
+                                >
+                                  {provingEvent === event.sourceTxHash ? (
+                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Proving...</>
+                                  ) : (
+                                    <><Shield className="h-3 w-3 mr-1" /> Prove</>
+                                  )}
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           )
                         })}
@@ -378,9 +451,14 @@ export default function BorrowerCreditPage() {
 
                 {/* Demo Profiles for Judges */}
                 <div className="mb-6">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/50 mb-3">
-                    Try Demo Profiles
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/50">
+                      Try Demo Profiles
+                    </p>
+                    <span className="font-mono text-[9px] text-[#4A4A4A] italic">
+                      Prove is only available for your own wallet
+                    </span>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     {[
                       {
@@ -480,6 +558,36 @@ export default function BorrowerCreditPage() {
                       </div>
                     )}
 
+                    {/* Proof result feedback */}
+                    {proofResult && (
+                      <div className={`rounded-2xl border p-4 ${proofResult.txHash ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {proofResult.txHash ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-red-500" />}
+                          <p className={`text-sm font-bold ${proofResult.txHash ? 'text-emerald-700' : 'text-red-600'}`}>
+                            {proofResult.txHash ? 'Proof Submitted Successfully' : 'Proof Failed'}
+                          </p>
+                        </div>
+                        <p className="text-xs text-[#4A4A4A] mt-1">{proofResult.message}</p>
+                        {proofResult.txHash && (
+                          <div className="mt-2 flex items-center gap-3">
+                            <a
+                              href={`https://creditcoin-testnet.blockscout.com/tx/${proofResult.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors flex items-center gap-1"
+                            >
+                              {proofResult.txHash.slice(0, 18)}... <ExternalLink className="h-3 w-3" />
+                            </a>
+                            {proofResult.score && (
+                              <Badge className="bg-[#171414] text-[#E1BAC2] font-mono text-[10px]">
+                                Score: {proofResult.score} · {proofResult.tier}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {discoveryResult.selectedTopEvents && discoveryResult.selectedTopEvents.length > 0 && (
                       <div className="overflow-x-auto">
                         <Table>
@@ -490,6 +598,7 @@ export default function BorrowerCreditPage() {
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Volume</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Weight</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Action</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -519,6 +628,26 @@ export default function BorrowerCreditPage() {
                                     {event.sourceTxHash?.slice(0, 10)}...
                                     <ExternalLink className="inline h-3 w-3 ml-1" />
                                   </a>
+                                </TableCell>
+                                <TableCell>
+                                  {isOwnWallet ? (
+                                    <Button
+                                      size="sm"
+                                      className="rounded-full bg-[#171414] font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black px-3 py-1"
+                                      onClick={() => handleProveEvent(event)}
+                                      disabled={provingEvent === event.sourceTxHash}
+                                    >
+                                      {provingEvent === event.sourceTxHash ? (
+                                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Proving...</>
+                                      ) : (
+                                        <><Shield className="h-3 w-3 mr-1" /> Prove</>
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <span className="font-mono text-[9px] text-[#4A4A4A] italic">
+                                      Demo only
+                                    </span>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}
