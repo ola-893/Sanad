@@ -282,10 +282,11 @@ export class DefiDiscoveryService {
   }
 
   /**
-   * Queries Etherscan API for contract interaction logs across 10 protocols
+   * Queries Etherscan API V2 for contract interaction logs across 10 protocols
    */
   private async _queryLiveEtherscanEvents(walletAddress: string): Promise<DiscoveredDeFiEvent[]> {
     if (!this.etherscanApiKey) {
+      console.warn('[DefiDiscovery] ETHERSCAN_API_KEY is not configured in environment — skipping live Etherscan V2 query');
       return [];
     }
 
@@ -323,12 +324,12 @@ export class DefiDiscoveryService {
     };
 
     try {
-      // 1. Query ERC-20 token transfers
-      const tokentxUrl = `https://api.etherscan.io/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`;
+      // 1. Query ERC-20 token transfers via Etherscan V2 API (chainid=1 for Ethereum Mainnet)
+      const tokentxUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`;
       const res = await axios.get(tokentxUrl, { timeout: 8000 });
 
       if (res.data?.status === '1' && Array.isArray(res.data.result)) {
-        for (const tx of res.data.result.slice(0, 30)) {
+        for (const tx of res.data.result.slice(0, 50)) {
           const to = (tx.to || '').toLowerCase();
           const from = (tx.from || '').toLowerCase();
 
@@ -382,6 +383,8 @@ export class DefiDiscoveryService {
             }
           }
         }
+      } else if (res.data?.status === '0') {
+        console.warn(`[DefiDiscovery] Etherscan API V2 returned status '0': ${res.data?.message} - ${res.data?.result}`);
       }
     } catch (err: any) {
       console.warn(`[DefiDiscovery] Etherscan live query notice: ${err.message}`);
