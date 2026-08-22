@@ -321,6 +321,7 @@ export class DefiDiscoveryService {
         borrower: walletAddress,
         hasVerifiedHistory: false,
         events: [],
+        selectedTopEvents: [],
         securityInfo,
         message: securityInfo.isFlagged 
           ? `Security Warning: ${securityInfo.riskWarning}. No legitimate clean DeFi lending history found.` 
@@ -376,8 +377,10 @@ export class DefiDiscoveryService {
     return {
       borrower: walletAddress,
       scannedAt: new Date().toISOString(),
+      hasVerifiedHistory: true,
       totalEventsFound: uniqueEvents.length,
       selectedTopEvents,
+      events: selectedTopEvents,
       protocolsScanned: allProtocolsScanned,
       securityInfo,
       summary: {

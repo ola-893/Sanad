@@ -20,12 +20,16 @@ import {
   Zap,
   RefreshCw,
   Search,
+  AlertTriangle,
+  AlertCircle,
+  XCircle,
+  ExternalLink,
 } from "lucide-react"
 import {
   SANAD_CREDIT_ORACLE_ADDRESS,
   SUPPORTED_ETHEREUM_PROTOCOLS,
 } from "@/core/credit-bureau/sanad-credit-oracle"
-import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset } from "@/core/credit-bureau/types"
+import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset, AddressSecurityInfo } from "@/core/credit-bureau/types"
 
 interface KYCVerificationProps {
   nextStep: () => void
@@ -60,6 +64,26 @@ const PRESETS: BorrowerPreset[] = [
     targetTier: "Silver",
     protocols: ["Aave v3", "Compound v3"],
   },
+  {
+    id: "flagged-exploiter",
+    label: "⚠️ Kelp DAO Exploiter (Flagged)",
+    address: "0x1F4C1c2e610f089D6914c4448E6F21Cb0db3adeF",
+    tag: "Exploiter / Blacklisted",
+    desc: "Tagged on-chain exploiter entity with Tornado.Cash fund routing",
+    targetScore: 0,
+    targetTier: "HighRisk",
+    protocols: ["Aave v3"],
+  },
+  {
+    id: "high-risk",
+    label: "🛑 Distressed Borrower (Liquidated)",
+    address: "0x9d6Bc9763008Ad1f7619A3498eFfe9Ec671b276d",
+    tag: "High Risk",
+    desc: "Collateral liquidation breach on Aave v3 ($18k liquidation)",
+    targetScore: 310,
+    targetTier: "HighRisk",
+    protocols: ["Aave v3"],
+  },
 ]
 
 export function KYCVerification({ nextStep }: KYCVerificationProps) {
@@ -77,6 +101,9 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
   const [isScanningDeFi, setIsScanningDeFi] = useState<boolean>(false)
   const [isProvingOnCC3, setIsProvingOnCC3] = useState<boolean>(false)
   const [discoveredEvents, setDiscoveredEvents] = useState<DeFiEvent[]>([])
+  const [securityInfo, setSecurityInfo] = useState<AddressSecurityInfo | null>(null)
+  const [scanMessage, setScanMessage] = useState<string | null>(null)
+  const [proofError, setProofError] = useState<string | null>(null)
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [onChainProfile, setOnChainProfile] = useState<OnChainCreditProfile | null>(null)
 
@@ -92,7 +119,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
 
   // Auto scan on step 2
   useEffect(() => {
-    if (step === 2 && discoveredEvents.length === 0) {
+    if (step === 2 && discoveredEvents.length === 0 && !isScanningDeFi && !securityInfo) {
       handleScanDeFi(walletAddress)
     }
   }, [step])
@@ -100,6 +127,12 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
   const handleScanDeFi = async (addressToScan: string) => {
     if (!addressToScan || !addressToScan.startsWith("0x")) return
     setIsScanningDeFi(true)
+    setProofError(null)
+    setCreditVerified(false)
+    setOnChainProfile(null)
+    setSecurityInfo(null)
+    setScanMessage(null)
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/discover`, {
@@ -109,10 +142,18 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
       })
       if (res.ok) {
         const json = await res.json()
-        setDiscoveredEvents(json.data.selectedTopEvents || [])
+        const events = json.data?.selectedTopEvents || json.data?.events || []
+        const secInfo = json.data?.securityInfo || json.securityInfo || null
+        setDiscoveredEvents(events)
+        setSecurityInfo(secInfo)
+        setScanMessage(json.data?.message || json.message || null)
+      } else {
+        const errJson = await res.json().catch(() => null)
+        setScanMessage(errJson?.message || `Failed to scan DeFi history (HTTP ${res.status})`)
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Scan error:", e)
+      setScanMessage(e.message || "Could not connect to backend discovery service")
     } finally {
       setIsScanningDeFi(false)
     }
@@ -121,6 +162,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
   const handleProveCredit = async () => {
     if (discoveredEvents.length === 0) return
     setIsProvingOnCC3(true)
+    setProofError(null)
 
     const topEvent = discoveredEvents[0]
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
@@ -135,27 +177,48 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
         }),
       })
 
-      if (res.ok) {
-        const json = await res.json()
-        setOnChainProfile({
-          borrower: walletAddress,
-          score: json.data.score || 845,
-          tier: json.data.tier || "Gold",
-          totalRepaidUSD: json.data.totalRepaidUSD || "37500",
-          totalLiquidatedUSD: "0",
-          totalDefaultedUSD: "0",
-          cleanRepaymentCount: 2,
-          liquidationCount: 0,
-          defaultCount: 0,
-          provenEventsCount: 1,
-          lastEvaluatedTimestamp: Math.floor(Date.now() / 1000),
-          provenEvents: [topEvent],
-        })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        const errMsg = errJson?.message || errJson?.error || `Oracle proof submission failed (HTTP ${res.status})`
+        setProofError(errMsg)
+        setCreditVerified(false)
+        return
       }
+
+      const json = await res.json()
+      if (!json.success || !json.data) {
+        setProofError(json.message || json.error || "Oracle returned an unsuccessful proof response")
+        setCreditVerified(false)
+        return
+      }
+
+      const data = json.data
+      // Strict validation of real on-chain returned profile metrics (no hardcoded literal fallbacks)
+      if (typeof data.score !== "number" || !data.tier) {
+        setProofError("Creditcoin Oracle returned incomplete profile metrics")
+        setCreditVerified(false)
+        return
+      }
+
+      setOnChainProfile({
+        borrower: walletAddress,
+        score: data.score,
+        tier: data.tier,
+        totalRepaidUSD: data.totalRepaidUSD != null ? String(data.totalRepaidUSD) : "0",
+        totalLiquidatedUSD: data.totalLiquidatedUSD != null ? String(data.totalLiquidatedUSD) : "0",
+        totalDefaultedUSD: data.totalDefaultedUSD != null ? String(data.totalDefaultedUSD) : "0",
+        cleanRepaymentCount: Number(data.cleanRepaymentCount ?? 1),
+        liquidationCount: Number(data.liquidationCount ?? 0),
+        defaultCount: Number(data.defaultCount ?? 0),
+        provenEventsCount: Number(data.provenEventsCount ?? 1),
+        lastEvaluatedTimestamp: Math.floor(Date.now() / 1000),
+        provenEvents: [topEvent],
+      })
       setCreditVerified(true)
-    } catch (err) {
-      console.warn("Proof error:", err)
-      setCreditVerified(true)
+    } catch (err: any) {
+      console.error("Proof error:", err)
+      setProofError(err.message || "Network error while submitting proof to Creditcoin Oracle")
+      setCreditVerified(false)
     } finally {
       setIsProvingOnCC3(false)
     }
@@ -297,6 +360,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
                       setActivePreset(p.id)
                       setWalletAddress(p.address)
                       setCreditVerified(false)
+                      setProofError(null)
                       handleScanDeFi(p.address)
                     }}
                     className={`p-3 rounded-xl text-left border transition-all ${
@@ -317,7 +381,11 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
           <div className="flex gap-2">
             <Input
               value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
+              onChange={(e) => {
+                setWalletAddress(e.target.value)
+                setCreditVerified(false)
+                setProofError(null)
+              }}
               placeholder="0x..."
               className="font-mono text-xs"
             />
@@ -332,38 +400,128 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
             </Button>
           </div>
 
+          {/* SECURITY WARNING BANNER (Rendered when address is flagged) */}
+          {securityInfo?.isFlagged && (
+            <div className="p-4 rounded-2xl border border-red-500/40 bg-red-500/10 space-y-2 text-xs text-red-900 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between font-bold text-red-700">
+                <span className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  Security Alert: {securityInfo.label || "Flagged Entity"}
+                </span>
+                <Badge variant="destructive" className="text-[9px] uppercase tracking-wider">
+                  {securityInfo.category || "FLAGGED"}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-red-800 leading-relaxed">
+                {securityInfo.riskWarning}
+              </p>
+              <div className="pt-1 text-[10px] text-red-700 font-mono">
+                Source: {securityInfo.source} • Classification: {securityInfo.category} (Credit Profiling Blocked)
+              </div>
+            </div>
+          )}
+
+          {/* NO HISTORY / SCAN MESSAGE */}
+          {!securityInfo?.isFlagged && scanMessage && discoveredEvents.length === 0 && (
+            <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-1 text-xs text-amber-900">
+              <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                No Historical DeFi Activity Detected
+              </div>
+              <p className="text-[11px] text-amber-800">
+                {scanMessage} — You can proceed with standard collateral terms at the baseline unscored rate (500 pts).
+              </p>
+            </div>
+          )}
+
+          {/* DISCOVERED EVENTS LIST */}
+          {discoveredEvents.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#171414]">
+                <span>Discovered Historical Events ({discoveredEvents.length})</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Ready for Attestcoin Proof</span>
+              </div>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {discoveredEvents.map((ev, i) => (
+                  <div key={ev.sourceTxHash || i} className="p-2.5 rounded-xl border border-[#171414]/10 bg-white/60 text-xs flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-[#171414] text-[11px]">{ev.protocolName}: {ev.eventTypeName}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono truncate max-w-[220px]">{ev.sourceTxHash}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-emerald-700 text-[11px]">${ev.volumeUSD.toLocaleString()}</div>
+                      <div className="text-[9px] text-muted-foreground font-mono">+{ev.weightScore} pts</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PROOF ERROR BANNER (Rendered visibly on actual failure) */}
+          {proofError && (
+            <div className="p-3.5 rounded-2xl border border-red-500/40 bg-red-500/10 space-y-2 text-xs text-red-900 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between font-bold text-red-700">
+                <span className="flex items-center gap-1.5">
+                  <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                  Proof Verification Failed
+                </span>
+                <Badge variant="outline" className="text-[10px] border-red-300 text-red-700">
+                  Creditcoin Oracle Rejection
+                </Badge>
+              </div>
+              <p className="text-[11px] text-red-800 break-words font-mono bg-red-500/5 p-2 rounded-lg border border-red-500/20">
+                {proofError}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleProveCredit}
+                className="text-xs h-7 border-red-300 hover:bg-red-100 text-red-900 rounded-lg"
+              >
+                <RefreshCw className="mr-1.5 h-3 w-3" />
+                Retry Attestcoin Proof Verification
+              </Button>
+            </div>
+          )}
+
           {/* Verification CTA / Result */}
           {!creditVerified ? (
             <Button
               type="button"
               onClick={handleProveCredit}
-              disabled={isProvingOnCC3 || discoveredEvents.length === 0}
-              className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black py-5"
+              disabled={isProvingOnCC3 || discoveredEvents.length === 0 || !!securityInfo?.isFlagged}
+              className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black py-5 disabled:opacity-40"
             >
               {isProvingOnCC3 ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating Attestcoin Proof on CC3...
+                  Submitting Attestcoin Proof to Creditcoin CC3...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />
-                  Verify On-Chain Credit Profile on Creditcoin
+                  {securityInfo?.isFlagged ? "Verification Blocked for Flagged Address" : "Verify On-Chain Credit Profile on Creditcoin"}
                 </span>
               )}
             </Button>
           ) : (
-            <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-1.5 text-xs">
+            <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-1.5 text-xs animate-in fade-in duration-200">
               <div className="flex items-center justify-between font-bold text-emerald-800">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                   Verified on Creditcoin CC3 Testnet
                 </span>
-                <span>Score: {onChainProfile?.score || 845} / 1000 ({onChainProfile?.tier || "Gold"} Tier)</span>
+                <span>Score: {onChainProfile?.score} / 1000 ({onChainProfile?.tier} Tier)</span>
               </div>
               <p className="text-[11px] text-emerald-900">
-                Unlocked Max Financing LTV: <strong>85% (Prime Tier)</strong> | Ujrah Discount: <strong>-40%</strong>
+                Total Repaid: <strong>${Number(onChainProfile?.totalRepaidUSD || 0).toLocaleString()}</strong> | Clean Repayments: <strong>{onChainProfile?.cleanRepaymentCount}</strong> | Proven Events: <strong>{onChainProfile?.provenEventsCount}</strong>
               </p>
+              <div className="text-[10px] text-emerald-700 font-mono pt-1 border-t border-emerald-500/20 flex justify-between items-center">
+                <span>SanadCreditOracle on CC3</span>
+                <span className="text-emerald-800 font-bold">Cryptographically Proven ✓</span>
+              </div>
             </div>
           )}
 
