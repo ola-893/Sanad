@@ -167,7 +167,7 @@ export default function WalletPage() {
                 </span>
                 <span className="text-lg font-mono font-bold text-[#4A4A4A]">CTC</span>
               </div>
-              <p className="text-xs text-[#4A4A4A] mt-2">Creditcoin CC3 Testnet — bridged from ETH via Attestcoin</p>
+              <p className="text-xs text-[#4A4A4A] mt-2">Creditcoin CC3 Testnet — native settlement & liquidity pool layer</p>
               {ctcData?.address && (
                 <a
                   href={`${process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'}/address/${ctcData.address}`}
@@ -184,20 +184,27 @@ export default function WalletPage() {
 
         {/* Network Info */}
         <div className="glass-panel rounded-2xl border border-[#171414]/10 p-5 sm:p-6 shadow-soft-editorial">
-          <p className="kicker-gold mb-4">Network Details</p>
+          <p className="kicker-gold mb-4">Supported Networks</p>
           <div className="space-y-3">
             {[
-              { label: "Network", value: networkName || "—" },
-              { label: "Chain ID", value: "11155111", mono: true },
-              { label: "Currency", value: "ETH (Sepolia Testnet)" },
+              { label: "Active Connected Network", value: networkName || "—" },
+              { label: "Creditcoin 3 Testnet", value: "Chain ID 102031 (tCTC Native)", mono: true },
+              { label: "Ethereum Sepolia Testnet", value: "Chain ID 11155111 (Credit Bureau)", mono: true },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#171414]/5">
                 <span className="text-sm text-[#4A4A4A]">{row.label}</span>
                 <span className={`text-sm font-bold text-[#171414] ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
               </div>
             ))}
+            <div className="flex items-center justify-between py-2 border-b border-[#171414]/5">
+              <span className="text-sm text-[#4A4A4A]">Creditcoin Blockscout</span>
+              <a href="https://creditcoin-testnet.blockscout.com" target="_blank" rel="noopener noreferrer"
+                className="text-sm font-bold text-[#171414] flex items-center gap-1 hover:underline">
+                creditcoin-testnet.blockscout.com <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-[#4A4A4A]">Explorer</span>
+              <span className="text-sm text-[#4A4A4A]">Sepolia Etherscan</span>
               <a href="https://sepolia.etherscan.io" target="_blank" rel="noopener noreferrer"
                 className="text-sm font-bold text-[#171414] flex items-center gap-1 hover:underline">
                 sepolia.etherscan.io <ExternalLink className="h-3 w-3" />

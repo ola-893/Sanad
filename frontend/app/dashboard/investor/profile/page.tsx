@@ -33,10 +33,19 @@ interface UserProfile {
 }
 
 export default function InvestorProfilePage() {
-  const { walletAddress, isConnected, truncateAddress } = useWalletAuth()
+  const { walletAddress, isConnected, chainId, truncateAddress } = useWalletAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const networkName =
+    chainId === 102031
+      ? "Creditcoin 3 Testnet"
+      : chainId === 11155111
+      ? "ETH Sepolia Testnet"
+      : chainId === 1
+      ? "Ethereum Mainnet"
+      : "Creditcoin 3 Testnet"
 
   const fetchProfile = async () => {
     setIsLoading(true)
@@ -160,7 +169,7 @@ export default function InvestorProfilePage() {
                 <div className="divide-y divide-[#171414]/5">
                   {[
                     { icon: <WalletIcon className="h-4 w-4" />, label: "Connected Wallet", value: truncateAddress(walletAddress) },
-                    { icon: <Shield className="h-4 w-4" />, label: "Network", value: "ETH Sepolia Testnet" },
+                    { icon: <Shield className="h-4 w-4" />, label: "Network", value: networkName },
                     { icon: <Shield className="h-4 w-4" />, label: "Role", value: "INVESTOR" },
                   ].map((row) => (
                     <div key={row.label} className="flex items-center justify-between px-5 py-3.5 hover:bg-[#F5F5F3]/40 transition-colors">

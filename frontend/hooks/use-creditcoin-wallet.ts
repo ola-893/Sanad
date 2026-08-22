@@ -139,13 +139,20 @@ export function useCreditcoinWallet() {
     }
   }, [checkConnection, address]);
 
+  const isCreditcoin =
+    chainId === CREDITCOIN_CC3_PARAMS.chainId ||
+    parseInt(chainId || '0', 16) === 102031 ||
+    chainId === '102031';
+
   return {
     address,
     balance,
     chainId,
+    isCreditcoin,
     isConnected,
     isConnecting,
     error,
+    connect: connectWallet,
     connectWallet,
     disconnectWallet,
     switchOrAddCreditcoin,

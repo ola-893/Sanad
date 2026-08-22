@@ -21,6 +21,8 @@ import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
 import apiInstance from "@/lib/axios-v1"
 
 
+import { LiquidityPoolManager } from "@/components/investor/liquidity-pool-manager"
+
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
 function StatCard({ label, value, sub, icon: Icon }: { label: string; value: string; sub: string; icon: LucideIcon }) {
@@ -41,8 +43,6 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
     </Card>
   )
 }
-
-
 
 export default function DashboardPage() {
   const { walletAddress, balance: walletBalance } = useWalletAuth()
@@ -94,15 +94,15 @@ export default function DashboardPage() {
           {/* Stats Row */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Wallet Balance"
+              label="ETH Balance"
               value={`${walletBalance || '0.0000'} ETH`}
               sub="Sepolia Testnet"
               icon={Wallet}
             />
             <StatCard
               label="Pool Stake"
-              value={`${poolData?.userLpBalance || "0.0000"} CTC`}
-              sub="Bridged from ETH"
+              value={`${poolData?.userLpBalance || "0.0000"} tCTC`}
+              sub="Creditcoin CC3 Pool"
               icon={TrendingUp}
             />
             <StatCard
@@ -118,6 +118,9 @@ export default function DashboardPage() {
               icon={CircleDollarSign}
             />
           </div>
+
+          {/* Native CTC Liquidity Pool Manager */}
+          <LiquidityPoolManager />
 
           {/* Cash Flow + Activity */}
           <div className="grid gap-4 lg:grid-cols-2">
