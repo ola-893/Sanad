@@ -167,6 +167,23 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
     },
   ],
 
+  // Liquidated Borrower — real Aave V2 liquidation event (verifiable on Etherscan)
+  '0x08cbf44086a86566b38cac15bc38d201689281d5': [
+    {
+      sourceTxHash: '0xcace9027c0a4474580474ed48d3eef41a97c2c2dff382d88f8020d528048b700',
+      blockHeight: 25803727,
+      protocol: Protocol.AaveV3,
+      protocolName: 'Aave V2',
+      eventType: EventType.OvercollateralizedLiquidation,
+      eventTypeName: 'Liquidation Call',
+      volumeUSD: 36,
+      timestamp: 1755788507,
+      description: 'Liquidated $36 USDC collateral on Aave V2 — position fell below health factor 1.0',
+      weightScore: -50,
+      etherscanUrl: 'https://etherscan.io/tx/0xcace9027c0a4474580474ed48d3eef41a97c2c2dff382d88f8020d528048b700',
+    },
+  ],
+
   // High Collateral Supplier (Aave v3 Collateral Supply)
   '0x424ae0175afdc844cc3ca87067d959fddae8ff8a': [
     {

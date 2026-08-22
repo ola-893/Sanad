@@ -136,12 +136,13 @@ export default function BorrowerCreditPage() {
   })
 
   /* ─── Discover DeFi history ─── */
-  const handleDiscover = async () => {
-    if (!discoverAddress) return
+  const handleDiscoverWithAddress = async (addr: string) => {
+    if (!addr) return
+    setDiscoverAddress(addr)
     setDiscovering(true)
     setDiscoveryResult(null)
     try {
-      const { data } = await apiInstance.post("/credit-oracle/discover", { address: discoverAddress })
+      const { data } = await apiInstance.post("/credit-oracle/discover", { address: addr })
       setDiscoveryResult(data?.data || data)
     } catch (err: any) {
       setDiscoveryResult({ message: err.response?.data?.message || err.message || "Discovery failed" })
@@ -149,6 +150,7 @@ export default function BorrowerCreditPage() {
       setDiscovering(false)
     }
   }
+  const handleDiscover = () => handleDiscoverWithAddress(discoverAddress)
 
   const score = profile ? Number(profile.score) : 0
   const tier = profile ? Number(profile.tier) : 0
@@ -374,14 +376,78 @@ export default function BorrowerCreditPage() {
                   Scan your Ethereum Mainnet wallet for DeFi lending activity. Attestcoin will generate cryptographic proofs for verified events.
                 </p>
 
+                {/* Demo Profiles for Judges */}
+                <div className="mb-6">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/50 mb-3">
+                    Try Demo Profiles
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    {[
+                      {
+                        label: "Prime Borrower",
+                        address: "0x891775eDdcaBABdCE4b476E335a9EEF73123C75b",
+                        desc: "1 Clean Repayment · $4K",
+                        risk: "low",
+                        icon: <CheckCircle className="h-3.5 w-3.5" />,
+                      },
+                      {
+                        label: "Retail DeFi User",
+                        address: "0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3",
+                        desc: "1 Clean Repayment · $60",
+                        risk: "low",
+                        icon: <CheckCircle className="h-3.5 w-3.5" />,
+                      },
+                      {
+                        label: "Collateral Supplier",
+                        address: "0x424ae0175afdc844cc3ca87067d959fddae8ff8a",
+                        desc: "1 Supply · $600 collateral",
+                        risk: "neutral",
+                        icon: <Coins className="h-3.5 w-3.5" />,
+                      },
+                      {
+                        label: "⚠️ Liquidated Borrower",
+                        address: "0x08cbf44086a86566b38cac15bc38d201689281d5",
+                        desc: "1 Liquidation on Aave V2 · Real tx",
+                        risk: "high",
+                        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                      },
+                    ].map((demo) => (
+                      <button
+                        key={demo.address}
+                        onClick={() => {
+                          setDiscoverAddress(demo.address)
+                          handleDiscoverWithAddress(demo.address)
+                        }}
+                        disabled={discovering}
+                        className={`rounded-xl border p-3 text-left transition-all hover:shadow-md disabled:opacity-50 ${
+                          demo.risk === 'high'
+                            ? 'border-red-200 bg-red-50/50 hover:bg-red-50'
+                            : demo.risk === 'neutral'
+                            ? 'border-amber-200 bg-amber-50/50 hover:bg-amber-50'
+                            : 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50'
+                        } ${discoverAddress === demo.address ? 'ring-2 ring-[#E1BAC2] shadow-md' : ''}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`
+                            ${demo.risk === 'high' ? 'text-red-600' : demo.risk === 'neutral' ? 'text-amber-600' : 'text-emerald-600'}
+                          `}>{demo.icon}</span>
+                          <span className="text-xs font-bold text-[#171414]">{demo.label}</span>
+                        </div>
+                        <p className="text-[10px] text-[#4A4A4A] font-mono truncate">{demo.address.slice(0, 10)}...{demo.address.slice(-6)}</p>
+                        <p className="text-[10px] text-[#4A4A4A] mt-1">{demo.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-3 mb-6">
                   <div className="relative flex-1">
-                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A]" />
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A] shrink-0" />
                     <input
                       placeholder="0x... Ethereum address"
-                      className={`pl-10 w-full font-mono text-sm ${INPUT}`}
+                      className={`w-full font-mono text-sm py-2.5 pl-10 pr-4 rounded-xl border border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2] focus-visible:ring-1 outline-none`}
                       value={discoverAddress}
-                      onChange={(e) => setDiscoverAddress(e.target.value)}
+                      onChange={(e) => setDiscoverAddress(e.target.value.trim())}
                     />
                   </div>
                   <Button className={BTN} onClick={handleDiscover} disabled={discovering || !discoverAddress}>
