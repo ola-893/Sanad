@@ -1,112 +1,160 @@
 # Sanad Protocol (سند)
-**Real-World Assets (RWA) & Cross-Chain Microfinance on Creditcoin 3**
+**Trustless Cross-Chain Credit Scoring & Real-World Asset (RWA) Microfinance on Creditcoin 3**
 
 > **Sanad (سند)**: 
-> 1. **Chain of Authentication**: Unbroken verification provenance from physical gold vault to on-chain note.
+> 1. **Chain of Authentication**: Cryptographic provenance from physical gold vault appraisal to on-chain note settlement.
 > 2. **Credit Note & Title Deed**: In Islamic commercial law (*Fiqh al-Mu'amalat*), a *Sanad* is a formal debt/collateral certificate (*Sanad Rahn*).
-> 3. **Creditcoin L1 Core Alignment**: Recording real-world microfinance lending into immutable, verifiable, portable credit histories that travel across borders.
+> 3. **Creditcoin L1 Core Alignment**: Transforming real-world microfinance and cross-chain DeFi activity into immutable, portable credit scoring on Creditcoin CC3.
 
 ---
 
 ## 🌟 Project Overview
 
-**Sanad Protocol** is a decentralized, Shariah-compliant credit network that transforms gold-backed Ar-Rahnu pawn financing into tokenized real-world asset notes (**SAG Tokens**) on **Creditcoin 3 (CC3 EVM)**. 
+**Sanad Protocol** is a decentralized, Shariah-compliant credit network that bridges physical gold-backed Ar-Rahnu microfinance with global Web3 capital on **Creditcoin 3 (CC3 EVM)**.
 
-By integrating Creditcoin's **Universal Smart Contracts (Attestcoin Protocol)**, Sanad creates a trustless bridge between physical microfinance institutions in emerging markets and global liquidity pools on Ethereum Sepolia — enabling transparent valuation, instant liquidity injection, and auditable repayment settlement without centralized custodians.
-
----
-
-## 💡 The Problem & Economic Justification
-
-Across Southeast Asia and emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hold billions in physical gold collateral. However:
-- **Cash Cycle Bottlenecks**: Operators turn their lending capital only 3–4 times per year due to slow bank credit lines.
-- **Credit Invisibility**: Unbanked micro-borrowers repay loans faithfully but generate zero portable credit score.
-- **Cross-Chain Silos**: Global Web3 capital cannot easily fund local microfinance loans without risky custodial bridges.
-
-**Sanad solves this on Creditcoin**:
-- **5x Faster Capital Turnover**: Instant liquidity releases via automated pools on Creditcoin CC3.
-- **30–40% Lower Cost of Capital**: Direct access to global Web3 liquidity.
-- **Portable Credit Records**: Every loan and repayment creates an immutable, verifiable track record on Creditcoin L1.
+By harnessing Creditcoin's native **Universal Smart Contracts (Attestcoin BlockProver Precompile `0xFD2`)**, Sanad creates a trustless, zero-oracle credit scoring bureau. The protocol cryptographically proves historical EVM transactions across 10 major DeFi lending protocols (Aave v3, Morpho Blue, Compound v3, Spark, MakerDAO, Euler v2, Fluid, etc.) on both **Ethereum Sepolia** and **Ethereum Mainnet**, updating borrower credit tiers (Bronze, Silver, Gold) on CC3 to gate risk-managed, asset-backed liquidity pools.
 
 ---
 
-## ⚡ Core Technical Architecture on Creditcoin
+## 💡 The Problem & Economic Opportunity
 
-### 1. Smart Contracts on Creditcoin CC3 (`102031` / `0x18e8f`)
-- **`SAGToken.sol`**: OpenZeppelin ERC-721 token representing verified physical gold collateral (weight, karat, valuation, LTV, IPFS certificate).
-- **`SanadLiquidityPool.sol`**: Liquidity pool smart contract executing trustless cross-chain repayment verification using Creditcoin's native **BlockProver Precompile (`0xFD2`)**.
+Across emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hold billions in physical gold collateral:
+- **Cash Cycle Bottlenecks**: Pawnshop operators turn over lending capital only 3–4 times per year due to slow commercial bank credit lines.
+- **Credit Invisibility**: Micro-borrowers repay faithfully but generate zero portable credit score.
+- **DeFi Overcollateralization & Oracle Vulnerabilities**: Web3 lending requires >150% overcollateralization because cross-chain credit history cannot be trustlessly verified without centralized, manipulable oracles.
 
-### 2. Universal Smart Contracts (Attestcoin SDK)
-- **Source Chain (Ethereum Sepolia)**: `RepaymentGateway.sol` accepts debt repayments and emits `InvoiceRepaymentReceived`.
-- **Proof Relay Engine**: Off-chain relayer queries the Creditcoin Attestcoin Prover (`https://prover.cc3-testnet.creditcoin.network`), fetches cryptographic Merkle inclusion proofs, and settles on `SanadLiquidityPool.sol` without bridge tokens.
-
-### 3. Autonomous AI Appraisal & Observability
-- **Gold Appraisal Agent (`agent/gold_evaluator.py`)**: Computes real-time fair market value, dynamic LTV haircuts (e.g. 916 gold), and Shariah compliance bounds.
-- **Decentralized Audit Trail**: On-chain events (`GoldCollateralMinted`, `CrossChainRepaymentVerified`) are indexed and persisted to PostgreSQL with real-time WebSocket streams to operator dashboards.
+**How Sanad Solves This on Creditcoin CC3**:
+- **Zero-Trust Cross-Chain Credit Verification**: Cryptographically decodes EVM calldata and validates Merkle/continuity proofs via Creditcoin's native `0xFD2` BlockProver precompile.
+- **5x Faster Capital Turnover**: Certified Ar-Rahnu branches tokenize appraised gold collateral into ERC-721 **SAG Tokens**, unlocking instant capital from global liquidity pools.
+- **Shariah-Compliant Mudarabah Economics**: Zero-Riba financing model with transparent *Ujrah* custody fee distribution and Dutch auction liquidation surplus return.
 
 ---
 
-## 🚀 Quick Start Guide
+## ⚡ Core Technical Architecture
+
+```
+                      ┌────────────────────────────────────────────────────────┐
+                      │             SOURCE CHAINS (DeFi Activity)              │
+                      │   • Ethereum Mainnet (ChainKey: 3)                     │
+                      │   • Ethereum Sepolia (ChainKey: 1)                     │
+                      │   [Aave v3, Morpho, Spark, Compound, Maker, Euler...]   │
+                      └──────────────────────────┬─────────────────────────────┘
+                                                 │ Historical Tx Hash
+                                                 ▼
+                      ┌────────────────────────────────────────────────────────┐
+                      │         ATTESTCOIN PROOF BUILDER SERVICE (USC)         │
+                      │   https://prover.cc3-testnet.creditcoin.network        │
+                      │   • Merkle Inclusion Proof (Siblings & Index)          │
+                      │   • Continuity Proof (Block Headers & Epoch Roots)     │
+                      └──────────────────────────┬─────────────────────────────┘
+                                                 │ Cryptographic Proof
+                                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                CREDITCOIN 3 (CC3) TESTNET (Chain ID: 102031)                            │
+│                                                                                                         │
+│  ┌──────────────────────────────────────────────────┐   ┌────────────────────────────────────────────┐  │
+│  │      NATIVE BLOCKPROVER PRECOMPILE (0xFD2)       │   │        NATIVE CHAININFO PRECOMPILE (0xFD3) │  │
+│  │   • Verifies Merkle & Continuity proofs on-chain │   │   • Validates source chain state & heights │  │
+│  └──────────────────────────┬───────────────────────┘   └────────────────────────────────────────────┘  │
+│                             │ verified = true                                                           │
+│                             ▼                                                                           │
+│  ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                       SANAD CREDIT ORACLE (SanadCreditOracle.sol)                                 │  │
+│  │   • Multi-Chain chainKey Mapping: Sepolia (1) & Mainnet (3)                                       │  │
+│  │   • Decodes EVM Calldata & Validates 10 Protocol Selectors                                        │  │
+│  │   • Strict Stablecoin Decimals & ±20% Volume Bounds Checker                                       │  │
+│  │   • Dynamically Computes Non-Custodial Score (300-850) & Tiers (Bronze, Silver, Gold)             │  │
+│  └──────────────────────────┬────────────────────────────────────────────────────────────────────────┘  │
+│                             │ Gates Borrow Limits & Terms                                               │
+│                             ▼                                                                           │
+│  ┌──────────────────────────────────────────────────┐   ┌────────────────────────────────────────────┐  │
+│  │        SANAD LIQUIDITY POOL (Native tCTC)        │   │        SAG COLLATERAL NFT (SAGToken.sol)   │  │
+│  │   • Direct Payable depositLiquidity()            │   │   • Physical Gold RWA Receipt              │  │
+│  │   • Mudarabah Capital Accounting & Ujrah Yield   │   │   • Autonomous AI Appraisal Metadata       │  │
+│  │   • Dutch Auction Liquidation & Surplus Return   │   │   • Compliance Freezing & Audit Provenance │  │
+│  └──────────────────────────────────────────────────┘   └────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📜 Deployed Smart Contracts & Verified On-Chain State
+
+### Creditcoin 3 (CC3) Testnet (Chain ID: `102031` / `0x18e8f`)
+
+| Smart Contract | Address | Compiler & Status | Explorer Link |
+| :--- | :--- | :--- | :--- |
+| **`SanadCreditOracle.sol`** | `0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3) |
+| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
+| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
+
+### Native CC3 Precompiles
+
+| Precompile Name | Address | Purpose |
+| :--- | :--- | :--- |
+| **`BlockProver`** | `0x0000000000000000000000000000000000000FD2` | Cryptographic Merkle & Continuity proof verification |
+| **`ChainInfo`** | `0x0000000000000000000000000000000000000fD3` | Query source chain heights, finalized epochs, and metadata |
+
+---
+
+## 🔍 Live Verified Transactions on Creditcoin CC3
+
+| Transaction Event | ChainKey & Context | CC3 Settlement Tx Hash | Blockscout Link |
+| :--- | :--- | :--- | :--- |
+| **Sepolia Borrow Proof** | `ChainKey = 1` (Aave v3 $30 USDC Borrow) | `0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924` | [View Settlement](https://creditcoin-testnet.blockscout.com/tx/0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924) |
+| **Mainnet Repay Proof** | `ChainKey = 3` (Aave v3 $3,999.89 USDe Repay) | `0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045` | [View Settlement](https://creditcoin-testnet.blockscout.com/tx/0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045) |
+| **Investor Pool Deposit** | Native CC3 (1.5 tCTC payable `depositLiquidity`) | `0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88` | [View Deposit](https://creditcoin-testnet.blockscout.com/tx/0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88) |
+
+---
+
+## 🚀 Quick Start & Reproduction
 
 ### Prerequisites
 - Node.js >= 20
-- Python >= 3.10
-- PostgreSQL & Redis
+- PostgreSQL & Redis (or Docker)
 
-### 1. Backend Setup
+### 1. Installation
 ```bash
+# Clone repository
+git clone https://github.com/ola-893/Sanad.git
+cd Sanad
+
+# Start PostgreSQL & Redis
+docker compose up -d postgres redis
+
+# Backend setup
 cd backend
 npm install
-cp .env.example .env
-npm run dev
-```
+npm run seed     # Seeds roles and test users (Password: Password123!)
+npm run dev      # Runs on port 5001
 
-### 2. Frontend Setup
-```bash
-cd frontend
+# Frontend setup (in a second terminal)
+cd ../frontend
 npm install
-npm run dev
+npm run dev      # Runs on port 3000
 ```
 
-### 3. Run E2E Attestcoin Verification Harness
+### 2. Run On-Chain Dual Proof & Pool Verification Test
 ```bash
 cd backend
-npx tsx src/scripts/deploy-and-relay-e2e.ts
-```
-
-### 4. Run Failure Path Stress Tests
-```bash
-cd backend
-npx tsx src/scripts/test-failure-paths.ts
+npx tsx src/scripts/deploy-and-prove-both.ts
 ```
 
 ---
 
-## 📜 Contract & Network Reference
+## 👥 User Roles & Workflow Navigation
 
-### Smart Contracts on Creditcoin 3 Testnet (`102031`) & Ethereum Sepolia
-| Contract | Deployed Address | Network | Explorer Link |
-| :--- | :--- | :--- | :--- |
-| **`SanadCreditOracle.sol`** | `0x74357E5FED91D6dDdd39847304b8651634693A00` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x74357E5FED91D6dDdd39847304b8651634693A00) |
-| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
-| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | CC3 Testnet | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
-| **`RepaymentGateway.sol`** | `0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162) |
-| **`InvestorVault.sol`** | `0xE037A229aF3886D0181B7727e8252F72B1d3d45B` | Ethereum Sepolia | [Etherscan](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B) |
-
-### Network & Prover Endpoints
-| Component | Identifier | Endpoint |
+| Role | Test Credentials | Key URLs & Functions |
 | :--- | :--- | :--- |
-| **Creditcoin 3 Testnet** | Chain ID `102031` | `https://rpc.cc3-testnet.creditcoin.network` |
-| **Blockscout Explorer** | CC3 Testnet | `https://creditcoin-testnet.blockscout.com/` |
-| **Attestcoin Prover** | ChainKey `3` (Mainnet) | `https://prover.cc3-testnet.creditcoin.network` |
-| **Precompile: BlockProver** | `0x0000000000000000000000000000000000000FD2` | Native L1 Precompile |
-| **Precompile: ChainInfo** | `0x0000000000000000000000000000000000000fD3` | Native L1 Precompile |
+| **Gold Borrower** | `borrower@sanad.finance` / `Password123!` | `/dashboard/borrower/credit`: Discover DeFi history, generate Attestcoin proofs, view credit score. |
+| **Liquidity Investor** | `investor@sanad.finance` / `Password123!` | `/dashboard`: Deposit native tCTC into `SanadLiquidityPool`, track Mudarabah yield, browse SAG notes. |
+| **Ar-Rahnu Pawnshop** | `pawnshop@sanad.finance` / `Password123!` | `/pawnshop/dashboard`: AI physical gold appraisal, mint ERC-721 SAG collateral receipts, fund micro-loans. |
+| **Regulator / Admin** | `admin@sanad.finance` / `Password123!` | `/admin/compliance`: Real-time on-chain audit stream, Dutch auction oversight, and compliance case management. |
 
 ---
 
-## 👥 User Roles & Portals
+## ⚖️ Shariah Compliance Principles
 
-1. **Borrowers / Small Traders**: Pledge physical gold at local Ar-Rahnu branches and receive instant cash.
-2. **Ar-Rahnu Operators / Pawnshops**: Tokenize appraised gold into SAG notes, access CC3 liquidity pools, and manage loans.
-3. **Global Funders / Investors**: Supply liquidity to `SanadLiquidityPool` and earn transparent, Shariah-compliant asset-backed yield.
-4. **Regulators & Compliance Officers**: Real-time auditable on-chain dashboard tracking collateral provenance and risk metrics.
+1. **Riba-Free (Zero Usury)**: No compound interest or predatory penalties.
+2. **Asset-Backed (Sanad Rahn)**: Every loan is 100% collateralized by physical gold vaulted in certified Ar-Rahnu institutions.
+3. **Equitable Liquidation**: If a borrower defaults after grace periods, collateral is liquidated via a transparent on-chain Dutch auction. **100% of any surplus proceeds are returned to the borrower**, strictly adhering to AAOIFI standards.
