@@ -25,6 +25,14 @@ export interface DeFiEvent {
   etherscanUrl: string;
 }
 
+export interface AddressSecurityInfo {
+  isFlagged: boolean;
+  label?: string;
+  category?: 'Exploit' | 'Sanctioned' | 'Phishing' | 'HighRisk' | 'Clean';
+  riskWarning?: string;
+  source: string;
+}
+
 export interface DiscoverySummary {
   cleanRepaymentsCount: number;
   liquidationsCount: number;
@@ -32,6 +40,7 @@ export interface DiscoverySummary {
   totalVolumeUSD: number;
   estimatedTier: string;
   activeProtocolsCount?: number;
+  securityInfo?: AddressSecurityInfo;
 }
 
 export interface OnChainCreditProfile {
