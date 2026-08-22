@@ -33,6 +33,18 @@ const VALUE = "font-display text-3xl font-extrabold tabular-nums text-[#171414]"
 const INPUT = "rounded-xl border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2]"
 const BTN = "rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black"
 
+/* ─── Volume formatting helper ─── */
+function formatVolume(raw: string | number | undefined | null): string {
+  const n = typeof raw === "string" ? Number(raw) : (raw ?? 0)
+  if (!isFinite(n) || isNaN(n) || n < 0) return "—"
+  // Values above 1e15 are almost certainly raw uint256 overflow / unconverted wei
+  if (n > 1e15) return "—"
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`
+  return `$${n.toLocaleString()}`
+}
+
 /* ─── Protocol & Event type maps ─── */
 const PROTOCOL_NAMES: Record<number, string> = {
   0: "Aave v3",
@@ -299,9 +311,9 @@ export default function BorrowerCreditPage() {
             <div className={`${GLASS} p-6 space-y-4`}>
               <p className={LABEL}>Credit Breakdown</p>
               {[
-                { label: "Total Repaid", value: `$${totalRepaid.toLocaleString()}`, icon: CheckCircle, color: "text-emerald-600" },
-                { label: "Liquidations", value: `$${totalLiquidated.toLocaleString()}`, icon: AlertTriangle, color: "text-amber-600" },
-                { label: "Defaults", value: `$${totalDefaulted.toLocaleString()}`, icon: AlertTriangle, color: "text-red-500" },
+                { label: "Total Repaid", value: formatVolume(totalRepaid), icon: CheckCircle, color: "text-emerald-600" },
+                { label: "Liquidations", value: formatVolume(totalLiquidated), icon: AlertTriangle, color: "text-amber-600" },
+                { label: "Defaults", value: formatVolume(totalDefaulted), icon: AlertTriangle, color: "text-red-500" },
                 { label: "Clean Repayments", value: cleanRepayments, icon: Shield, color: "text-emerald-600" },
                 { label: "Liquidation Events", value: liquidations, icon: AlertTriangle, color: "text-amber-600" },
                 { label: "Default Events", value: defaults, icon: AlertTriangle, color: "text-red-500" },
@@ -380,7 +392,7 @@ export default function BorrowerCreditPage() {
                         <TableRow className="border-[#171414]/10">
                           <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Protocol</TableHead>
                           <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Volume</TableHead>
+                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Value (USD)</TableHead>
                           <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Block</TableHead>
                           <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx Hash</TableHead>
                         </TableRow>
@@ -406,8 +418,8 @@ export default function BorrowerCreditPage() {
                                   {EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-mono text-xs font-bold text-[#171414]">
-                                ${Number(event.volumeUSD).toLocaleString()}
+                              <TableCell className="font-mono text-xs font-bold text-[#171414] whitespace-nowrap">
+                                {formatVolume(event.volumeUSD)}
                               </TableCell>
                               <TableCell className="font-mono text-xs text-[#4A4A4A]">
                                 #{event.blockHeight}
@@ -454,7 +466,7 @@ export default function BorrowerCreditPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/50">
-                      Try Demo Profiles
+                      Try Sample Wallets
                     </p>
                     <span className="font-mono text-[9px] text-[#4A4A4A] italic">
                       Prove is only available for your own wallet
@@ -465,28 +477,28 @@ export default function BorrowerCreditPage() {
                       {
                         label: "Prime Borrower",
                         address: "0x891775eDdcaBABdCE4b476E335a9EEF73123C75b",
-                        desc: "1 Clean Repayment · $4K",
+                        desc: "$4K USDS Repayment on Aave v3",
                         risk: "low",
                         icon: <CheckCircle className="h-3.5 w-3.5" />,
                       },
                       {
                         label: "Retail DeFi User",
                         address: "0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3",
-                        desc: "1 Clean Repayment · $60",
+                        desc: "$60 USDC Repayment on Aave v3",
                         risk: "low",
                         icon: <CheckCircle className="h-3.5 w-3.5" />,
                       },
                       {
                         label: "Collateral Supplier",
                         address: "0x424ae0175afdc844cc3ca87067d959fddae8ff8a",
-                        desc: "1 Supply · $600 collateral",
+                        desc: "$600 USDC Supplied as Collateral on Aave v3",
                         risk: "neutral",
                         icon: <Coins className="h-3.5 w-3.5" />,
                       },
                       {
                         label: "⚠️ Liquidated Borrower",
                         address: "0x08cbf44086a86566b38cac15bc38d201689281d5",
-                        desc: "1 Liquidation on Aave V2 · Real tx",
+                        desc: "$36 USDC Liquidated on Aave V2",
                         risk: "high",
                         icon: <AlertTriangle className="h-3.5 w-3.5" />,
                       },
@@ -596,7 +608,7 @@ export default function BorrowerCreditPage() {
                             <TableRow className="border-[#171414]/10">
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Protocol</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Volume</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Value (USD)</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Weight</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx</TableHead>
                               <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Action</TableHead>
@@ -620,8 +632,8 @@ export default function BorrowerCreditPage() {
                                     {event.eventTypeName || EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="font-mono text-xs font-bold text-[#171414]">
-                                  ${Number(event.volumeUSD).toLocaleString()}
+                                <TableCell className="font-mono text-xs font-bold text-[#171414] whitespace-nowrap">
+                                  {formatVolume(event.volumeUSD)}
                                 </TableCell>
                                 <TableCell className="font-mono text-xs text-[#4A4A4A]">
                                   {event.weightScore || "—"}

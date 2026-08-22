@@ -223,6 +223,8 @@ export const STATIC_TOKEN_METADATA: Record<string, { symbol: string; decimals: n
   '0x853d955acef822db058eb8505911ed77f175b99e': { symbol: 'FRAX', decimals: 18, referencePriceUSD: 1.0 },
   '0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f': { symbol: 'GHO', decimals: 18, referencePriceUSD: 1.0 },
   '0x6c3ea9036406852006290770bedfcaba0e23a0e8': { symbol: 'PYUSD', decimals: 6, referencePriceUSD: 1.0 },
+  '0x4c9edd5852cd905f086c759e8383e09bff1e68b3': { symbol: 'USDe', decimals: 18, referencePriceUSD: 1.0 },
+  '0x1abaea1f7c830bd89acc67ec4af516284b1bc33c': { symbol: 'crvUSD', decimals: 18, referencePriceUSD: 1.0 },
   // Volatile / Collateral Assets (Snapshot reference prices)
   '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', decimals: 18, referencePriceUSD: 2700.0 },
   '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0': { symbol: 'wstETH', decimals: 18, referencePriceUSD: 3150.0 },
@@ -302,6 +304,35 @@ export const CURATED_DEMO_PROFILES: Record<string, DiscoveredDeFiEvent[]> = {
     },
   ],
 };
+
+/**
+ * Safely converts a raw token amount to a USD volume estimate.
+ * Guards against type(uint256).max and JavaScript Number overflow.
+ * Returns 0 for any invalid or overflowed values.
+ */
+function safeVolumeUSD(rawAmount: bigint | number, decimals: number, referencePriceUSD: number): number {
+  let bigVal: bigint;
+  try {
+    bigVal = typeof rawAmount === 'bigint' ? rawAmount : BigInt(Math.round(rawAmount));
+  } catch {
+    return 0;
+  }
+  if (bigVal <= 0n) return 0;
+
+  // Reject uint256 max or near-max (used for "repay all" patterns in Aave/Compound)
+  const MAX_UINT256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+  if (bigVal >= MAX_UINT256 / 2n) return 0;
+
+  // Divide by 10^decimals using BigInt first (avoids overflow for 18-decimal tokens)
+  // then convert the quotient to Number for the final price multiplication.
+  const divisor = 10n ** BigInt(decimals);
+  const tokenAmount = Number(bigVal / divisor);
+  const result = tokenAmount * referencePriceUSD;
+
+  // Sanity cap: nothing over $1B from discovery
+  if (!isFinite(result) || result < 0 || result > 1_000_000_000) return 0;
+  return Math.round(result);
+}
 
 export class DefiDiscoveryService {
   private ethProvider: ethers.JsonRpcProvider;
@@ -406,7 +437,6 @@ export class DefiDiscoveryService {
           totalBorrowedUSD: 0,
           estimatedTier: securityInfo.isFlagged ? 'HighRisk' : 'Unscored',
           activeProtocolsCount: 0,
-          securityInfo,
         },
         message: securityInfo.isFlagged 
           ? `Security Warning: ${securityInfo.riskWarning}. No legitimate clean DeFi lending history found.` 
@@ -574,7 +604,7 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -600,7 +630,29 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const isKnownToken = !!STATIC_TOKEN_METADATA[assetAddr];
+
+              // For type(uint256).max "repay all" calls, fetch the full tx to get token transfer amounts
+              const MAX_UINT = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+              let effectiveAmount = rawAmount;
+              if (BigInt(String(rawAmount)) >= MAX_UINT / 2n) {
+                try {
+                  const txDetail = await axios.get(`https://eth.blockscout.com/api/v2/transactions/${sourceTxHash}`, { timeout: 5000 });
+                  const transfers = txDetail.data?.token_transfers || [];
+                  const matchingTransfer = transfers.find((tt: any) => {
+                    const ttFrom = (tt.from?.hash || '').toLowerCase();
+                    const ttToken = (tt.token?.address_hash || tt.token?.address || '').toLowerCase();
+                    return ttToken === assetAddr && ttFrom === walletAddress;
+                  });
+                  if (matchingTransfer?.total?.value) {
+                    effectiveAmount = BigInt(matchingTransfer.total.value);
+                  }
+                } catch (e: any) {
+                }
+              }
+
+              const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
+
 
               discovered.push({
                 sourceTxHash,
@@ -626,7 +678,7 @@ export class DefiDiscoveryService {
               const assetAddr = parsed[0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -671,7 +723,7 @@ export class DefiDiscoveryService {
               const loanToken = parsed[0][0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[loanToken] || { symbol: 'USDC', decimals: 6, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -694,7 +746,7 @@ export class DefiDiscoveryService {
               const loanToken = parsed[0][0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[loanToken] || { symbol: 'USDC', decimals: 6, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -720,7 +772,7 @@ export class DefiDiscoveryService {
               const assetAddr = isCollateral ? parsed[0][1].toLowerCase() : parsed[0][0].toLowerCase();
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -753,7 +805,7 @@ export class DefiDiscoveryService {
               const rawAmount = isTo ? parsed[2] : parsed[1];
               const isBaseAsset = assetAddr === cometBaseToken;
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 6, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               if (isBaseAsset) {
                 // Withdrawing base token from Comet is borrowing base asset
@@ -781,7 +833,7 @@ export class DefiDiscoveryService {
               const rawAmount = isTo ? parsed[2] : parsed[1];
               const isBaseAsset = assetAddr === cometBaseToken;
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 6, referencePriceUSD: 1.0 };
-              const volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, tokenInfo.decimals)) * tokenInfo.referencePriceUSD);
+              const volumeUSD = safeVolumeUSD(rawAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               const eventType = isBaseAsset ? EventType.CleanRepayment : EventType.CollateralSupply;
               discovered.push({
@@ -813,7 +865,7 @@ export class DefiDiscoveryService {
               const newCol = BigInt(parsed[1]);
 
               if (newDebt > 0n) {
-                const volumeUSD = Math.round(Number(ethers.formatUnits(newDebt, 18)));
+                const volumeUSD = safeVolumeUSD(newDebt, 18, 1.0);
                 discovered.push({
                   sourceTxHash,
                   blockHeight,
@@ -828,7 +880,7 @@ export class DefiDiscoveryService {
                   etherscanUrl,
                 });
               } else if (newDebt < 0n) {
-                const volumeUSD = Math.round(Number(ethers.formatUnits(-newDebt, 18)));
+                const volumeUSD = safeVolumeUSD(-newDebt, 18, 1.0);
                 discovered.push({
                   sourceTxHash,
                   blockHeight,
@@ -843,7 +895,7 @@ export class DefiDiscoveryService {
                   etherscanUrl,
                 });
               } else if (newCol > 0n) {
-                const volumeUSD = Math.round(Number(ethers.formatUnits(newCol, 18)));
+                const volumeUSD = safeVolumeUSD(newCol, 18, 1.0);
                 discovered.push({
                   sourceTxHash,
                   blockHeight,
@@ -924,14 +976,14 @@ export class DefiDiscoveryService {
                     
                     let volumeUSD = 0;
                     if (targetVault === '0x9bd52f2805c6af014132874124686e7b248c2cbb' || targetVault === '0x797dd80692c3b2dadabce8e30c07fde5307d48a9') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     } else if (targetVault === '0xba98fc35c9dfd69178ad5dce9fa29c64554783b5') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 18)) * 2700);
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 2700);
                     } else if (targetVault === '0xab2726daf820aa9270d14db9b18c8d187cbf2f30') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 8)) * 95000);
+                      volumeUSD = safeVolumeUSD(rawAmount, 8, 95000);
                     } else {
-                      const num18 = Number(ethers.formatUnits(rawAmount, 18));
-                      volumeUSD = num18 > 0.001 ? Math.round(num18) : Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 1.0);
+                      if (volumeUSD === 0) volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     }
 
                     discovered.push({
@@ -957,14 +1009,14 @@ export class DefiDiscoveryService {
                     
                     let volumeUSD = 0;
                     if (targetVault === '0x9bd52f2805c6af014132874124686e7b248c2cbb' || targetVault === '0x797dd80692c3b2dadabce8e30c07fde5307d48a9') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     } else if (targetVault === '0xba98fc35c9dfd69178ad5dce9fa29c64554783b5') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 18)) * 2700);
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 2700);
                     } else if (targetVault === '0xab2726daf820aa9270d14db9b18c8d187cbf2f30') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 8)) * 95000);
+                      volumeUSD = safeVolumeUSD(rawAmount, 8, 95000);
                     } else {
-                      const num18 = Number(ethers.formatUnits(rawAmount, 18));
-                      volumeUSD = num18 > 0.001 ? Math.round(num18) : Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 1.0);
+                      if (volumeUSD === 0) volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     }
 
                     discovered.push({
@@ -990,14 +1042,14 @@ export class DefiDiscoveryService {
                     
                     let volumeUSD = 0;
                     if (targetVault === '0x9bd52f2805c6af014132874124686e7b248c2cbb' || targetVault === '0x797dd80692c3b2dadabce8e30c07fde5307d48a9') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     } else if (targetVault === '0xba98fc35c9dfd69178ad5dce9fa29c64554783b5') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 18)) * 2700);
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 2700);
                     } else if (targetVault === '0xab2726daf820aa9270d14db9b18c8d187cbf2f30') {
-                      volumeUSD = Math.round(Number(ethers.formatUnits(rawAmount, 8)) * 95000);
+                      volumeUSD = safeVolumeUSD(rawAmount, 8, 95000);
                     } else {
-                      const num18 = Number(ethers.formatUnits(rawAmount, 18));
-                      volumeUSD = num18 > 0.001 ? Math.round(num18) : Math.round(Number(ethers.formatUnits(rawAmount, 6)));
+                      volumeUSD = safeVolumeUSD(rawAmount, 18, 1.0);
+                      if (volumeUSD === 0) volumeUSD = safeVolumeUSD(rawAmount, 6, 1.0);
                     }
 
                     discovered.push({
@@ -1021,7 +1073,7 @@ export class DefiDiscoveryService {
             // direct borrow(amount, receiver)
             try {
               const parsed = eulerVaultIface.decodeFunctionData('borrow', tx.raw_input);
-              const volumeUSD = Math.round(Number(ethers.formatUnits(parsed[0], 18)));
+              const volumeUSD = safeVolumeUSD(parsed[0], 18, 1.0);
               discovered.push({
                 sourceTxHash,
                 blockHeight,
@@ -1040,7 +1092,7 @@ export class DefiDiscoveryService {
             // direct repay(amount, receiver)
             try {
               const parsed = eulerVaultIface.decodeFunctionData('repay', tx.raw_input);
-              const volumeUSD = Math.round(Number(ethers.formatUnits(parsed[0], 18)));
+              const volumeUSD = safeVolumeUSD(parsed[0], 18, 1.0);
               discovered.push({
                 sourceTxHash,
                 blockHeight,
@@ -1059,7 +1111,7 @@ export class DefiDiscoveryService {
             // direct deposit(amount, receiver)
             try {
               const parsed = eulerVaultIface.decodeFunctionData('deposit', tx.raw_input);
-              const volumeUSD = Math.round(Number(ethers.formatUnits(parsed[0], 18)));
+              const volumeUSD = safeVolumeUSD(parsed[0], 18, 1.0);
               discovered.push({
                 sourceTxHash,
                 blockHeight,
