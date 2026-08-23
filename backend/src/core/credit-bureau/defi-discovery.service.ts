@@ -138,6 +138,11 @@ export const ETHEREUM_DEFI_ADDRESSES: Record<string, { protocol: Protocol; name:
     name: 'Aave v3 (Sepolia)',
     category: 'Pooled Lending',
   },
+  '0x387d311e47e80b498169e6fb51d3193167d89f7d': {
+    protocol: Protocol.AaveV3,
+    name: 'Aave v3 (Sepolia)',
+    category: 'Pooled Lending',
+  },
   '0xc3d688b66703497daa19211eedff47f25384cdc3': {
     protocol: Protocol.CompoundV3,
     name: 'Compound v3',
@@ -410,12 +415,13 @@ async function resolveActualAmount(
   assetAddr: string,
   walletAddress: string,
   direction: 'from' | 'to' = 'from',
+  blockscoutBase: string = 'https://eth.blockscout.com',
 ): Promise<bigint> {
   const bigVal = typeof rawAmount === 'bigint' ? rawAmount : BigInt(Math.round(Number(rawAmount)));
   if (bigVal < MAX_UINT256 / 2n) return bigVal; // normal amount, no resolution needed
   try {
     const txDetail = await axios.get(
-      `https://eth.blockscout.com/api/v2/transactions/${sourceTxHash}`,
+      `${blockscoutBase}/api/v2/transactions/${sourceTxHash}`,
       { timeout: 5000 },
     );
     const transfers = txDetail.data?.token_transfers || [];
@@ -685,9 +691,15 @@ export class DefiDiscoveryService {
       'function batch((address,address,uint256,bytes)[] items) external payable'
     ]);
 
-    // 1. Fetch wallet transactions via Blockscout API v2
+    // 1. Fetch wallet transactions via Blockscout API v2 (Mainnet + Sepolia)
+    const CHAIN_CONFIGS = [
+      { name: 'Mainnet', blockscout: 'https://eth.blockscout.com', etherscanBase: 'https://etherscan.io', etherscanTxBase: 'https://etherscan.io/tx/' },
+      { name: 'Sepolia', blockscout: 'https://eth-sepolia.blockscout.com', etherscanBase: 'https://sepolia.etherscan.io', etherscanTxBase: 'https://sepolia.etherscan.io/tx/' },
+    ];
+
+    for (const chain of CHAIN_CONFIGS) {
     try {
-      const res = await axios.get(`https://eth.blockscout.com/api/v2/addresses/${walletAddress}/transactions`, { timeout: 6000 });
+      const res = await axios.get(`${chain.blockscout}/api/v2/addresses/${walletAddress}/transactions`, { timeout: 6000 });
       const items = res.data?.items || [];
 
       for (const tx of items) {
@@ -699,7 +711,7 @@ export class DefiDiscoveryService {
         const blockHeight = Number(tx.block_number) || 0;
         const timestamp = Math.floor(new Date(tx.timestamp).getTime() / 1000) || Math.floor(Date.now() / 1000);
         const sourceTxHash = tx.hash;
-        const etherscanUrl = `https://etherscan.io/tx/${sourceTxHash}`;
+        const etherscanUrl = `${chain.etherscanTxBase}${sourceTxHash}`;
 
         // =====================================================================
         // Aave v3 / Spark Protocol
@@ -713,7 +725,7 @@ export class DefiDiscoveryService {
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
               // For max-uint borrows, actual amount comes from pool→borrower transfer
-              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'to');
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'to', chain.blockscout);
               const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
@@ -742,7 +754,7 @@ export class DefiDiscoveryService {
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
               // For max-uint "repay all" calls, resolve actual amount from token transfers
-              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from');
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from', chain.blockscout);
               const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
@@ -771,8 +783,31 @@ export class DefiDiscoveryService {
               const rawAmount = parsed[1];
               const tokenInfo = STATIC_TOKEN_METADATA[assetAddr] || { symbol: 'Asset', decimals: 18, referencePriceUSD: 1.0 };
               // For max-uint supply calls, resolve actual amount from token transfers
-              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from');
+              const effectiveAmount = await resolveActualAmount(rawAmount, sourceTxHash, assetAddr, walletAddress, 'from', chain.blockscout);
               const volumeUSD = safeVolumeUSD(effectiveAmount, tokenInfo.decimals, tokenInfo.referencePriceUSD);
+
+              discovered.push({
+                sourceTxHash,
+                blockHeight,
+                protocol: protoMeta.protocol,
+                protocolName: protoMeta.name,
+                eventType: EventType.CollateralSupply,
+                eventTypeName: EVENT_TYPE_NAMES[EventType.CollateralSupply],
+                tokenSymbol: tokenInfo.symbol,
+                volumeUSD,
+                timestamp,
+                description: `Collateral Supply: $${volumeUSD.toLocaleString()} ${tokenInfo.symbol} on ${protoMeta.name}`,
+                weightScore: 20,
+                etherscanUrl,
+              });
+            } catch {}
+          } else if (selector === '0x474cf53d') {
+            // depositETH(address aavePoolETH, address onBehalfOf, uint16 referralCode)
+            // The actual amount is in tx.value (ETH sent with the tx)
+            try {
+              const ethValue = BigInt(tx.value || '0');
+              const tokenInfo = { symbol: 'WETH', decimals: 18, referencePriceUSD: 2700.0 };
+              const volumeUSD = safeVolumeUSD(ethValue, tokenInfo.decimals, tokenInfo.referencePriceUSD);
 
               discovered.push({
                 sourceTxHash,
@@ -1242,8 +1277,9 @@ export class DefiDiscoveryService {
         }
       }
     } catch (err: any) {
-      console.warn(`[DefiDiscovery] Blockscout query notice: ${err.message}`);
+      console.warn(`[DefiDiscovery] Blockscout query notice for ${chain.name}: ${err.message}`);
     }
+    } // end for chain
 
     return discovered;
   }

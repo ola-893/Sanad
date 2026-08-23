@@ -95,6 +95,7 @@ contract SanadCreditOracle is Ownable {
         uint32 liquidationCount;
         uint32 defaultCount;
         uint32 activeBorrowCount;
+        uint32 collateralSupplyCount;
         uint64 lastEvaluatedTimestamp;
         uint32 provenEventsCount;
     }
@@ -603,6 +604,8 @@ contract SanadCreditOracle is Ownable {
         } else if (eventData.eventType == EventType.ActiveBorrowPosition) {
             profile.activeBorrowCount++;
             profile.totalBorrowedUSD += eventData.volumeUSD;
+        } else if (eventData.eventType == EventType.CollateralSupply) {
+            profile.collateralSupplyCount++;
         } else if (eventData.eventType == EventType.OvercollateralizedLiquidation) {
             profile.liquidationCount++;
             profile.totalLiquidatedUSD += eventData.volumeUSD;
@@ -649,23 +652,30 @@ contract SanadCreditOracle is Ownable {
         // Base score
         int256 computedScore = 500;
 
-        // 1. Positive points for clean repayments
-        int256 cleanRepayBonus = int256(uint256(profile.cleanRepaymentCount)) * 25;
-        int256 volumeBonus = int256(profile.totalRepaidUSD / (1000 * 1e6)) * 15; // +15 pts per $1,000 repaid
+        // 1. Positive points for clean repayments (+50 per repayment)
+        int256 cleanRepayBonus = int256(uint256(profile.cleanRepaymentCount)) * 50;
+
+        // 2. Volume bonus — scaled to work on both testnet and mainnet
+        //    +20 pts per $100 repaid (cap at 200)
+        int256 volumeBonus = int256(profile.totalRepaidUSD / (100 * 1e6)) * 20;
         if (volumeBonus > 200) volumeBonus = 200;
         cleanRepayBonus += volumeBonus;
 
-        // 2. Modest points for active borrow positions (capacity & credit activity confirmation)
-        int256 borrowBonus = int256(uint256(profile.activeBorrowCount)) * 10;
-        if (borrowBonus > 30) borrowBonus = 30; // Capped at +30 pts max
+        // 3. Active borrow positions — shows credit activity (+20 per, cap 40)
+        int256 borrowBonus = int256(uint256(profile.activeBorrowCount)) * 20;
+        if (borrowBonus > 40) borrowBonus = 40;
 
-        // 3. Penalties for liquidations (Aave/Compound/Morpho/Spark risk signal)
-        int256 liquidationPenalty = int256(uint256(profile.liquidationCount)) * 35;
+        // 4. Collateral supply — shows DeFi engagement (+15 per, cap 30)
+        int256 collateralBonus = int256(uint256(profile.collateralSupplyCount)) * 15;
+        if (collateralBonus > 30) collateralBonus = 30;
 
-        // 4. Severe penalties for uncollateralized defaults (Maple/Goldfinch)
+        // 5. Liquidation penalties (-40 per liquidation)
+        int256 liquidationPenalty = int256(uint256(profile.liquidationCount)) * 40;
+
+        // 6. Default penalties (-150 per default)
         int256 defaultPenalty = int256(uint256(profile.defaultCount)) * 150;
 
-        computedScore = computedScore + cleanRepayBonus + borrowBonus - liquidationPenalty - defaultPenalty;
+        computedScore = computedScore + cleanRepayBonus + borrowBonus + collateralBonus - liquidationPenalty - defaultPenalty;
 
         // Bound score between 0 and 1000
         if (computedScore < 0) {

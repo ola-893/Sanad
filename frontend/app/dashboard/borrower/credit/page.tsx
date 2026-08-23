@@ -16,7 +16,6 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Coins,
   Activity,
   Link2,
   Wallet,
@@ -25,6 +24,8 @@ import {
 import Link from "next/link"
 import { useAtom } from "jotai"
 import { userAtom } from "@/store/atoms"
+import { ethers } from "ethers"
+import { SANAD_CREDIT_ORACLE_ADDRESS } from "@/core/credit-bureau/sanad-credit-oracle"
 
 /* ─── Design tokens ─── */
 const GLASS = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
@@ -64,29 +65,45 @@ const EVENT_TYPE_NAMES: Record<number, string> = {
   1: "Liquidation",
   2: "Default",
   3: "Collateral Supply",
+  4: "Active Borrow",
 }
 
 const TIER_INFO: Record<number, { label: string; color: string; bg: string }> = {
   0: { label: "Unrated", color: "text-gray-500", bg: "bg-gray-100" },
-  1: { label: "Poor", color: "text-red-600", bg: "bg-red-50" },
-  2: { label: "Fair", color: "text-orange-600", bg: "bg-orange-50" },
-  3: { label: "Good", color: "text-amber-600", bg: "bg-amber-50" },
-  4: { label: "Very Good", color: "text-emerald-600", bg: "bg-emerald-50" },
-  5: { label: "Excellent", color: "text-emerald-700", bg: "bg-emerald-100" },
+  1: { label: "Bronze", color: "text-orange-600", bg: "bg-orange-50" },
+  2: { label: "Silver", color: "text-slate-500", bg: "bg-slate-50" },
+  3: { label: "Gold", color: "text-amber-600", bg: "bg-amber-50" },
+  4: { label: "HighRisk", color: "text-red-600", bg: "bg-red-50" },
 }
 
 interface CreditProfile {
   borrower: string
-  score: string
-  tier: number
-  totalRepaidUSD: string
-  totalLiquidatedUSD: string
-  totalDefaultedUSD: string
+  score: string | number
+  tier: number | string
+  totalRepaidUSD: string | number
+  totalLiquidatedUSD: string | number
+  totalDefaultedUSD: string | number
   cleanRepaymentCount: number
   liquidationCount: number
   defaultCount: number
   lastEvaluatedTimestamp: string
   provenEventsCount: number
+}
+
+/** Normalize tier — contract may return numeric (0-5) or string ('Unscored', 'Poor', etc.) */
+function normalizeTier(raw: number | string | undefined): number {
+  if (typeof raw === 'number') return raw
+  if (typeof raw === 'string') {
+    const lower = raw.toLowerCase()
+    if (lower === 'unscored' || lower === 'unrated') return 0
+    if (lower === 'bronze') return 1
+    if (lower === 'silver') return 2
+    if (lower === 'gold') return 3
+    if (lower === 'highrisk' || lower === 'high risk') return 4
+    const n = Number(raw)
+    return isNaN(n) ? 0 : n
+  }
+  return 0
 }
 
 interface ProvenEvent {
@@ -128,7 +145,6 @@ export default function BorrowerCreditPage() {
   const [discovering, setDiscovering] = useState(false)
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null)
   const [provingEvent, setProvingEvent] = useState<string | null>(null)
-  const [proofResult, setProofResult] = useState<{ txHash?: string; score?: string; tier?: string; message?: string } | null>(null)
   const [proofModal, setProofModal] = useState<{ open: boolean; event?: any; step: 'idle' | 'attesting' | 'fetched' | 'submitting' | 'done'; proofData?: any; error?: string }>({ open: false, step: 'idle' })
 
   /* ─── Fetch on-chain credit profile ─── */
@@ -172,7 +188,7 @@ export default function BorrowerCreditPage() {
   const handleFetchProof = async (event: any) => {
     setProofModal({ open: true, event, step: 'attesting' })
     try {
-      // Pass chainKey: 1 for Sepolia, 3 for Mainnet (sample wallets are Mainnet)
+      // Pass chainKey: 1 for Sepolia, 3 for Mainnet
       const isSepolia = event.etherscanUrl?.includes('sepolia') || event.network === 'sepolia'
       const { data } = await apiInstance.post('/credit-oracle/fetch-proof', {
         sourceTxHash: event.sourceTxHash,
@@ -194,12 +210,30 @@ export default function BorrowerCreditPage() {
     try {
       if (!window.ethereum) throw new Error('MetaMask not found')
 
-      const message = `Sanad Protocol: Verify DeFi credit event for ${discoverAddress}\nEvent: ${event.eventTypeName || 'DeFi Event'}\nTxHash: ${event.sourceTxHash}\nTimestamp: ${event.timestamp}`
-      const signature = await (window.ethereum as any).request({
-        method: 'personal_sign',
-        params: [message, discoverAddress],
+      // Must match contract's _validateBorrowerAuthorization format:
+      // keccak256(abi.encodePacked(borrower, oracleAddress, chainId, nonce))
+      const cc3RpcUrl = process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network'
+      const cc3Provider = new ethers.JsonRpcProvider(cc3RpcUrl, 102031, {
+        staticNetwork: ethers.Network.from(102031),
       })
-      if (!signature) throw new Error('Signature rejected')
+      const oracleContract = new ethers.Contract(
+        SANAD_CREDIT_ORACLE_ADDRESS,
+        ['function nonces(address) external view returns (uint256)'],
+        cc3Provider
+      )
+      let currentNonce = BigInt(0)
+      try {
+        currentNonce = await oracleContract.nonces(discoverAddress)
+      } catch (e) { /* default 0 */ }
+
+      const innerHash = ethers.solidityPackedKeccak256(
+        ['address', 'address', 'uint256', 'uint256'],
+        [discoverAddress, SANAD_CREDIT_ORACLE_ADDRESS, 102031, currentNonce]
+      )
+      const browserProvider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await browserProvider.getSigner()
+      const signature = await signer.signMessage(ethers.getBytes(innerHash))
+      if (!signature || signature.length !== 132) throw new Error('Invalid signature')
 
       const { data } = await apiInstance.post('/credit-oracle/prove-event', {
         address: discoverAddress,
@@ -226,7 +260,7 @@ export default function BorrowerCreditPage() {
   }
 
   const score = profile ? Number(profile.score) : 0
-  const tier = profile ? Number(profile.tier) : 0
+  const tier = profile ? normalizeTier(profile.tier) : 0
   const tierInfo = TIER_INFO[tier] || TIER_INFO[0]
   const totalRepaid = profile ? Number(profile.totalRepaidUSD) : 0
   const totalLiquidated = profile ? Number(profile.totalLiquidatedUSD) : 0
@@ -273,7 +307,7 @@ export default function BorrowerCreditPage() {
               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px]">CC3 Testnet</Badge>
             </div>
             <p className="text-sm text-[#4A4A4A]">
-              Your credit score is derived from cryptographically proven DeFi repayment events on Ethereum Mainnet, verified on-chain via Attestcoin&apos;s Block Prover. Each event is independently verified against the Ethereum state trie.
+              Your credit score is derived from cryptographically proven DeFi repayment events on Ethereum Sepolia testnet, verified on-chain via Attestcoin&apos;s Block Prover. Each event is independently verified against the Ethereum state trie.
             </p>
           </div>
         </div>
@@ -458,77 +492,8 @@ export default function BorrowerCreditPage() {
               <div className={`${GLASS} p-6`}>
                 <p className={LABEL}>Discover DeFi History</p>
                 <p className="mt-1 text-sm text-[#4A4A4A] mb-6">
-                  Scan your Ethereum Mainnet wallet for DeFi lending activity. Attestcoin will generate cryptographic proofs for verified events.
+                  Scan your Ethereum Sepolia wallet for DeFi lending activity. Attestcoin will generate cryptographic proofs for verified events on CC3 testnet.
                 </p>
-
-                {/* Demo Profiles for Judges */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/50">
-                      Try Sample Wallets
-                    </p>
-                    <span className="font-mono text-[9px] text-[#4A4A4A] italic">
-                      Prove is only available for your own wallet
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                    {[
-                      {
-                        label: "Prime Borrower",
-                        address: "0x891775eDdcaBABdCE4b476E335a9EEF73123C75b",
-                        desc: "$4K USDS Repayment on Aave v3",
-                        risk: "low",
-                        icon: <CheckCircle className="h-3.5 w-3.5" />,
-                      },
-                      {
-                        label: "Retail DeFi User",
-                        address: "0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3",
-                        desc: "$60 USDC Repayment on Aave v3",
-                        risk: "low",
-                        icon: <CheckCircle className="h-3.5 w-3.5" />,
-                      },
-                      {
-                        label: "Collateral Supplier",
-                        address: "0x424ae0175afdc844cc3ca87067d959fddae8ff8a",
-                        desc: "$600 USDC Supplied as Collateral on Aave v3",
-                        risk: "neutral",
-                        icon: <Coins className="h-3.5 w-3.5" />,
-                      },
-                      {
-                        label: "⚠️ Liquidated Borrower",
-                        address: "0x08cbf44086a86566b38cac15bc38d201689281d5",
-                        desc: "$36 USDC Liquidated on Aave V2",
-                        risk: "high",
-                        icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                      },
-                    ].map((demo) => (
-                      <button
-                        key={demo.address}
-                        onClick={() => {
-                          setDiscoverAddress(demo.address)
-                          handleDiscoverWithAddress(demo.address)
-                        }}
-                        disabled={discovering}
-                        className={`rounded-xl border p-3 text-left transition-all hover:shadow-md disabled:opacity-50 ${
-                          demo.risk === 'high'
-                            ? 'border-red-200 bg-red-50/50 hover:bg-red-50'
-                            : demo.risk === 'neutral'
-                            ? 'border-amber-200 bg-amber-50/50 hover:bg-amber-50'
-                            : 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50'
-                        } ${discoverAddress === demo.address ? 'ring-2 ring-[#E1BAC2] shadow-md' : ''}`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`
-                            ${demo.risk === 'high' ? 'text-red-600' : demo.risk === 'neutral' ? 'text-amber-600' : 'text-emerald-600'}
-                          `}>{demo.icon}</span>
-                          <span className="text-xs font-bold text-[#171414]">{demo.label}</span>
-                        </div>
-                        <p className="text-[10px] text-[#4A4A4A] font-mono truncate">{demo.address.slice(0, 10)}...{demo.address.slice(-6)}</p>
-                        <p className="text-[10px] text-[#4A4A4A] mt-1">{demo.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="flex gap-3 mb-6">
                   <div className="relative flex-1">
@@ -567,36 +532,6 @@ export default function BorrowerCreditPage() {
                             <p className="mt-1 font-display text-xl font-extrabold text-[#171414]">{s.value}</p>
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Proof result feedback */}
-                    {proofResult && (
-                      <div className={`rounded-2xl border p-4 ${proofResult.txHash ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          {proofResult.txHash ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-red-500" />}
-                          <p className={`text-sm font-bold ${proofResult.txHash ? 'text-emerald-700' : 'text-red-600'}`}>
-                            {proofResult.txHash ? 'Proof Submitted Successfully' : 'Proof Failed'}
-                          </p>
-                        </div>
-                        <p className="text-xs text-[#4A4A4A] mt-1">{proofResult.message}</p>
-                        {proofResult.txHash && (
-                          <div className="mt-2 flex items-center gap-3">
-                            <a
-                              href={`https://creditcoin-testnet.blockscout.com/tx/${proofResult.txHash}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors flex items-center gap-1"
-                            >
-                              {proofResult.txHash.slice(0, 18)}... <ExternalLink className="h-3 w-3" />
-                            </a>
-                            {proofResult.score && (
-                              <Badge className="bg-[#171414] text-[#E1BAC2] font-mono text-[10px]">
-                                Score: {proofResult.score} · {proofResult.tier}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
                       </div>
                     )}
 
@@ -803,7 +738,7 @@ export default function BorrowerCreditPage() {
                   <div className="space-y-1.5">
                     <div className="flex justify-between">
                       <span className="font-mono text-[10px] text-[#E1BAC2]/50">Chain Key</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.chainKey} (Ethereum Mainnet)</span>
+                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.chainKey} ({proofModal.proofData.chainKey === 1 ? 'Ethereum Sepolia' : 'Ethereum Mainnet'})</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-mono text-[10px] text-[#E1BAC2]/50">Block Height</span>

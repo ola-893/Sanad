@@ -128,6 +128,7 @@ export default function KycVerificationPage() {
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [proofTxHash, setProofTxHash] = useState<string | null>(null)
   const [noHistoryMessage, setNoHistoryMessage] = useState<string | null>(null)
+  const [provingAttempted, setProvingAttempted] = useState<boolean>(false)
 
   // 3. ID Verification
   const [idType, setIdType] = useState<IdType>("nin")
@@ -154,12 +155,13 @@ export default function KycVerificationPage() {
     }
   }, [step, walletAddress])
 
-  // Auto-generate proof after scan completes (only if events found)
+  // Auto-generate proof after scan completes (only if events found, only once)
   useEffect(() => {
-    if (step === 2 && discoveredEvents.length > 0 && !creditVerified && !isProvingOnCC3 && !isScanningDeFi && !noHistoryMessage) {
+    if (step === 2 && discoveredEvents.length > 0 && !creditVerified && !isProvingOnCC3 && !isScanningDeFi && !noHistoryMessage && !provingAttempted) {
+      setProvingAttempted(true)
       handleProveCreditScore()
     }
-  }, [discoveredEvents, step, creditVerified, isProvingOnCC3, isScanningDeFi, noHistoryMessage])
+  }, [discoveredEvents, step, creditVerified, isProvingOnCC3, isScanningDeFi, noHistoryMessage, provingAttempted])
 
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -172,6 +174,7 @@ export default function KycVerificationPage() {
     setCreditVerified(false)
     setOnChainProfile(null)
     setProofTxHash(null)
+    setProvingAttempted(false)
     handleScanDeFiHistory(preset.address)
   }
 
@@ -197,7 +200,7 @@ export default function KycVerificationPage() {
         body: JSON.stringify({ address: addressToScan }),
       })
       clearInterval(progressTimer)
-      if (!res.ok) throw new Error(`Failed to discover Ethereum history (${res.status})`)
+      if (!res.ok) throw new Error(`Failed to discover DeFi history (${res.status})`)
       const json = await res.json()
       const data = json.data
 
@@ -211,7 +214,7 @@ export default function KycVerificationPage() {
       if (data.hasVerifiedHistory === false) {
         setDiscoveredEvents([])
         setDiscoverySummary(null)
-        setNoHistoryMessage(data.message || "No proven DeFi history found for this address yet.")
+        setNoHistoryMessage(data.message || "No DeFi lending activity found on Sepolia yet.")
         setOnChainProfile({
           borrower: addressToScan,
           score: 500,
@@ -299,26 +302,10 @@ export default function KycVerificationPage() {
       }
 
       if (!signatureValid) {
-        // No valid signature — skip on-chain proof, use local scoring
-        console.log("[KYC] No valid signature, using local credit scoring")
-        const totalRepay = discoveredEvents.filter(e => e.eventType === 0).reduce((s, e) => s + e.volumeUSD, 0)
-        let fallbackScore = 500
-        let fallbackTier = "Unscored"
-        if (totalRepay > 10000) { fallbackScore = 845; fallbackTier = "Gold" }
-        else if (totalRepay > 5000) { fallbackScore = 720; fallbackTier = "Silver" }
-        else if (totalRepay > 1000) { fallbackScore = 600; fallbackTier = "Bronze" }
-        else if (totalRepay > 0) { fallbackScore = 550; fallbackTier = "HighRisk" }
-
-        setOnChainProfile({
-          borrower: walletAddress, score: fallbackScore, tier: fallbackTier,
-          totalRepaidUSD: String(totalRepay), totalLiquidatedUSD: "0", totalDefaultedUSD: "0",
-          cleanRepaymentCount: discoveredEvents.filter(e => e.eventType === 0).length,
-          liquidationCount: discoveredEvents.filter(e => e.eventType === 1).length,
-          defaultCount: discoveredEvents.filter(e => e.eventType === 2).length,
-          provenEventsCount: discoveredEvents.length,
-          lastEvaluatedTimestamp: Math.floor(Date.now() / 1000), provenEvents: discoveredEvents,
-        })
-        setCreditVerified(true)
+        // No valid signature — cannot prove on-chain. User must sign to proceed.
+        console.log("[KYC] No valid signature — proof requires MetaMask authorization")
+        setErrorMessage("Wallet signature is required to generate an on-chain credit proof. Please click 'Sign & Prove' and approve the MetaMask request.")
+        setIsProvingOnCC3(false)
         return
       }
 
@@ -358,27 +345,10 @@ export default function KycVerificationPage() {
       }
       setCreditVerified(true)
     } catch (err: any) {
-      console.warn("[KYC] Proof submission failed, using local credit scoring:", err.message)
-      // Fallback: compute credit score locally from discovered events
-      const totalRepay = discoveredEvents.filter(e => e.eventType === 0).reduce((s, e) => s + e.volumeUSD, 0)
-      const liquidations = discoveredEvents.filter(e => e.eventType === 1).length
-      const defaults = discoveredEvents.filter(e => e.eventType === 2).length
-      let fallbackScore = 500
-      let fallbackTier = "Unscored"
-      if (totalRepay > 10000 && liquidations === 0 && defaults === 0) { fallbackScore = 845; fallbackTier = "Gold" }
-      else if (totalRepay > 5000 && liquidations <= 1) { fallbackScore = 720; fallbackTier = "Silver" }
-      else if (totalRepay > 1000) { fallbackScore = 600; fallbackTier = "Bronze" }
-      else if (totalRepay > 0) { fallbackScore = 550; fallbackTier = "HighRisk" }
-
-      setOnChainProfile({
-        borrower: walletAddress, score: fallbackScore, tier: fallbackTier,
-        totalRepaidUSD: String(totalRepay), totalLiquidatedUSD: "0", totalDefaultedUSD: "0",
-        cleanRepaymentCount: discoveredEvents.filter(e => e.eventType === 0).length,
-        liquidationCount: liquidations, defaultCount: defaults,
-        provenEventsCount: discoveredEvents.length,
-        lastEvaluatedTimestamp: Math.floor(Date.now() / 1000), provenEvents: discoveredEvents,
-      })
-      setCreditVerified(true)
+      console.warn("[KYC] Proof submission failed:", err.message)
+      // Do NOT mark as verified — user must retry proof submission
+      setErrorMessage(`Proof submission failed: ${err.message}. Please click 'Sign & Prove' to retry.`)
+      setCreditVerified(false)
     } finally {
       setIsProvingOnCC3(false)
     }
@@ -578,7 +548,24 @@ export default function KycVerificationPage() {
     }
   }
 
-  const handlePrevStep = () => { if (step > 1) setStep(step - 1) }
+  const handlePrevStep = () => {
+    if (step > 1) {
+      // Reset DeFi scan state so it rescans when re-entering step 2
+      if (step === 2) {
+        setDiscoveredEvents([])
+        setDiscoverySummary(null)
+        setCreditVerified(false)
+        setOnChainProfile(null)
+        setProofTxHash(null)
+        setNoHistoryMessage(null)
+        setIsDemoMode(false)
+        setScanStep(0)
+        setProofStep(0)
+        setProvingAttempted(false)
+      }
+      setStep(step - 1)
+    }
+  }
   const handleIdUpload = (side: "front" | "back") => { side === "front" ? setIdFrontUploaded(true) : setIdBackUploaded(true) }
   const handleSelfieUpload = () => setSelfieUploaded(true)
   const handleComplete = () => router.push("/dashboard/borrower")
@@ -808,12 +795,12 @@ export default function KycVerificationPage() {
                       <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
                       <div>
                         <p className="text-sm font-medium text-[#171414]">Scanning DeFi history...</p>
-                        <p className="text-xs text-muted-foreground">Querying Ethereum Mainnet for lending activity</p>
+                        <p className="text-xs text-muted-foreground">Querying Ethereum Sepolia for lending activity</p>
                       </div>
                     </div>
                     <div className="space-y-2.5">
                       {[
-                        "Connecting to Ethereum Mainnet RPC",
+                        "Connecting to Ethereum Sepolia RPC",
                         "Scanning Aave v3, Compound v3, Morpho Blue",
                         "Scanning Spark, MakerDAO, Euler, Fluid",
                         "Scanning Maple, Goldfinch, Fraxlend",
@@ -872,9 +859,9 @@ export default function KycVerificationPage() {
                   </div>
                 )}
 
-                {/* Discovered records (compact) */}
+                {/* Discovered records + Sign & Prove button */}
                 {!isScanningDeFi && discoveredEvents.length > 0 && !creditVerified && (
-                  <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
+                  <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4 space-y-3">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-medium text-[#171414]">Found {discoveredEvents.length} lending record{discoveredEvents.length !== 1 ? 's' : ''}</p>
                       <div className="flex items-center gap-2">
@@ -900,6 +887,17 @@ export default function KycVerificationPage() {
                         </div>
                       ))}
                     </div>
+                    <Button
+                      onClick={() => handleProveCreditScore()}
+                      disabled={isProvingOnCC3}
+                      className="w-full rounded-xl bg-[#171414] text-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-black"
+                    >
+                      {isProvingOnCC3 ? (
+                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Proving on CC3...</>
+                      ) : (
+                        <><Shield className="h-3.5 w-3.5 mr-1.5" /> Sign & Prove on CC3</>
+                      )}
+                    </Button>
                   </div>
                 )}
 
@@ -907,12 +905,18 @@ export default function KycVerificationPage() {
                 {!isScanningDeFi && noHistoryMessage && creditVerified && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
                     <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
-                      <AlertTriangle className="h-5 w-5" /> No On-Chain History
+                      <AlertTriangle className="h-5 w-5" /> No DeFi Activity Found
                     </div>
                     <p className="text-xs text-amber-800">{noHistoryMessage}</p>
-                    <p className="text-xs text-muted-foreground">
-                      You'll be assigned a base credit tier. Your score can improve as you build on-chain lending history.
-                    </p>
+                    <div className="rounded-xl bg-white border border-amber-100 p-3 space-y-2">
+                      <p className="text-[11px] font-bold text-[#171414]">How to build your credit score:</p>
+                      <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
+                        <li>Supply collateral on <span className="font-bold">Aave v3 Sepolia</span></li>
+                        <li>Borrow a small amount against your collateral</li>
+                        <li>Repay the loan on time</li>
+                        <li>Return here and click <span className="font-bold">Discover</span> again to prove your activity</li>
+                      </ul>
+                    </div>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="outline" className="text-[10px] font-mono border-amber-300 bg-white text-amber-700">
                         Tier: Unscored (Base)

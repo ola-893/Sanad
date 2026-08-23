@@ -22,12 +22,12 @@ export interface OracleSubmissionResult {
 export const SANAD_CREDIT_ORACLE_ABI = [
   'function submitSingleProof(uint64 chainKey, uint64 height, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) calldata merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) calldata continuityProof, address borrower, tuple(bytes32 sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp) calldata eventData, bytes calldata borrowerSignature) external returns (bool)',
   'function submitBatchProof(uint64 chainKey, uint64[] calldata heights, bytes[] calldata encodedTransactions, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings)[] calldata merkleProofs, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) calldata sharedContinuityProof, address borrower, tuple(bytes32 sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp)[] calldata eventsData, bytes calldata borrowerSignature) external returns (bool)',
-  'function getCreditProfile(address borrower) external view returns (tuple(address borrower, uint256 score, uint8 tier, uint256 totalRepaidUSD, uint256 totalLiquidatedUSD, uint256 totalDefaultedUSD, uint32 cleanRepaymentCount, uint32 liquidationCount, uint32 defaultCount, uint64 lastEvaluatedTimestamp, uint32 provenEventsCount))',
+  'function getCreditProfile(address borrower) external view returns (tuple(address borrower, uint256 score, uint8 tier, uint256 totalRepaidUSD, uint256 totalLiquidatedUSD, uint256 totalDefaultedUSD, uint256 totalBorrowedUSD, uint32 cleanRepaymentCount, uint32 liquidationCount, uint32 defaultCount, uint32 activeBorrowCount, uint32 collateralSupplyCount, uint64 lastEvaluatedTimestamp, uint32 provenEventsCount))',
   'function getProvenEvents(address borrower) external view returns (tuple(bytes32 sourceTxHash, uint64 blockHeight, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp)[])',
   'function isTxProven(bytes32 txHash) external view returns (bool)',
-  'function primarySourceChainKey() external view returns (uint64)',
-  'event CreditScoreUpdated(address indexed borrower, uint256 oldScore, uint256 newScore, uint8 tier, bytes32 indexed txHash)',
-  'event DeFiEventProven(address indexed borrower, bytes32 indexed sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 blockHeight)'
+  'function isSupportedChainKey(uint64) external view returns (bool)',
+  'event CreditScoreUpdated(address indexed borrower, uint256 oldScore, uint256 newScore, uint8 tier, bytes32 triggerTxHash)',
+  'event EventProven(address indexed borrower, bytes32 indexed sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 blockHeight)'
 ];
 
 export interface FetchProofResult {
@@ -62,7 +62,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x74357E5FED91D6dDdd39847304b8651634693A00';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
   }
@@ -196,7 +196,7 @@ export class AttestcoinOracleRelayerService {
       const receipt = await tx.wait();
 
       const profile = await contract.getCreditProfile(borrowerAddress);
-      const tiers = ['Unscored', 'HighRisk', 'Bronze', 'Silver', 'Gold'];
+      const tiers = ['Unscored', 'Bronze', 'Silver', 'Gold', 'HighRisk'];
 
       return {
         success: true,
@@ -225,7 +225,7 @@ export class AttestcoinOracleRelayerService {
       const contract = this.getContract();
       const profile = await contract.getCreditProfile(borrowerAddress);
       const provenEvents = await contract.getProvenEvents(borrowerAddress);
-      const tiers = ['Unscored', 'HighRisk', 'Bronze', 'Silver', 'Gold'];
+      const tiers = ['Unscored', 'Bronze', 'Silver', 'Gold', 'HighRisk'];
       const protocols = [
         'Aave v3',
         'Compound v3',
@@ -238,7 +238,7 @@ export class AttestcoinOracleRelayerService {
         'Goldfinch Protocol',
         'Fraxlend'
       ];
-      const eventTypes = ['Clean Repayment', 'Overcollateralized Liquidation', 'Undercollateralized Default', 'Collateral Supply'];
+      const eventTypes = ['Clean Repayment', 'Overcollateralized Liquidation', 'Undercollateralized Default', 'Collateral Supply', 'Active Borrow Position'];
 
       return {
         borrower: profile.borrower,
@@ -250,6 +250,8 @@ export class AttestcoinOracleRelayerService {
         cleanRepaymentCount: Number(profile.cleanRepaymentCount),
         liquidationCount: Number(profile.liquidationCount),
         defaultCount: Number(profile.defaultCount),
+        activeBorrowCount: Number(profile.activeBorrowCount),
+        collateralSupplyCount: Number(profile.collateralSupplyCount),
         provenEventsCount: Number(profile.provenEventsCount),
         lastEvaluatedTimestamp: Number(profile.lastEvaluatedTimestamp),
         provenEvents: provenEvents.map((e: any) => ({
