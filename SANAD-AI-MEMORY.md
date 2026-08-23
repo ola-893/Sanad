@@ -351,13 +351,13 @@ enum CreditTier {
 
 | # | Bug | Severity | File | Status |
 |---|-----|----------|------|--------|
-| 1 | `totalBorrowedUSD` missing from all 3 ABI files | **CRITICAL** | relayer.service.ts, sanad-credit-oracle.ts (×2) | ✅ Fixed |
-| 2 | Credit profile page signed human-readable string instead of keccak256 | **CRITICAL** | credit/page.tsx | ✅ Fixed |
-| 3 | `Active Borrow Position` missing from relayer eventTypes array | **MEDIUM** | relayer.service.ts | ✅ Fixed |
-| 4 | `Active Borrow` missing from frontend EVENT_TYPE_NAMES | **LOW** | credit/page.tsx | ✅ Fixed |
-| 5 | Relayer tiers array had old order after backend dev's push | **HIGH** | relayer.service.ts (line 199) | ✅ Fixed |
-| 6 | Infinite loop when MetaMask signature cancelled in KYC | **HIGH** | kyc/page.tsx | ✅ Fixed |
-| 7 | Volume showed raw wei for non-USD tokens | **MEDIUM** | defi-discovery.service.ts | ✅ Fixed |
+| 1 | `totalBorrowedUSD` missing from all 3 ABI files | **CRITICAL** | relayer.service.ts, sanad-credit-oracle.ts (x2) | Fixed |
+| 2 | Credit profile page signed human-readable string instead of keccak256 | **CRITICAL** | credit/page.tsx | Fixed |
+| 3 | `Active Borrow Position` missing from relayer eventTypes array | **MEDIUM** | relayer.service.ts | Fixed |
+| 4 | `Active Borrow` missing from frontend EVENT_TYPE_NAMES | **LOW** | credit/page.tsx | Fixed |
+| 5 | Relayer tiers array had old order after backend dev's push | **HIGH** | relayer.service.ts (line 199) | Fixed |
+| 6 | Infinite loop when MetaMask signature cancelled in KYC | **HIGH** | kyc/page.tsx | Fixed |
+| 7 | Volume showed raw wei for non-USD tokens | **MEDIUM** | defi-discovery.service.ts | Fixed |
 
 ### Pre-existing Issues (Not Our Scope)
 - `pawnshop-profile.controller.ts` — string type error
@@ -378,28 +378,28 @@ All 20 checks passed:
 
 | # | Check | Result |
 |---|-------|--------|
-| 1 | Contract CreditTier enum | Unscored(0) Bronze(1) Silver(2) Gold(3) HighRisk(4) ✅ |
-| 2 | Contract EventType enum | CleanRepayment(0)...ActiveBorrowPosition(4) ✅ |
-| 3 | Contract CreditProfile struct | 14 fields in order ✅ |
-| 4 | Contract chain key | isSupportedChainKey mapping, supports 1+3 ✅ |
-| 5 | Contract authorization | msg.sender == borrower \|\| msg.sender == owner() ✅ |
-| 6 | Relayer ABI | 14 fields ✅ |
-| 7 | Frontend lib ABI | 14 fields ✅ |
-| 8 | Frontend core ABI | 14 fields ✅ |
-| 9 | Relayer tiers (line 199) | ['Unscored','Bronze','Silver','Gold','HighRisk'] ✅ |
-| 10 | Relayer tiers (line 228) | ['Unscored','Bronze','Silver','Gold','HighRisk'] ✅ |
-| 11 | Relayer eventTypes | 5 types with Active Borrow Position ✅ |
-| 12 | Frontend TIER_INFO | 0=Unrated 1=Bronze 2=Silver 3=Gold 4=HighRisk ✅ |
-| 13 | Frontend EVENT_TYPE_NAMES | 0-4 with Active Borrow ✅ |
-| 14 | Frontend normalizeTier | bronze→1 silver→2 gold→3 highrisk→4 ✅ |
-| 15 | Relayer ABI events | EventProven + CreditScoreUpdated ✅ |
-| 16 | Frontend core ABI events | EventProven + CreditScoreUpdated ✅ |
-| 17 | Frontend lib ABI events | EventProven + CreditScoreUpdated ✅ |
-| 18 | Signature: contract | keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(borrower, address(this), block.chainid, nonce)))) |
-| 19 | Signature: KYC page | solidityPackedKeccak256(["address","address","uint256","uint256"], [wallet, oracle, 102031, nonce]) + signMessage ✅ MATCH |
-| 20 | Signature: credit profile | Same as KYC page ✅ MATCH |
-| 21 | Typecheck frontend | Clean ✅ |
-| 22 | Typecheck backend | Clean ✅ |
+| 1 | Contract CreditTier enum | Unscored(0) Bronze(1) Silver(2) Gold(3) HighRisk(4) PASS |
+| 2 | Contract EventType enum | CleanRepayment(0)...ActiveBorrowPosition(4) PASS |
+| 3 | Contract CreditProfile struct | 14 fields in order PASS |
+| 4 | Contract chain key | isSupportedChainKey mapping, supports 1+3 PASS |
+| 5 | Contract authorization | msg.sender == borrower or msg.sender == owner() PASS |
+| 6 | Relayer ABI | 14 fields PASS |
+| 7 | Frontend lib ABI | 14 fields PASS |
+| 8 | Frontend core ABI | 14 fields PASS |
+| 9 | Relayer tiers (line 199) | ['Unscored','Bronze','Silver','Gold','HighRisk'] PASS |
+| 10 | Relayer tiers (line 228) | ['Unscored','Bronze','Silver','Gold','HighRisk'] PASS |
+| 11 | Relayer eventTypes | 5 types with Active Borrow Position PASS |
+| 12 | Frontend TIER_INFO | 0=Unrated 1=Bronze 2=Silver 3=Gold 4=HighRisk PASS |
+| 13 | Frontend EVENT_TYPE_NAMES | 0-4 with Active Borrow PASS |
+| 14 | Frontend normalizeTier | bronze->1 silver->2 gold->3 highrisk->4 PASS |
+| 15 | Relayer ABI events | EventProven + CreditScoreUpdated PASS |
+| 16 | Frontend core ABI events | EventProven + CreditScoreUpdated PASS |
+| 17 | Frontend lib ABI events | EventProven + CreditScoreUpdated PASS |
+| 18 | Signature: contract | keccak256(abi.encodePacked) + EIP-191 wrap |
+| 19 | Signature: KYC page | solidityPackedKeccak256 + signMessage PASS MATCH |
+| 20 | Signature: credit profile | Same as KYC page PASS MATCH |
+| 21 | Typecheck frontend | Clean PASS |
+| 22 | Typecheck backend | Clean PASS |
 
 ---
 
@@ -525,11 +525,11 @@ This enables `_queryLiveEtherscanEvents()` in `defi-discovery.service.ts` to ret
 2. Signs wallet authentication message
 3. Registers with profile details
 4. KYC Step 1: Personal info
-5. **KYC Step 2: Auto-scans wallet's DeFi history on Sepolia → generates Attestcoin proof on CC3 → shows credit score**
+5. **KYC Step 2: Auto-scans wallet's DeFi history on Sepolia -> generates Attestcoin proof on CC3 -> shows credit score**
 6. KYC Step 3-4: ID + Face (can be skipped in demo)
 7. Dashboard shows credit score, ETH balance, SAG opportunities
 8. Browse NFTs, view details
-9. **Credit profile page: Discover events → Sign & Prove on CC3 → Score updates**
+9. **Credit profile page: Discover events -> Sign & Prove on CC3 -> Score updates**
 
 ---
 
@@ -538,38 +538,38 @@ This enables `_queryLiveEtherscanEvents()` in `defi-discovery.service.ts` to ret
 ### Sign In (Returning User)
 ```
 User visits /login/investor
-  → MetaMask already connected?
-  → Check localStorage.authState for valid token + matching wallet
-  → Both found → Auto-redirect to /dashboard (no sign needed)
+  -> MetaMask already connected?
+  -> Check localStorage.authState for valid token + matching wallet
+  -> Both found -> Auto-redirect to /dashboard (no sign needed)
 ```
 
 ### Sign In (First Time)
 ```
 User visits /login/investor
-  → Clicks "Connect MetaMask"
-  → Clicks "Sign & Login"
-  → Signs nonce message
-  → Backend verifies signature → returns JWT
-  → Tokens stored in localStorage.authState + sessionStorage
-  → Redirect to /dashboard
+  -> Clicks "Connect MetaMask"
+  -> Clicks "Sign & Login"
+  -> Signs nonce message
+  -> Backend verifies signature -> returns JWT
+  -> Tokens stored in localStorage.authState + sessionStorage
+  -> Redirect to /dashboard
 ```
 
 ### Sign Out
 ```
 User clicks "Sign Out"
-  → wallet_revokePermissions() — MetaMask disconnects
-  → Clear in-memory state (userAtom)
-  → Redirect to /
-  → Tokens PERSIST in localStorage (for auto-login on reconnect)
+  -> wallet_revokePermissions() — MetaMask disconnects
+  -> Clear in-memory state (userAtom)
+  -> Redirect to /
+  -> Tokens PERSIST in localStorage (for auto-login on reconnect)
 ```
 
 ### Auto-Login on Reconnect
 ```
 User reconnects MetaMask
-  → useWalletAuth detects connected address
-  → Checks localStorage.authState + sessionStorage for token
-  → Token found + wallet matches → walletAuthenticated = true
-  → WalletConnectCard auto-redirects to dashboard
+  -> useWalletAuth detects connected address
+  -> Checks localStorage.authState + sessionStorage for token
+  -> Token found + wallet matches -> walletAuthenticated = true
+  -> WalletConnectCard auto-redirects to dashboard
 ```
 
 **Key: Tokens are NOT cleared on sign-out.** Only MetaMask is disconnected. This allows auto-login when the user reconnects.
@@ -687,13 +687,13 @@ cd backend && npx tsx src/scripts/clear-users.ts
 
 ## Sample Wallets (For Testing)
 
-| Wallet | Activity | Score |
-|--------|----------|-------|
-| `0x891775eDdcaBABdCE4b476E335a9EEF73123C75b` | Prime Borrower — 8 events, $4K+ repayment | — |
-| `0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3` | Retail DeFi User — 6 events, $60 repayment | — |
-| `0x424ae017b571e8ff8a...` | Collateral Supplier — supply events | — |
-| `0x08cbf440...9281d5` | Liquidated Borrower — liquidation on Aave V2 | — |
-| `0xF17cA94560018D6AE9d5e1Af15aEe8E14d615963` | Test wallet — 3 Sepolia Aave transactions | — |
+| Wallet | Activity |
+|--------|----------|
+| `0x891775eDdcaBABdCE4b476E335a9EEF73123C75b` | Prime Borrower — 8 events, $4K+ repayment |
+| `0xcad85e1ec294f71f3ca68ef3261f894f50c1c4c3` | Retail DeFi User — 6 events, $60 repayment |
+| `0x424ae017b571e8ff8a...` | Collateral Supplier — supply events |
+| `0x08cbf440...9281d5` | Liquidated Borrower — liquidation on Aave V2 |
+| `0xF17cA94560018D6AE9d5e1Af15aEe8E14d615963` | Test wallet — 3 Sepolia Aave transactions |
 
 ---
 
