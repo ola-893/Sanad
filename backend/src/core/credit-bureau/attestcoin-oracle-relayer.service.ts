@@ -261,7 +261,7 @@ export class AttestcoinOracleRelayerService {
           eventType: eventTypes[Number(e.eventType)] || 'Event',
           volumeUSD: ethers.formatUnits(e.volumeUSD, 6),
           timestamp: Number(e.timestamp),
-          etherscanUrl: `https://etherscan.io/tx/${e.sourceTxHash}`,
+          etherscanUrl: `https://eth-sepolia.blockscout.com/tx/${e.sourceTxHash}`,
         })),
         oracleAddress: this.oracleContractAddress,
       };

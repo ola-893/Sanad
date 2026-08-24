@@ -6,20 +6,20 @@ import apiInstance from "@/lib/axios-v1"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   ArrowLeft,
   Fingerprint,
   ExternalLink,
   Loader2,
   Shield,
-  TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Activity,
   Link2,
   Wallet,
   Clock,
+  Search,
+  ChevronRight,
+  Zap,
 } from "lucide-react"
 import Link from "next/link"
 import { useAtom } from "jotai"
@@ -28,17 +28,14 @@ import { ethers } from "ethers"
 import { SANAD_CREDIT_ORACLE_ADDRESS } from "@/core/credit-bureau/sanad-credit-oracle"
 
 /* ─── Design tokens ─── */
-const GLASS = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
-const LABEL = "font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#171414]/50"
+const GLASS = "glass-panel rounded-3xl border border-[#171414]/10 bg-white/70 shadow-soft-editorial"
+const LABEL = "font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#171414]/40"
 const VALUE = "font-display text-3xl font-extrabold tabular-nums text-[#171414]"
-const INPUT = "rounded-xl border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2]"
-const BTN = "rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black"
 
 /* ─── Volume formatting helper ─── */
 function formatVolume(raw: string | number | undefined | null): string {
   const n = typeof raw === "string" ? Number(raw) : (raw ?? 0)
   if (!isFinite(n) || isNaN(n) || n < 0) return "—"
-  // Values above 1e15 are almost certainly raw uint256 overflow / unconverted wei
   if (n > 1e15) return "—"
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
@@ -48,32 +45,30 @@ function formatVolume(raw: string | number | undefined | null): string {
 
 /* ─── Protocol & Event type maps ─── */
 const PROTOCOL_NAMES: Record<number, string> = {
-  0: "Aave v3",
-  1: "Compound v3",
-  2: "Morpho Blue",
-  3: "Spark Protocol",
-  4: "MakerDAO",
-  5: "Euler v2",
-  6: "Fluid",
-  7: "Maple Finance",
-  8: "Goldfinch",
-  9: "Fraxlend",
+  0: "Aave v3", 1: "Compound v3", 2: "Morpho Blue", 3: "Spark Protocol",
+  4: "MakerDAO", 5: "Euler v2", 6: "Fluid", 7: "Maple Finance",
+  8: "Goldfinch", 9: "Fraxlend",
 }
 
 const EVENT_TYPE_NAMES: Record<number, string> = {
-  0: "Clean Repayment",
-  1: "Liquidation",
-  2: "Default",
-  3: "Collateral Supply",
-  4: "Active Borrow",
+  0: "Clean Repayment", 1: "Liquidation", 2: "Default",
+  3: "Collateral Supply", 4: "Active Borrow",
 }
 
-const TIER_INFO: Record<number, { label: string; color: string; bg: string }> = {
-  0: { label: "Unrated", color: "text-gray-500", bg: "bg-gray-100" },
-  1: { label: "Bronze", color: "text-orange-600", bg: "bg-orange-50" },
-  2: { label: "Silver", color: "text-slate-500", bg: "bg-slate-50" },
-  3: { label: "Gold", color: "text-amber-600", bg: "bg-amber-50" },
-  4: { label: "HighRisk", color: "text-red-600", bg: "bg-red-50" },
+const EVENT_COLORS: Record<number, string> = {
+  0: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  1: "bg-red-50 text-red-600 border-red-200",
+  2: "bg-red-50 text-red-600 border-red-200",
+  3: "bg-blue-50 text-blue-600 border-blue-200",
+  4: "bg-purple-50 text-purple-600 border-purple-200",
+}
+
+const TIER_INFO: Record<number, { label: string; color: string; glow: string }> = {
+  0: { label: "Unrated", color: "text-[#171414]/50", glow: "" },
+  1: { label: "Bronze", color: "text-amber-600", glow: "shadow-[0_0_20px_rgba(245,158,11,0.2)]" },
+  2: { label: "Silver", color: "text-gray-500", glow: "shadow-[0_0_20px_rgba(148,163,184,0.2)]" },
+  3: { label: "Gold", color: "text-yellow-600", glow: "shadow-[0_0_20px_rgba(250,204,21,0.3)]" },
+  4: { label: "HighRisk", color: "text-red-600", glow: "shadow-[0_0_20px_rgba(248,113,113,0.2)]" },
 }
 
 interface CreditProfile {
@@ -90,16 +85,15 @@ interface CreditProfile {
   provenEventsCount: number
 }
 
-/** Normalize tier — contract may return numeric (0-5) or string ('Unscored', 'Poor', etc.) */
 function normalizeTier(raw: number | string | undefined): number {
-  if (typeof raw === 'number') return raw
-  if (typeof raw === 'string') {
+  if (typeof raw === "number") return raw
+  if (typeof raw === "string") {
     const lower = raw.toLowerCase()
-    if (lower === 'unscored' || lower === 'unrated') return 0
-    if (lower === 'bronze') return 1
-    if (lower === 'silver') return 2
-    if (lower === 'gold') return 3
-    if (lower === 'highrisk' || lower === 'high risk') return 4
+    if (lower === "unscored" || lower === "unrated") return 0
+    if (lower === "bronze") return 1
+    if (lower === "silver") return 2
+    if (lower === "gold") return 3
+    if (lower === "highrisk" || lower === "high risk") return 4
     const n = Number(raw)
     return isNaN(n) ? 0 : n
   }
@@ -145,7 +139,13 @@ export default function BorrowerCreditPage() {
   const [discovering, setDiscovering] = useState(false)
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null)
   const [provingEvent, setProvingEvent] = useState<string | null>(null)
-  const [proofModal, setProofModal] = useState<{ open: boolean; event?: any; step: 'idle' | 'attesting' | 'fetched' | 'submitting' | 'done'; proofData?: any; error?: string }>({ open: false, step: 'idle' })
+  const [proofModal, setProofModal] = useState<{
+    open: boolean
+    event?: any
+    step: "idle" | "attesting" | "fetched" | "submitting" | "done"
+    proofData?: any
+    error?: string
+  }>({ open: false, step: "idle" })
 
   /* ─── Fetch on-chain credit profile ─── */
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -184,58 +184,55 @@ export default function BorrowerCreditPage() {
   }
   const handleDiscover = () => handleDiscoverWithAddress(discoverAddress)
 
-  /* ─── Fetch Attestcoin proof (step 2+3: attestation + proof generation) ─── */
+  /* ─── Fetch Attestcoin proof ─── */
   const handleFetchProof = async (event: any) => {
-    setProofModal({ open: true, event, step: 'attesting' })
+    setProofModal({ open: true, event, step: "attesting" })
     try {
-      // Pass chainKey: 1 for Sepolia, 3 for Mainnet
-      const isSepolia = event.etherscanUrl?.includes('sepolia') || event.network === 'sepolia'
-      const { data } = await apiInstance.post('/credit-oracle/fetch-proof', {
+      const isSepolia = event.etherscanUrl?.includes("sepolia") || event.network === "sepolia"
+      const { data } = await apiInstance.post("/credit-oracle/fetch-proof", {
         sourceTxHash: event.sourceTxHash,
         blockHeight: event.blockHeight,
         chainKey: isSepolia ? 1 : 3,
       })
       const proofData = data?.data || data
-      setProofModal(prev => ({ ...prev, step: 'fetched', proofData }))
+      setProofModal((prev) => ({ ...prev, step: "fetched", proofData }))
     } catch (err: any) {
-      setProofModal(prev => ({ ...prev, step: 'idle', error: err.response?.data?.message || err.message || 'Failed to fetch proof' }))
+      setProofModal((prev) => ({ ...prev, step: "idle", error: err.response?.data?.message || err.message || "Failed to fetch proof" }))
     }
   }
 
-  /* ─── Submit proof to CC3 (step 4: MetaMask signature + contract call) ─── */
+  /* ─── Submit proof to CC3 ─── */
   const handleSubmitToCC3 = async () => {
     const { event, proofData } = proofModal
     if (!event || !proofData) return
-    setProofModal(prev => ({ ...prev, step: 'submitting', error: undefined }))
+    setProofModal((prev) => ({ ...prev, step: "submitting", error: undefined }))
     try {
-      if (!window.ethereum) throw new Error('MetaMask not found')
+      if (!window.ethereum) throw new Error("MetaMask not found")
 
-      // Must match contract's _validateBorrowerAuthorization format:
-      // keccak256(abi.encodePacked(borrower, oracleAddress, chainId, nonce))
-      const cc3RpcUrl = process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network'
+      const cc3RpcUrl = process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || "https://rpc.cc3-testnet.creditcoin.network"
       const cc3Provider = new ethers.JsonRpcProvider(cc3RpcUrl, 102031, {
         staticNetwork: ethers.Network.from(102031),
       })
       const oracleContract = new ethers.Contract(
         SANAD_CREDIT_ORACLE_ADDRESS,
-        ['function nonces(address) external view returns (uint256)'],
+        ["function nonces(address) external view returns (uint256)"],
         cc3Provider
       )
       let currentNonce = BigInt(0)
       try {
         currentNonce = await oracleContract.nonces(discoverAddress)
-      } catch (e) { /* default 0 */ }
+      } catch {}
 
       const innerHash = ethers.solidityPackedKeccak256(
-        ['address', 'address', 'uint256', 'uint256'],
+        ["address", "address", "uint256", "uint256"],
         [discoverAddress, SANAD_CREDIT_ORACLE_ADDRESS, 102031, currentNonce]
       )
       const browserProvider = new ethers.BrowserProvider(window.ethereum)
       const signer = await browserProvider.getSigner()
       const signature = await signer.signMessage(ethers.getBytes(innerHash))
-      if (!signature || signature.length !== 132) throw new Error('Invalid signature')
+      if (!signature || signature.length !== 132) throw new Error("Invalid signature")
 
-      const { data } = await apiInstance.post('/credit-oracle/prove-event', {
+      const { data } = await apiInstance.post("/credit-oracle/prove-event", {
         address: discoverAddress,
         event: {
           sourceTxHash: event.sourceTxHash,
@@ -249,13 +246,13 @@ export default function BorrowerCreditPage() {
       })
 
       const result = data?.data || data
-      setProofModal(prev => ({ ...prev, step: 'done', proofData: { ...prev.proofData, submitResult: result } }))
+      setProofModal((prev) => ({ ...prev, step: "done", proofData: { ...prev.proofData, submitResult: result } }))
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['credit-profile', walletAddress] })
-        queryClient.invalidateQueries({ queryKey: ['proven-events', walletAddress] })
+        queryClient.invalidateQueries({ queryKey: ["credit-profile", walletAddress] })
+        queryClient.invalidateQueries({ queryKey: ["proven-events", walletAddress] })
       }
     } catch (err: any) {
-      setProofModal(prev => ({ ...prev, step: 'fetched', error: err.message }))
+      setProofModal((prev) => ({ ...prev, step: "fetched", error: err.message }))
     }
   }
 
@@ -272,44 +269,22 @@ export default function BorrowerCreditPage() {
 
   const isOwnWallet = discoverAddress && walletAddress && discoverAddress.toLowerCase() === walletAddress.toLowerCase()
 
-  const scoreColor = score >= 800 ? "text-emerald-600" : score >= 600 ? "text-amber-600" : score >= 400 ? "text-orange-600" : "text-red-500"
-  const scoreRing = score >= 800 ? "stroke-emerald-500" : score >= 600 ? "stroke-amber-500" : score >= 400 ? "stroke-orange-500" : "stroke-red-500"
+  const scoreRing = score >= 750 ? "stroke-yellow-500" : score >= 550 ? "stroke-gray-400" : score >= 350 ? "stroke-amber-500" : "stroke-red-500"
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] p-6 md:p-10 max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#FAFAF8] p-6 md:p-10 max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/borrower">
-          <Button variant="ghost" size="sm" className="rounded-full font-mono text-[10px] text-[#171414] hover:bg-[#171414]/5">
+          <Button variant="ghost" size="sm" className="rounded-full font-mono text-[10px] text-[#171414]/60 hover:text-[#171414] hover:bg-[#171414]/5">
             <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back
           </Button>
         </Link>
         <div>
           <p className={LABEL}>Attestcoin Protocol</p>
-          <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+          <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-[#171414]">
             Credit Profile
           </h1>
-          <p className="mt-1 text-sm text-[#4A4A4A]">
-            On-chain credit score derived from proven DeFi repayment history
-          </p>
-        </div>
-      </div>
-
-      {/* Attestcoin Protocol Card */}
-      <div className={`${GLASS} overflow-hidden`}>
-        <div className="flex items-stretch">
-          <div className="flex items-center justify-center bg-[#171414] px-8">
-            <Fingerprint className="h-10 w-10 text-[#E1BAC2]" />
-          </div>
-          <div className="flex-1 px-6 py-5">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="font-display text-lg font-bold text-[#171414]">Attestcoin Credit Oracle</h3>
-              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px]">CC3 Testnet</Badge>
-            </div>
-            <p className="text-sm text-[#4A4A4A]">
-              Your credit score is derived from cryptographically proven DeFi repayment events on Ethereum Sepolia testnet, verified on-chain via Attestcoin&apos;s Block Prover. Each event is independently verified against the Ethereum state trie.
-            </p>
-          </div>
         </div>
       </div>
 
@@ -319,86 +294,131 @@ export default function BorrowerCreditPage() {
         </div>
       ) : (
         <>
-          {/* Score + Stats Row */}
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Credit Score Circle */}
-            <div className={`${GLASS} p-8 flex flex-col items-center justify-center`}>
-              <p className={LABEL}>Credit Score</p>
-              <div className="relative my-4">
-                <svg className="h-36 w-36 -rotate-90" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f0" strokeWidth="8" />
-                  <circle
-                    cx="60" cy="60" r="50" fill="none"
-                    className={scoreRing}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(score / 1000) * 314} 314`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`font-display text-4xl font-extrabold ${scoreColor}`}>{score}</span>
-                  <span className="font-mono text-[10px] text-[#4A4A4A]">/ 1000</span>
-                </div>
-              </div>
-              <Badge className={`${tierInfo.bg} ${tierInfo.color} border font-mono text-[11px] font-bold`}>
-                Tier {tier}: {tierInfo.label}
-              </Badge>
-            </div>
-
-            {/* Credit Breakdown */}
-            <div className={`${GLASS} p-6 space-y-4`}>
-              <p className={LABEL}>Credit Breakdown</p>
-              {[
-                { label: "Total Repaid", value: formatVolume(totalRepaid), icon: CheckCircle, color: "text-emerald-600" },
-                { label: "Liquidations", value: formatVolume(totalLiquidated), icon: AlertTriangle, color: "text-amber-600" },
-                { label: "Defaults", value: formatVolume(totalDefaulted), icon: AlertTriangle, color: "text-red-500" },
-                { label: "Clean Repayments", value: cleanRepayments, icon: Shield, color: "text-emerald-600" },
-                { label: "Liquidation Events", value: liquidations, icon: AlertTriangle, color: "text-amber-600" },
-                { label: "Default Events", value: defaults, icon: AlertTriangle, color: "text-red-500" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
-                    <span className="text-sm text-[#4A4A4A]">{item.label}</span>
+          {/* ─── Score Hero ─── */}
+          <div className={`${GLASS} overflow-hidden`}>
+            <div className="grid grid-cols-1 lg:grid-cols-3">
+              {/* Score Circle */}
+              <div className="flex flex-col items-center justify-center p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#171414]/10">
+                <p className={LABEL}>Credit Score</p>
+                <div className="relative my-5">
+                  <svg className="h-40 w-40 -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                    <circle
+                      cx="60" cy="60" r="50" fill="none"
+                      className={scoreRing}
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(score / 1000) * 314} 314`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="font-display text-5xl font-extrabold text-[#171414]">{score}</span>
+                    <span className="font-mono text-[10px] text-[#171414]/40">/ 1000</span>
                   </div>
-                  <span className="font-mono text-sm font-bold text-[#171414]">{item.value}</span>
                 </div>
-              ))}
-            </div>
-
-            {/* Proven Events Summary */}
-            <div className={`${GLASS} p-6 space-y-4`}>
-              <p className={LABEL}>Proven Events</p>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E1BAC2]/10">
-                  <Link2 className="h-6 w-6 text-[#E1BAC2]" />
-                </div>
-                <div>
-                  <p className="font-display text-2xl font-extrabold text-[#171414]">{provenCount}</p>
-                  <p className="text-xs text-[#4A4A4A]">Events verified on CC3</p>
-                </div>
+                <Badge className={`${tierInfo.glow} bg-[#171414]/5 border-[#171414]/15 ${tierInfo.color} font-mono text-[11px] font-bold px-4 py-1`}>
+                  {tierInfo.label}
+                </Badge>
+                <p className="mt-3 text-xs text-[#171414]/40 text-center max-w-xs">
+                  Score derived from cryptographically proven DeFi repayment events on Ethereum, verified via Attestcoin Block Prover
+                </p>
               </div>
-              {profile?.lastEvaluatedTimestamp && (
-                <div className="flex items-center gap-2 text-xs text-[#4A4A4A]">
-                  <Clock className="h-3 w-3" />
-                  Last evaluated: {new Date(Number(profile.lastEvaluatedTimestamp) * 1000).toLocaleDateString()}
+
+              {/* Stats */}
+              <div className="lg:col-span-2 p-6 lg:p-8 space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: "Repaid", value: formatVolume(totalRepaid), icon: CheckCircle, color: "text-emerald-600" },
+                    { label: "Borrowed", value: formatVolume(profile ? Number(profile.totalRepaidUSD || 0) + Number(profile.totalLiquidatedUSD || 0) : 0), icon: Zap, color: "text-blue-600" },
+                    { label: "Events", value: provenCount, icon: Link2, color: "text-[#E1BAC2]" },
+                    { label: "Protocols", value: 10, icon: Shield, color: "text-purple-600" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-2xl bg-[#171414]/5 border border-[#171414]/10 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                        <span className={LABEL}>{stat.label}</span>
+                      </div>
+                      <p className="font-display text-xl font-extrabold text-[#171414]">{stat.value}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-              <div className="rounded-2xl border border-[#171414]/10 p-3 bg-[#FAFAF8]">
-                <p className="font-mono text-[10px] text-[#4A4A4A]">Wallet</p>
-                <p className="font-mono text-[10px] text-[#171414] mt-0.5 truncate">{walletAddress || "Not connected"}</p>
+
+                {/* Breakdown */}
+                <div className="rounded-2xl bg-[#171414]/5 border border-[#171414]/10 p-5 space-y-4">
+                  <p className={LABEL}>Score Breakdown</p>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Clean Repayments", value: cleanRepayments, points: cleanRepayments * 50, maxPoints: 500, icon: CheckCircle, color: "emerald", desc: "+50 per repayment" },
+                      { label: "Liquidations", value: liquidations, points: -liquidations * 40, maxPoints: 200, icon: AlertTriangle, color: "red", desc: "-40 per liquidation" },
+                      { label: "Defaults", value: defaults, points: -defaults * 150, maxPoints: 300, icon: AlertTriangle, color: "red", desc: "-150 per default" },
+                    ].map((item) => {
+                      const progress = Math.min(Math.abs(item.points) / item.maxPoints, 1)
+                      return (
+                        <div key={item.label} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${
+                                item.color === "emerald" ? "bg-emerald-100" : "bg-red-100"
+                              }`}>
+                                <item.icon className={`h-3.5 w-3.5 ${
+                                  item.color === "emerald" ? "text-emerald-600" : "text-red-500"
+                                }`} />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#171414]">{item.label}</p>
+                                <p className="text-[10px] text-[#171414]/40">{item.desc}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm font-bold text-[#171414]">{item.value}</span>
+                              <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full ${
+                                item.points > 0 ? "bg-emerald-100 text-emerald-700" :
+                                item.points < 0 ? "bg-red-100 text-red-600" :
+                                "bg-gray-100 text-gray-500"
+                              }`}>
+                                {item.points > 0 ? "+" : ""}{item.points}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[#171414]/5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                item.color === "emerald" ? "bg-emerald-500" : "bg-red-500"
+                              }`}
+                              style={{ width: `${progress * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Wallet + Last Evaluated */}
+                <div className="flex flex-wrap items-center gap-4 text-xs text-[#171414]/40">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-3 w-3" />
+                    <span className="font-mono truncate max-w-[200px]">{walletAddress || "Not connected"}</span>
+                  </div>
+                  {profile?.lastEvaluatedTimestamp && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3 w-3" />
+                      <span>Last evaluated: {new Date(Number(profile.lastEvaluatedTimestamp) * 1000).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Tabs: Events + Discover */}
+          {/* ─── Tabs ─── */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full max-w-md grid-cols-2 rounded-full bg-[#171414]/5 p-1">
-              <TabsTrigger value="score" className="rounded-full font-display text-sm font-bold data-[state=active]:bg-[#171414] data-[state=active]:text-[#E1BAC2]">
-                <Activity className="h-4 w-4 mr-1.5" /> Proven Events
+            <TabsList className="grid w-full max-w-sm grid-cols-2 rounded-full bg-[#171414]/5 border border-[#171414]/10 p-1">
+              <TabsTrigger value="score" className="rounded-full font-display text-xs font-bold data-[state=active]:bg-[#E1BAC2] data-[state=active]:text-[#171414] text-[#171414]/60">
+                <Link2 className="h-3.5 w-3.5 mr-1.5" /> Proven Events
               </TabsTrigger>
-              <TabsTrigger value="discover" className="rounded-full font-display text-sm font-bold data-[state=active]:bg-[#171414] data-[state=active]:text-[#E1BAC2]">
-                <Fingerprint className="h-4 w-4 mr-1.5" /> Discover History
+              <TabsTrigger value="discover" className="rounded-full font-display text-xs font-bold data-[state=active]:bg-[#E1BAC2] data-[state=active]:text-[#171414] text-[#171414]/60">
+                <Search className="h-3.5 w-3.5 mr-1.5" /> Discover
               </TabsTrigger>
             </TabsList>
 
@@ -406,7 +426,7 @@ export default function BorrowerCreditPage() {
             <TabsContent value="score">
               <div className={`${GLASS} p-6`}>
                 <p className={LABEL}>On-Chain Verified Events</p>
-                <p className="mt-1 text-sm text-[#4A4A4A] mb-6">DeFi events cryptographically proven via Attestcoin Block Prover on CC3</p>
+                <p className="mt-1 text-sm text-[#171414]/50 mb-6">DeFi events cryptographically proven via Attestcoin Block Prover on CC3</p>
 
                 {eventsLoading ? (
                   <div className="flex items-center justify-center py-16">
@@ -418,70 +438,49 @@ export default function BorrowerCreditPage() {
                       <Link2 className="h-7 w-7 text-[#E1BAC2]" />
                     </div>
                     <p className="font-display text-lg font-bold text-[#171414]">No proven events yet</p>
-                    <p className="mt-1 text-sm text-[#4A4A4A]">Discover your DeFi history to generate Attestcoin proofs</p>
-                    <Button className={`${BTN} mt-4`} onClick={() => setActiveTab("discover")}>
-                      <Fingerprint className="h-3.5 w-3.5 mr-1.5" /> Discover History
+                    <p className="mt-1 text-sm text-[#171414]/50">Discover your DeFi history to generate Attestcoin proofs</p>
+                    <Button
+                      className="mt-4 rounded-full bg-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#d4a6af]"
+                      onClick={() => setActiveTab("discover")}
+                    >
+                      <Search className="h-3.5 w-3.5 mr-1.5" /> Discover History
                     </Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-[#171414]/10">
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Protocol</TableHead>
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Value (USD)</TableHead>
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Block</TableHead>
-                          <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx Hash</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {provenEvents.map((event, i) => {
-                          const isRepayment = event.eventType === 0
-                          const isLiquidation = event.eventType === 1
-                          return (
-                            <TableRow key={i} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
-                              <TableCell>
-                                <Badge variant="outline" className="font-mono text-[10px] border-[#171414]/15">
-                                  {PROTOCOL_NAMES[event.protocol] || `Protocol ${event.protocol}`}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={`font-mono text-[10px] ${
-                                  event.eventType === 0 ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                                  event.eventType === 1 || event.eventType === 2 ? "bg-red-50 text-red-600 border-red-200" :
-                                  event.eventType === 4 ? "bg-blue-50 text-blue-600 border-blue-200" :
-                                  "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
-                                }`}>
-                                  {EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-mono text-xs font-bold text-[#171414] whitespace-nowrap">
-                                {formatVolume(event.volumeUSD)}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs text-[#4A4A4A]">
-                                #{event.blockHeight}
-                              </TableCell>
-                              <TableCell>
-                                <a href={`https://etherscan.io/tx/${event.sourceTxHash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors">
-                                  {event.sourceTxHash?.slice(0, 10)}...
-                                  <ExternalLink className="inline h-3 w-3 ml-1" />
-                                </a>
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  className={BTN + " text-[9px] px-3 py-1"}
-                                  onClick={() => handleFetchProof(event)}
-                                >
-                                  <Shield className="h-3 w-3 mr-1" /> Verify
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-3">
+                    {provenEvents.map((event, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-2xl bg-[#171414]/5 border border-[#171414]/10 p-4 hover:bg-[#171414]/8 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${EVENT_COLORS[event.eventType] || "bg-[#171414]/5 text-[#171414]/50 border-[#171414]/15"}`}>
+                            <Shield className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-display text-sm font-bold text-[#171414]">{EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}</p>
+                              <Badge variant="outline" className="font-mono text-[9px] border-[#171414]/15 text-[#171414]/50">
+                                {PROTOCOL_NAMES[event.protocol] || `Protocol ${event.protocol}`}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-[#171414]/40">
+                              <span className="font-mono">#{event.blockHeight}</span>
+                              <span>•</span>
+                              <a
+                                href={`https://eth-sepolia.blockscout.com/tx/${event.sourceTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono hover:text-[#E1BAC2] transition-colors flex items-center gap-1"
+                              >
+                                {event.sourceTxHash?.slice(0, 14)}...
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-sm font-bold text-[#171414]">{formatVolume(event.volumeUSD)}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -491,22 +490,26 @@ export default function BorrowerCreditPage() {
             <TabsContent value="discover">
               <div className={`${GLASS} p-6`}>
                 <p className={LABEL}>Discover DeFi History</p>
-                <p className="mt-1 text-sm text-[#4A4A4A] mb-6">
+                <p className="mt-1 text-sm text-[#171414]/50 mb-6">
                   Scan your Ethereum Sepolia wallet for DeFi lending activity. Attestcoin will generate cryptographic proofs for verified events on CC3 testnet.
                 </p>
 
                 <div className="flex gap-3 mb-6">
                   <div className="relative flex-1">
-                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A] shrink-0" />
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#171414]/40 shrink-0" />
                     <input
                       placeholder="0x... Ethereum address"
-                      className={`w-full font-mono text-sm py-2.5 pl-10 pr-4 rounded-xl border border-[#171414]/15 bg-[#FAFAF8] focus-visible:ring-[#E1BAC2] focus-visible:ring-1 outline-none`}
+                      className="w-full font-mono text-sm py-2.5 pl-10 pr-4 rounded-xl border border-[#171414]/15 bg-[#171414]/5 text-[#171414] placeholder:text-[#171414]/20 focus-visible:ring-[#E1BAC2] focus-visible:ring-1 outline-none"
                       value={discoverAddress}
                       onChange={(e) => setDiscoverAddress(e.target.value.trim())}
                     />
                   </div>
-                  <Button className={BTN} onClick={handleDiscover} disabled={discovering || !discoverAddress}>
-                    {discovering ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Fingerprint className="h-3.5 w-3.5 mr-1.5" />}
+                  <Button
+                    className="rounded-full bg-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#d4a6af] px-5"
+                    onClick={handleDiscover}
+                    disabled={discovering || !discoverAddress}
+                  >
+                    {discovering ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1.5" />}
                     {discovering ? "Scanning..." : "Discover"}
                   </Button>
                 </div>
@@ -514,8 +517,8 @@ export default function BorrowerCreditPage() {
                 {discoveryResult && (
                   <div className="space-y-4">
                     {discoveryResult.message && (
-                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-sm text-amber-700">{discoveryResult.message}</p>
+                      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                        <p className="text-sm text-amber-600">{discoveryResult.message}</p>
                       </div>
                     )}
 
@@ -527,7 +530,7 @@ export default function BorrowerCreditPage() {
                           { label: "Liquidations", value: discoveryResult.summary.liquidationsCount },
                           { label: "Active Protocols", value: discoveryResult.summary.activeProtocolsCount },
                         ].map((s) => (
-                          <div key={s.label} className="rounded-2xl border border-[#171414]/10 p-4 bg-[#FAFAF8]">
+                          <div key={s.label} className="rounded-2xl border border-[#171414]/10 bg-[#171414]/5 p-4">
                             <p className={LABEL}>{s.label}</p>
                             <p className="mt-1 font-display text-xl font-extrabold text-[#171414]">{s.value}</p>
                           </div>
@@ -536,82 +539,57 @@ export default function BorrowerCreditPage() {
                     )}
 
                     {discoveryResult.selectedTopEvents && discoveryResult.selectedTopEvents.length > 0 && (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-[#171414]/10">
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Protocol</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Event</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Token</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Value (USD)</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Weight</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Tx</TableHead>
-                              <TableHead className="font-mono text-[10px] uppercase tracking-wider text-[#171414]/50">Action</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {discoveryResult.selectedTopEvents.map((event: any, i: number) => (
-                              <TableRow key={i} className="border-[#171414]/5 hover:bg-[#E1BAC2]/5">
-                                <TableCell>
-                                  <Badge variant="outline" className="font-mono text-[10px] border-[#171414]/15">
-                                    {event.protocolName || PROTOCOL_NAMES[event.protocol] || `Protocol ${event.protocol}`}
+                      <div className="space-y-3">
+                        {discoveryResult.selectedTopEvents.map((event: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between rounded-2xl bg-[#171414]/5 border border-[#171414]/10 p-4 hover:bg-[#171414]/8 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${EVENT_COLORS[event.eventType] || "bg-[#171414]/5 text-[#171414]/50 border-[#171414]/15"}`}>
+                                <Shield className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-display text-sm font-bold text-[#171414]">{event.eventTypeName || EVENT_TYPE_NAMES[event.eventType]}</p>
+                                  <Badge variant="outline" className="font-mono text-[9px] border-[#171414]/15 text-[#171414]/50">
+                                    {event.protocolName || PROTOCOL_NAMES[event.protocol]}
                                   </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className={`font-mono text-[10px] ${
-                                    event.eventType === 0 ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                                    event.eventType === 1 || event.eventType === 2 ? "bg-red-50 text-red-600 border-red-200" :
-                                    event.eventType === 4 ? "bg-blue-50 text-blue-600 border-blue-200" :
-                                    "bg-[#171414]/5 text-[#171414] border-[#171414]/10"
-                                  }`}>
-                                    {event.eventTypeName || EVENT_TYPE_NAMES[event.eventType] || `Event ${event.eventType}`}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="font-mono text-[10px] border-[#171414]/15">
-                                    {event.tokenSymbol || '—'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-mono text-xs font-bold text-[#171414] whitespace-nowrap">
-                                  {formatVolume(event.volumeUSD)}
-                                </TableCell>
-                                <TableCell className="font-mono text-xs text-[#4A4A4A]">
-                                  {event.weightScore || "—"}
-                                </TableCell>
-                                <TableCell>
-                                  <a href={event.etherscanUrl || `https://etherscan.io/tx/${event.sourceTxHash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#171414] hover:text-[#E1BAC2] transition-colors">
-                                    {event.sourceTxHash?.slice(0, 10)}...
-                                    <ExternalLink className="inline h-3 w-3 ml-1" />
-                                  </a>
-                                </TableCell>
-                                <TableCell>
-                                  {isOwnWallet ? (
-                                    <Button
-                                      size="sm"
-                                      className="rounded-full bg-[#171414] font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black px-3 py-1"
-                                      onClick={() => handleFetchProof(event)}
-                                      disabled={provingEvent === event.sourceTxHash}
-                                    >
-                                      {provingEvent === event.sourceTxHash ? (
-                                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Proving...</>
-                                      ) : (
-                                        <><Shield className="h-3 w-3 mr-1" /> Prove</>
-                                      )}
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      className="rounded-full bg-[#171414]/80 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2]/80 hover:bg-[#171414] px-3 py-1"
-                                      onClick={() => handleFetchProof(event)}
-                                    >
-                                      <Shield className="h-3 w-3 mr-1" /> Prove
-                                    </Button>
+                                  {event.tokenSymbol && (
+                                    <Badge variant="outline" className="font-mono text-[9px] border-[#171414]/15 text-[#171414]/40">
+                                      {event.tokenSymbol}
+                                    </Badge>
                                   )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-[#171414]/40">
+                                  <span className="font-mono">Weight: {event.weightScore || "—"}</span>
+                                  <span>•</span>
+                                  <a
+                                    href={`https://eth-sepolia.blockscout.com/tx/${event.sourceTxHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono hover:text-[#E1BAC2] transition-colors flex items-center gap-1"
+                                  >
+                                    {event.sourceTxHash?.slice(0, 12)}...
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <p className="font-mono text-sm font-bold text-[#171414]">{formatVolume(event.volumeUSD)}</p>
+                              <Button
+                                size="sm"
+                                className="rounded-full bg-[#E1BAC2] font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#d4a6af] px-3 py-1"
+                                onClick={() => handleFetchProof(event)}
+                                disabled={provingEvent === event.sourceTxHash}
+                              >
+                                {provingEvent === event.sourceTxHash ? (
+                                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Proving...</>
+                                ) : (
+                                  <><Shield className="h-3 w-3 mr-1" /> Prove</>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -624,137 +602,103 @@ export default function BorrowerCreditPage() {
 
       {/* ─── Attestcoin Proof Modal ─── */}
       {proofModal.open && proofModal.event && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setProofModal({ open: false, step: 'idle' })}>
-          <div className="glass-panel w-full max-w-lg mx-4 p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setProofModal({ open: false, step: "idle" })}>
+          <div className="glass-panel w-full max-w-md mx-4 overflow-hidden border border-[#171414]/15 bg-white backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#171414]/10">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#171414]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E1BAC2]/10">
                   <Fingerprint className="h-4.5 w-4.5 text-[#E1BAC2]" />
                 </div>
                 <div>
                   <p className="font-display text-sm font-bold text-[#171414]">Attestcoin Proof</p>
-                  <p className="font-mono text-[10px] text-[#4A4A4A]">{proofModal.event.sourceTxHash?.slice(0, 18)}...</p>
+                  <p className="font-mono text-[10px] text-[#171414]/40">{proofModal.event.sourceTxHash?.slice(0, 18)}...</p>
                 </div>
               </div>
-              <button onClick={() => setProofModal({ open: false, step: 'idle' })} className="rounded-full p-1.5 hover:bg-[#171414]/5">
+              <button onClick={() => setProofModal({ open: false, step: "idle" })} className="rounded-full p-1.5 hover:bg-[#171414]/5">
                 <span className="sr-only">Close</span>
-                <svg className="h-4 w-4 text-[#4A4A4A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                <svg className="h-4 w-4 text-[#171414]/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             </div>
 
             {/* Event Summary */}
-            <div className="px-6 py-4 bg-[#FAFAF8] border-b border-[#171414]/5">
+            <div className="px-6 py-4 bg-[#171414]/3 border-b border-[#171414]/10">
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <p className={LABEL}>Event</p>
-                  <p className="font-display text-sm font-bold text-[#171414]">{proofModal.event.eventTypeName}</p>
+                  <p className="font-display text-xs font-bold text-[#171414]">{proofModal.event.eventTypeName}</p>
                 </div>
                 <div>
                   <p className={LABEL}>Token</p>
-                  <p className="font-display text-sm font-bold text-[#171414]">{proofModal.event.tokenSymbol || '—'}</p>
+                  <p className="font-display text-xs font-bold text-[#171414]">{proofModal.event.tokenSymbol || "—"}</p>
                 </div>
                 <div>
                   <p className={LABEL}>Value</p>
-                  <p className="font-display text-sm font-bold text-[#171414]">{formatVolume(proofModal.event.volumeUSD)}</p>
+                  <p className="font-display text-xs font-bold text-[#171414]">{formatVolume(proofModal.event.volumeUSD)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Step Progress */}
+            {/* Steps */}
             <div className="px-6 py-5 space-y-4">
-              {/* Step 1: Attestation */}
-              <div className="flex items-start gap-3">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'attesting' ? 'bg-[#171414] animate-pulse' : proofModal.step !== 'idle' ? 'bg-emerald-500' : 'bg-[#171414]/10'}`}>
-                  {proofModal.step !== 'idle' ? (
-                    <CheckCircle className="h-3.5 w-3.5 text-white" />
-                  ) : (
-                    <span className="font-mono text-[10px] font-bold text-[#171414]">1</span>
-                  )}
+              {[
+                {
+                  step: "attesting",
+                  title: "Block Attestation",
+                  desc: proofModal.step === "attesting" ? "Waiting for Ethereum block to be attested..." : proofModal.step !== "idle" ? `Block #${proofModal.event.blockHeight} attested ✓` : "Pending",
+                  done: proofModal.step !== "idle" && proofModal.step !== "attesting",
+                  active: proofModal.step === "attesting",
+                },
+                {
+                  step: "fetched",
+                  title: "Proof Generated",
+                  desc: proofModal.step === "attesting" ? "Waiting..." : proofModal.step === "fetched" || proofModal.step === "submitting" || proofModal.step === "done" ? "Merkle + continuity proof ready ✓" : "Pending",
+                  done: proofModal.step === "fetched" || proofModal.step === "submitting" || proofModal.step === "done",
+                  active: false,
+                },
+                {
+                  step: "submitting",
+                  title: "Submit to CC3",
+                  desc: proofModal.step === "submitting" ? "Submitting to SanadCreditOracle..." : proofModal.step === "done" ? "Proof recorded on-chain ✓" : proofModal.step === "fetched" ? "Ready — requires MetaMask signature" : "Pending",
+                  done: proofModal.step === "done",
+                  active: proofModal.step === "submitting",
+                },
+              ].map((s, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${s.active ? "bg-[#E1BAC2] animate-pulse" : s.done ? "bg-emerald-500" : "bg-white/10"}`}>
+                    {s.done ? (
+                      <CheckCircle className="h-3.5 w-3.5 text-[#171414]" />
+                    ) : (
+                      <span className="font-mono text-[10px] font-bold text-[#171414]">{i + 1}</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-display text-sm font-bold text-[#171414]">{s.title}</p>
+                    <p className="text-xs text-[#171414]/50">{s.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-display text-sm font-bold text-[#171414]">Block Attestation</p>
-                  <p className="text-xs text-[#4A4A4A]">
-                    {proofModal.step === 'attesting'
-                      ? 'Waiting for Ethereum block to be attested by Attestcoin Prover...'
-                      : proofModal.step !== 'idle'
-                      ? `Block #${proofModal.event.blockHeight} attested ✓`
-                      : 'Pending'
-                    }
-                  </p>
-                </div>
-              </div>
+              ))}
 
-              {/* Step 2: Proof Generation */}
-              <div className="flex items-start gap-3">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done' ? 'bg-emerald-500' : proofModal.step === 'attesting' ? 'bg-[#171414] animate-pulse' : 'bg-[#171414]/10'}`}>
-                  {proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done' ? (
-                    <CheckCircle className="h-3.5 w-3.5 text-white" />
-                  ) : (
-                    <span className="font-mono text-[10px] font-bold text-[#171414]">2</span>
-                  )}
-                </div>
-                <div>
-                  <p className="font-display text-sm font-bold text-[#171414]">Proof Generated</p>
-                  <p className="text-xs text-[#4A4A4A]">
-                    {proofModal.step === 'attesting'
-                      ? 'Waiting for attestation...'
-                      : proofModal.step === 'fetched' || proofModal.step === 'submitting' || proofModal.step === 'done'
-                      ? `Merkle proof + continuity proof ready ✓`
-                      : 'Pending'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3: Submit to CC3 */}
-              <div className="flex items-start gap-3">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${proofModal.step === 'done' ? 'bg-emerald-500' : proofModal.step === 'submitting' ? 'bg-[#171414] animate-pulse' : 'bg-[#171414]/10'}`}>
-                  {proofModal.step === 'done' ? (
-                    <CheckCircle className="h-3.5 w-3.5 text-white" />
-                  ) : (
-                    <span className="font-mono text-[10px] font-bold text-[#171414]">3</span>
-                  )}
-                </div>
-                <div>
-                  <p className="font-display text-sm font-bold text-[#171414]">Submit to CC3</p>
-                  <p className="text-xs text-[#4A4A4A]">
-                    {proofModal.step === 'submitting'
-                      ? 'Submitting proof to SanadCreditOracle on CC3...'
-                      : proofModal.step === 'done'
-                      ? 'Proof recorded on-chain ✓'
-                      : proofModal.step === 'fetched'
-                      ? 'Ready to submit — requires MetaMask signature'
-                      : 'Pending'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Proof Data (when fetched) */}
-              {proofModal.proofData && proofModal.step !== 'attesting' && (
-                <div className="rounded-xl border border-[#171414]/10 bg-[#171414] p-4 space-y-2">
+              {/* Proof Data */}
+              {proofModal.proofData && proofModal.step !== "attesting" && (
+                <div className="rounded-xl border border-[#171414]/10 bg-[#171414]/3 p-4 space-y-2">
                   <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2]/60">Proof Data</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Chain Key</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.chainKey} ({proofModal.proofData.chainKey === 1 ? 'Ethereum Sepolia' : 'Ethereum Mainnet'})</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Chain Key</span>
+                      <span className="font-mono text-[10px] text-[#171414]/60">{proofModal.proofData.chainKey} ({proofModal.proofData.chainKey === 1 ? "Sepolia" : "Mainnet"})</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Block Height</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2]">#{proofModal.proofData.blockHeight}</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Block Height</span>
+                      <span className="font-mono text-[10px] text-[#171414]/60">#{proofModal.proofData.blockHeight}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Merkle Root</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2] truncate ml-4">{proofModal.proofData.merkleProof?.root?.slice(0, 22)}...</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Merkle Siblings</span>
+                      <span className="font-mono text-[10px] text-[#171414]/60">{proofModal.proofData.merkleProof?.siblings?.length || 0} hashes</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Merkle Siblings</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.merkleProof?.siblings?.length || 0} hashes</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#E1BAC2]/50">Continuity Roots</span>
-                      <span className="font-mono text-[10px] text-[#E1BAC2]">{proofModal.proofData.continuityProof?.roots?.length || 0} roots</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Continuity Roots</span>
+                      <span className="font-mono text-[10px] text-[#171414]/60">{proofModal.proofData.continuityProof?.roots?.length || 0} roots</span>
                     </div>
                   </div>
                 </div>
@@ -767,27 +711,28 @@ export default function BorrowerCreditPage() {
                 </div>
               )}
 
-              {/* CC3 submission result */}
-              {proofModal.step === 'done' && proofModal.proofData?.submitResult && (
+              {/* Success */}
+              {proofModal.step === "done" && proofModal.proofData?.submitResult && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                    <p className="text-xs font-bold text-emerald-700">Proof Recorded on CC3</p>
+                    <p className="text-xs font-bold text-emerald-600">Proof Recorded on CC3</p>
                   </div>
                   <div className="space-y-1 mt-2">
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#4A4A4A]">Credit Score</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Credit Score</span>
                       <span className="font-mono text-[10px] font-bold text-[#171414]">{proofModal.proofData.submitResult.score}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-mono text-[10px] text-[#4A4A4A]">Tier</span>
+                      <span className="font-mono text-[10px] text-[#171414]/40">Tier</span>
                       <span className="font-mono text-[10px] font-bold text-[#171414]">{proofModal.proofData.submitResult.tier}</span>
                     </div>
                     {proofModal.proofData.submitResult.transactionHash && (
                       <a
                         href={`https://creditcoin-testnet.blockscout.com/tx/${proofModal.proofData.submitResult.transactionHash}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="font-mono text-[10px] text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[10px] text-[#E1BAC2] hover:text-[#d4a6af] flex items-center gap-1"
                       >
                         {proofModal.proofData.submitResult.transactionHash.slice(0, 20)}... <ExternalLink className="h-3 w-3" />
                       </a>
@@ -797,30 +742,30 @@ export default function BorrowerCreditPage() {
               )}
             </div>
 
-            {/* Footer Actions */}
+            {/* Footer */}
             <div className="px-6 py-4 border-t border-[#171414]/10 flex justify-end gap-3">
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full font-mono text-[10px] text-[#4A4A4A]"
-                onClick={() => setProofModal({ open: false, step: 'idle' })}
+                className="rounded-full font-mono text-[10px] text-[#171414]/50 hover:text-[#171414] hover:bg-[#171414]/5"
+                onClick={() => setProofModal({ open: false, step: "idle" })}
               >
                 Close
               </Button>
-              {proofModal.step === 'fetched' && (
+              {proofModal.step === "fetched" && (
                 <Button
                   size="sm"
-                  className="rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] hover:bg-black px-4"
+                  className="rounded-full bg-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#d4a6af] px-4"
                   onClick={handleSubmitToCC3}
                 >
-                  <Shield className="h-3 w-3 mr-1.5" /> Submit to CC3
+                  <Shield className="h-3 w-3 mr-1.5" /> Sign & Submit
                 </Button>
               )}
-              {proofModal.step === 'submitting' && (
+              {proofModal.step === "submitting" && (
                 <Button
                   size="sm"
                   disabled
-                  className="rounded-full bg-[#171414] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E1BAC2] px-4"
+                  className="rounded-full bg-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] px-4"
                 >
                   <Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> Submitting...
                 </Button>
