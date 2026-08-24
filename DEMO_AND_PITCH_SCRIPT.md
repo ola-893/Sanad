@@ -89,9 +89,11 @@
 
 ## 🔗 Key Demo Links for Judges
 
-- **CC3 Credit Oracle Address**: [`0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3`](https://creditcoin-testnet.blockscout.com/address/0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3)
-- **CC3 Liquidity Pool Address**: [`0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70`](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70)
-- **CC3 SAG Gold NFT Address**: [`0x68359bD39Bf7A683a96808cAD38147d1baFa07f1`](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1)
-- **Live Sepolia Proof Settlement Tx**: [`0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924`](https://creditcoin-testnet.blockscout.com/tx/0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924)
-- **Live Mainnet Proof Settlement Tx**: [`0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045`](https://creditcoin-testnet.blockscout.com/tx/0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045)
-- **Live Investor Deposit Tx**: [`0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88`](https://creditcoin-testnet.blockscout.com/tx/0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88)
+- **CC3 Credit Oracle Address**: [`0xB7AfB0419AdA5820872701325e00015BFAD10023`](https://creditcoin-testnet.blockscout.com/address/0xB7AfB0419AdA5820872701325e00015BFAD10023)
+- **CC3 Liquidity Pool Address**: [`0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F`](https://creditcoin-testnet.blockscout.com/address/0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F)
+- **CC3 SAG Gold NFT Address**: [`0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13`](https://creditcoin-testnet.blockscout.com/address/0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13)
+- **Sepolia Repayment Gateway**: [`0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162`](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162)
+- **Sepolia Investor Vault**: [`0xE037A229aF3886D0181B7727e8252F72B1d3d45B`](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B)
+- **Live Cross-Chain Investor Deposit Settlement Tx (CC3)**: [`0x36902dda63f508c27b644ee07c446694d3282bca019a15a816a35289ebd6e1d7`](https://creditcoin-testnet.blockscout.com/tx/0x36902dda63f508c27b644ee07c446694d3282bca019a15a816a35289ebd6e1d7) *(Sepolia Source: [`0x71b95becef...`](https://sepolia.etherscan.io/tx/0x71b95becef2c2311a046ab97571ec88acd7f2c078b411b5c87ff003c73d903d8))*
+- **Live Cross-Chain Loan Repayment Settlement Tx (CC3)**: [`0xaec11c9b303618f52f443c2213f3a932a1f9dbb95fc2c991713c16ca0659536c`](https://creditcoin-testnet.blockscout.com/tx/0xaec11c9b303618f52f443c2213f3a932a1f9dbb95fc2c991713c16ca0659536c) *(Sepolia Source: [`0xf3035df4...`](https://sepolia.etherscan.io/tx/0xf3035df49e280f6583710bcc402c25c40eabf6d87115c5d35440f62162b51265))*
+- **Live Native Investor Pool Deposit Tx (CC3)**: [`0xe4aa4d7b8c64685c4a41946ebf3354712a2f0886ecbd41ea155dbe666fca5ac9`](https://creditcoin-testnet.blockscout.com/tx/0xe4aa4d7b8c64685c4a41946ebf3354712a2f0886ecbd41ea155dbe666fca5ac9)

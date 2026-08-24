@@ -167,8 +167,60 @@ export async function deployToTestnet() {
     feContent = feContent.replace(/NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS=.*/, `NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS="${deploymentResults.creditOracle}"`);
     feContent = feContent.replace(/NEXT_PUBLIC_SAG_TOKEN_ADDRESS=.*/, `NEXT_PUBLIC_SAG_TOKEN_ADDRESS="${deploymentResults.sagToken}"`);
     feContent = feContent.replace(/NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS=.*/, `NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS="${deploymentResults.liquidityPool}"`);
+    feContent = feContent.replace(/NEXT_PUBLIC_POOL_ADDRESS=.*/, `NEXT_PUBLIC_POOL_ADDRESS="${deploymentResults.liquidityPool}"`);
     fs.writeFileSync(frontendEnvPath, feContent, 'utf8');
     console.log(`  ✅ Updated ${frontendEnvPath} with new contract addresses.`);
+  }
+
+  // Update frontend contract helpers fallback addresses
+  const feOraclePath1 = path.resolve(process.cwd(), '../frontend/core/credit-bureau/sanad-credit-oracle.ts');
+  if (fs.existsSync(feOraclePath1)) {
+    let content = fs.readFileSync(feOraclePath1, 'utf8');
+    content = content.replace(/SANAD_CREDIT_ORACLE_ADDRESS =\s*process\.env\.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS \|\| '[^']+';/, `SANAD_CREDIT_ORACLE_ADDRESS =\n  process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS || '${deploymentResults.creditOracle}';`);
+    fs.writeFileSync(feOraclePath1, content, 'utf8');
+    console.log(`  ✅ Updated ${feOraclePath1}`);
+  }
+
+  const feOraclePath2 = path.resolve(process.cwd(), '../frontend/lib/contracts/sanad-credit-oracle.ts');
+  if (fs.existsSync(feOraclePath2)) {
+    let content = fs.readFileSync(feOraclePath2, 'utf8');
+    content = content.replace(/SANAD_CREDIT_ORACLE_ADDRESS =\s*process\.env\.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS \|\| '[^']+';/, `SANAD_CREDIT_ORACLE_ADDRESS =\n  process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS || '${deploymentResults.creditOracle}';`);
+    fs.writeFileSync(feOraclePath2, content, 'utf8');
+    console.log(`  ✅ Updated ${feOraclePath2}`);
+  }
+
+  const fePoolPath = path.resolve(process.cwd(), '../frontend/lib/contracts/sanad-liquidity-pool.ts');
+  if (fs.existsSync(fePoolPath)) {
+    let content = fs.readFileSync(fePoolPath, 'utf8');
+    content = content.replace(/'0x[0-9a-fA-F]{40}';\s*\n\s*export const SAG_TOKEN_ADDRESS/, `'${deploymentResults.liquidityPool}';\n\nexport const SAG_TOKEN_ADDRESS`);
+    content = content.replace(/SAG_TOKEN_ADDRESS =\s*process\.env\.NEXT_PUBLIC_SAG_TOKEN_ADDRESS \|\|\s*'0x[0-9a-fA-F]{40}';/, `SAG_TOKEN_ADDRESS =\n  process.env.NEXT_PUBLIC_SAG_TOKEN_ADDRESS ||\n  '${deploymentResults.sagToken}';`);
+    fs.writeFileSync(fePoolPath, content, 'utf8');
+    console.log(`  ✅ Updated ${fePoolPath}`);
+  }
+
+  const beRelayerPath = path.resolve(process.cwd(), 'src/core/credit-bureau/attestcoin-oracle-relayer.service.ts');
+  if (fs.existsSync(beRelayerPath)) {
+    let content = fs.readFileSync(beRelayerPath, 'utf8');
+    content = content.replace(/CREDITCOIN_CONFIG\.contracts\.creditOracleAddress \|\| '0x[0-9a-fA-F]{40}'/, `CREDITCOIN_CONFIG.contracts.creditOracleAddress || '${deploymentResults.creditOracle}'`);
+    fs.writeFileSync(beRelayerPath, content, 'utf8');
+    console.log(`  ✅ Updated ${beRelayerPath}`);
+  }
+
+  const beTestDepositPath = path.resolve(process.cwd(), 'src/scripts/test-sepolia-deposit-e2e.ts');
+  if (fs.existsSync(beTestDepositPath)) {
+    let content = fs.readFileSync(beTestDepositPath, 'utf8');
+    content = content.replace(/SANAD_LIQUIDITY_POOL_ADDRESS \|\| '0x[0-9a-fA-F]{40}'/, `SANAD_LIQUIDITY_POOL_ADDRESS || '${deploymentResults.liquidityPool}'`);
+    fs.writeFileSync(beTestDepositPath, content, 'utf8');
+    console.log(`  ✅ Updated ${beTestDepositPath}`);
+  }
+
+  const beTestRepayPath = path.resolve(process.cwd(), 'src/scripts/test-sepolia-repay-e2e.ts');
+  if (fs.existsSync(beTestRepayPath)) {
+    let content = fs.readFileSync(beTestRepayPath, 'utf8');
+    content = content.replace(/SANAD_LIQUIDITY_POOL_ADDRESS \|\| '0x[0-9a-fA-F]{40}'/, `SANAD_LIQUIDITY_POOL_ADDRESS || '${deploymentResults.liquidityPool}'`);
+    content = content.replace(/SAG_TOKEN_ADDRESS \|\| '0x[0-9a-fA-F]{40}'/, `SAG_TOKEN_ADDRESS || '${deploymentResults.sagToken}'`);
+    fs.writeFileSync(beTestRepayPath, content, 'utf8');
+    console.log(`  ✅ Updated ${beTestRepayPath}`);
   }
 
   // Save results to summary

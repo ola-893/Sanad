@@ -16,10 +16,11 @@ const PRIVATE_KEY = process.env.CREDITCOIN_PRIVATE_KEY || process.env.PRIVATE_KE
 if (!PRIVATE_KEY) throw new Error('Missing PRIVATE_KEY');
 
 const CC3_RPC = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
+const SEPOLIA_RPC = process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
 
-const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70';
-const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || '0x68359bD39Bf7A683a96808cAD38147d1baFa07f1';
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F';
+const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || '0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13';
 const SEPOLIA_GATEWAY_ADDRESS = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162';
 
 const REPAYMENT_GATEWAY_ABI = [
@@ -53,6 +54,26 @@ async function main() {
   console.log('\n[1/5] Setting up SAG Collateral Loan on Creditcoin CC3...');
   const testTokenId = 1;
   const loanAmountUSD = 500; // 500 USD repayment
+
+  try {
+    const owner = await sagContract.ownerOf(testTokenId);
+    console.log(`  • Collateral Token #${testTokenId} exists (Owner: ${owner})`);
+  } catch {
+    console.log(`  • Minting Token #${testTokenId} Gold Collateral Note on CC3...`);
+    const mintTx = await sagContract.mintCollateral({
+      pawnshop: cc3Signer.address,
+      borrower: cc3Signer.address,
+      weightGrams: 5000,
+      karat: 24,
+      appraisedValueUSD: 3500000000n,
+      loanAmount: 500000000n,
+      tenureDays: 30,
+      monthlyUjrahUSD: 10000000n,
+      ipfsUri: 'ipfs://QmSanadGoldAuditHashTest'
+    });
+    await mintTx.wait();
+    console.log(`  ✅ Minted Collateral Note #${testTokenId} on CC3`);
+  }
 
   const currentBalance = await poolContract.tokenLoanBalance(testTokenId);
   console.log(`  • Initial Token #${testTokenId} Active Loan Balance: ${ethers.formatEther(currentBalance)} tCTC`);

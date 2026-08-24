@@ -96,12 +96,12 @@ To test on-chain actions (Credit scoring, Minting, Freezing, Repayment, Liquidit
 1. **Borrower Credit Bureau & Attestcoin Proof** (`/dashboard/borrower/credit`):
    - Connect EVM wallet.
    - Scan DeFi history across Aave v3, Morpho, Spark, Compound, Maker, and Euler.
-   - Generate Attestcoin cryptographic proof for active borrow / repayment and submit to `SanadCreditOracle` (`0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3`).
+   - Generate Attestcoin cryptographic proof for active borrow / repayment and submit to `SanadCreditOracle` (`0xB7AfB0419AdA5820872701325e00015BFAD10023`).
    - Observe on-chain score dynamically recalculate and upgrade tier (Bronze/Silver/Gold).
 
 2. **Investor Liquidity Pool** (`/dashboard`):
    - Connect on Creditcoin CC3.
-   - Use the **Sanad Liquidity Pool** manager to execute a payable deposit of native tCTC into `SanadLiquidityPool` (`0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70`).
+   - Use the **Sanad Liquidity Pool** manager to execute a payable deposit of native tCTC into `SanadLiquidityPool` (`0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F`).
    - View updated LP stake, pool share, and browse asset-backed SAG notes (`/dashboard/browse`).
 
 3. **Pawnshop Gold Origination** (`/pawnshop/nfts/new`):

@@ -84,9 +84,16 @@ Across emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hol
 
 | Smart Contract | Address | Compiler & Status | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **`SanadCreditOracle.sol`** | `0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x59577E83E0b038bd3ad224b8Ae5E16f5E2819AD3) |
-| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
-| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
+| **`SanadCreditOracle.sol`** | `0xB7AfB0419AdA5820872701325e00015BFAD10023` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xB7AfB0419AdA5820872701325e00015BFAD10023) |
+| **`SanadLiquidityPool.sol`** | `0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F) |
+| **`SAGToken.sol`** | `0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13) |
+
+### Ethereum Sepolia Gateways (Chain ID: `11155111`)
+
+| Gateway Contract | Address | Purpose | Explorer Link |
+| :--- | :--- | :--- | :--- |
+| **`RepaymentGateway.sol`** | `0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162` | Cross-chain borrower loan repayment gateway | [Etherscan](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162) |
+| **`InvestorVault.sol`** | `0xE037A229aF3886D0181B7727e8252F72B1d3d45B` | Cross-chain investor liquidity deposit gateway | [Etherscan](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B) |
 
 ### Native CC3 Precompiles
 
@@ -99,11 +106,11 @@ Across emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hol
 
 ## 🔍 Live Verified Transactions on Creditcoin CC3
 
-| Transaction Event | ChainKey & Context | CC3 Settlement Tx Hash | Blockscout Link |
+| Transaction Event | ChainKey & Context | Source / CC3 Settlement Tx Hash | Blockscout / Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **Sepolia Borrow Proof** | `ChainKey = 1` (Aave v3 $30 USDC Borrow) | `0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924` | [View Settlement](https://creditcoin-testnet.blockscout.com/tx/0xc29da4c8fbb842c071092a894ae6374b394d4e9c8298ffae5fde42af889ec924) |
-| **Mainnet Repay Proof** | `ChainKey = 3` (Aave v3 $3,999.89 USDe Repay) | `0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045` | [View Settlement](https://creditcoin-testnet.blockscout.com/tx/0x1e35f1897dfdcd550dba7784f1693e83c13b7657bb31c2814ac3bb3be1582045) |
-| **Investor Pool Deposit** | Native CC3 (1.5 tCTC payable `depositLiquidity`) | `0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88` | [View Deposit](https://creditcoin-testnet.blockscout.com/tx/0x6327cb7ea2c7185bda4acf2c3c6d82d6f0a1b35e5b9ad22189d4e81a83761c88) |
+| **Cross-Chain Investor Deposit** | `ChainKey = 1` (Sepolia InvestorVault -> CC3 `verifyAndRecordDeposit`) | CC3 Settlement: `0x36902dda63f508c27b644ee07c446694d3282bca019a15a816a35289ebd6e1d7`<br>Sepolia Tx: `0x71b95becef2c2311a046ab97571ec88acd7f2c078b411b5c87ff003c73d903d8` | [View CC3 Settlement](https://creditcoin-testnet.blockscout.com/tx/0x36902dda63f508c27b644ee07c446694d3282bca019a15a816a35289ebd6e1d7) |
+| **Cross-Chain Loan Repayment** | `ChainKey = 1` (Sepolia RepaymentGateway -> CC3 `verifyAndSettleRepayment`) | CC3 Settlement: `0xaec11c9b303618f52f443c2213f3a932a1f9dbb95fc2c991713c16ca0659536c`<br>Sepolia Tx: `0xf3035df49e280f6583710bcc402c25c40eabf6d87115c5d35440f62162b51265` | [View CC3 Settlement](https://creditcoin-testnet.blockscout.com/tx/0xaec11c9b303618f52f443c2213f3a932a1f9dbb95fc2c991713c16ca0659536c) |
+| **Native CTC Pool Deposit** | Native CC3 (5.0 tCTC payable `depositLiquidity`) | CC3 Tx: `0xe4aa4d7b8c64685c4a41946ebf3354712a2f0886ecbd41ea155dbe666fca5ac9` | [View Deposit](https://creditcoin-testnet.blockscout.com/tx/0xe4aa4d7b8c64685c4a41946ebf3354712a2f0886ecbd41ea155dbe666fca5ac9) |
 
 ---
 
