@@ -155,6 +155,7 @@ contract SanadCreditOracle is Ownable {
         _registerProtocol(Protocol.AaveV3, 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2); // Mainnet Pool
         _registerProtocol(Protocol.AaveV3, 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e); // Mainnet Pool V3.0
         _registerProtocol(Protocol.AaveV3, 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951); // Sepolia Pool
+        _registerProtocol(Protocol.AaveV3, 0x387d311e47e80b498169e6fb51d3193167d89F7D); // Sepolia Gateway
 
         // 2. Compound v3 (Comet USDC, WETH, USDT)
         _registerProtocol(Protocol.CompoundV3, 0xc3d688B66703497DAA19211EEdff47f25384cdc3); // Comet USDC
