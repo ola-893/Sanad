@@ -20,6 +20,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { CreditScoreCard } from "@/components/credit-score-card"
 import apiInstance from "@/lib/axios-v1"
+import { Fingerprint, ArrowRight } from "lucide-react"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -56,6 +57,30 @@ export default function BorrowerDashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const [newEventsCount, setNewEventsCount] = useState(0)
+  const [scanningEvents, setScanningEvents] = useState(false)
+
+  // Auto-scan for new unproven DeFi events
+  useEffect(() => {
+    if (!walletAddress) return
+    setScanningEvents(true)
+    apiInstance.post("/credit-oracle/discover", { address: walletAddress })
+      .then(async (res) => {
+        const events = res.data?.data?.selectedTopEvents || []
+        if (events.length === 0) return
+        // Check how many are already proven
+        try {
+          const profileRes = await apiInstance.get(`/credit-oracle/profile/${walletAddress}`)
+          const provenCount = profileRes.data?.data?.provenEventsCount || 0
+          if (events.length > provenCount) {
+            setNewEventsCount(events.length - provenCount)
+          }
+        } catch {}
+      })
+      .catch(() => {})
+      .finally(() => setScanningEvents(false))
+  }, [walletAddress])
+
   const activeLoans = loans.filter(l => l.status === 'active' || l.approvalStatus === 'approved')
   const pendingLoans = loans.filter(l => l.status === 'pending' || l.approvalStatus === 'pending')
   const completedLoans = loans.filter(l => l.status === 'completed' || l.approvalStatus === 'closed')
@@ -65,6 +90,27 @@ export default function BorrowerDashboardPage() {
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <div className="mx-auto max-w-7xl space-y-6">
           <DashboardHeader portal="Borrower Portal" subtitle="Your gold financing overview" />
+
+          {/* New Events Alert */}
+          {newEventsCount > 0 && (
+            <Link href="/dashboard/borrower/credit?tab=discover" className="block">
+              <div className="rounded-2xl border border-[#E1BAC2]/30 bg-[#E1BAC2]/5 p-4 flex items-center justify-between hover:bg-[#E1BAC2]/10 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E1BAC2]">
+                    <Fingerprint className="h-5 w-5 text-[#171414]" />
+                  </div>
+                  <div>
+                    <p className="font-display text-sm font-bold text-[#171414]">{newEventsCount} New DeFi Event{newEventsCount > 1 ? 's' : ''} Detected</p>
+                    <p className="text-xs text-[#171414]/50">Prove them on CC3 to boost your credit score</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] font-bold text-[#E1BAC2] uppercase tracking-wider">Prove Now</span>
+                  <ArrowRight className="h-4 w-4 text-[#E1BAC2]" />
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Stats Row */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

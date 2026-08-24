@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import { CREDITCOIN_CONFIG } from '@/features/creditcoin/creditcoin.config.js';
 import { SANAD_LIQUIDITY_POOL_ABI } from '@/features/creditcoin/contracts/SanadLiquidityPool.abi.js';
 import { DiscoveredDeFiEvent, Protocol, EventType } from './defi-discovery.service.js';
+import { db } from '@/db/index.js';
+import { ProvenEvents } from '@/features/credit-bureau/proven-events.model.js';
+import { eq } from 'drizzle-orm';
 
 dotenv.config();
 
@@ -195,6 +198,26 @@ export class AttestcoinOracleRelayerService {
       console.log(`[AttestcoinRelayer] Broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
       const receipt = await tx.wait();
 
+      // Store CC3 tx hash in database
+      try {
+        const sourceTxHash = ethers.hexlify(event.sourceTxHash);
+        await db.insert(ProvenEvents).values({
+          id: sourceTxHash,
+          borrowerAddress,
+          sourceTxHash,
+          cc3TxHash: receipt.hash,
+          blockHeight: event.blockHeight || 0,
+          protocol: event.protocol,
+          eventType: event.eventType,
+          volumeUsd: event.volumeUSD.toString(),
+          timestamp: event.timestamp || 0,
+          chainKey: this.sourceChainKey,
+        }).onConflictDoNothing();
+        console.log(`[AttestcoinRelayer] Stored CC3 proof tx ${receipt.hash.slice(0, 18)}... for source ${sourceTxHash.slice(0, 18)}...`);
+      } catch (dbErr: any) {
+        console.warn('[AttestcoinRelayer] Failed to store CC3 tx hash in DB:', dbErr.message);
+      }
+
       const profile = await contract.getCreditProfile(borrowerAddress);
       const tiers = ['Unscored', 'Bronze', 'Silver', 'Gold', 'HighRisk'];
 
@@ -240,6 +263,59 @@ export class AttestcoinOracleRelayerService {
       ];
       const eventTypes = ['Clean Repayment', 'Overcollateralized Liquidation', 'Undercollateralized Default', 'Collateral Supply', 'Active Borrow Position'];
 
+      // Get CC3 tx hashes — first from database, then fallback to Blockscout
+      let cc3TxHashes: Record<string, string> = {};
+      
+      // 1. Try database first
+      try {
+        const dbEvents = await db.select().from(ProvenEvents)
+          .where(eq(ProvenEvents.borrowerAddress, borrowerAddress));
+        for (const row of dbEvents) {
+          if (row.sourceTxHash && row.cc3TxHash) {
+            cc3TxHashes[row.sourceTxHash.toLowerCase()] = row.cc3TxHash;
+          }
+        }
+        console.log(`[AttestcoinRelayer] Found ${dbEvents.length} CC3 tx hashes in database for ${borrowerAddress}`);
+      } catch (dbErr: any) {
+        console.warn('[AttestcoinRelayer] Failed to read CC3 tx hashes from DB:', dbErr.message);
+      }
+      
+      // 2. Fallback to Blockscout if database has no results
+      if (Object.keys(cc3TxHashes).length === 0) {
+        try {
+          const blockscoutUrl = 'https://creditcoin-testnet.blockscout.com';
+          const res = await fetch(`${blockscoutUrl}/api/v2/addresses/${this.oracleContractAddress}/logs`);
+          if (res.ok) {
+            const data = await res.json();
+            const items = data?.items || [];
+            const eventProvenTopic = ethers.id('EventProven(address,bytes32,uint8,uint8,uint256,uint64)');
+            console.log(`[AttestcoinRelayer] Querying Blockscout logs for ${borrowerAddress}... Found ${items.length} total logs`);
+            
+            for (const log of items) {
+              const topics = log.topics || [];
+              if (topics[0]?.toLowerCase() === eventProvenTopic.toLowerCase() &&
+                  topics[1]?.toLowerCase() === ethers.zeroPadValue(borrowerAddress, 32).toLowerCase()) {
+                const sourceTxHash = topics[2];
+                if (sourceTxHash) {
+                  cc3TxHashes[sourceTxHash.toLowerCase()] = log.transaction_hash;
+                  // Also store in database for future lookups
+                  try {
+                    await db.insert(ProvenEvents).values({
+                      id: sourceTxHash,
+                      borrowerAddress,
+                      sourceTxHash,
+                      cc3TxHash: log.transaction_hash,
+                    }).onConflictDoNothing();
+                  } catch {}
+                }
+              }
+            }
+          }
+        } catch (logErr: any) {
+          console.warn('[AttestcoinRelayer] Failed to fetch EventProven logs from Blockscout:', logErr.message);
+        }
+      }
+
       return {
         borrower: profile.borrower,
         score: Number(profile.score),
@@ -254,15 +330,21 @@ export class AttestcoinOracleRelayerService {
         collateralSupplyCount: Number(profile.collateralSupplyCount),
         provenEventsCount: Number(profile.provenEventsCount),
         lastEvaluatedTimestamp: Number(profile.lastEvaluatedTimestamp),
-        provenEvents: provenEvents.map((e: any) => ({
-          sourceTxHash: e.sourceTxHash,
-          blockHeight: Number(e.blockHeight),
-          protocol: protocols[Number(e.protocol)] || 'DeFi',
-          eventType: eventTypes[Number(e.eventType)] || 'Event',
-          volumeUSD: ethers.formatUnits(e.volumeUSD, 6),
-          timestamp: Number(e.timestamp),
-          etherscanUrl: `https://eth-sepolia.blockscout.com/tx/${e.sourceTxHash}`,
-        })),
+        provenEvents: provenEvents.map((e: any) => {
+          const srcHash = ethers.hexlify(e.sourceTxHash);
+          const cc3TxHash = cc3TxHashes[srcHash.toLowerCase()] || '';
+          return {
+            sourceTxHash: srcHash,
+            blockHeight: Number(e.blockHeight),
+            protocol: protocols[Number(e.protocol)] || 'DeFi',
+            eventType: eventTypes[Number(e.eventType)] || 'Event',
+            volumeUSD: ethers.formatUnits(e.volumeUSD, 6),
+            timestamp: Number(e.timestamp),
+            etherscanUrl: `https://eth-sepolia.blockscout.com/tx/${srcHash}`,
+            cc3TxHash,
+            cc3ExplorerUrl: cc3TxHash ? `https://creditcoin-testnet.blockscout.com/tx/${cc3TxHash}` : '',
+          };
+        }),
         oracleAddress: this.oracleContractAddress,
       };
     } catch (err: any) {
