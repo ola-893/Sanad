@@ -48,7 +48,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       kicker="Welcome Back"
-      title="Sign In to Sanad"
+      title=""
       subtitle="Choose your role to continue with wallet-based authentication"
       auditNote="Secure wallet-based authentication · No password required"
       footerLinks={[

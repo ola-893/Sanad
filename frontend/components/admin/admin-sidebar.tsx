@@ -13,6 +13,7 @@ import {
   Store,
   Scale,
 } from "lucide-react"
+import Image from "next/image"
 import { useState } from "react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useAtom } from "jotai"
@@ -88,9 +89,14 @@ export function AdminSidebar() {
     <div className="flex h-full w-64 flex-col border-r border-[#171414]/10 bg-[#FAFAF8]">
       {/* ─── Logo ─── */}
       <div className="flex h-16 items-center gap-3 px-6">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#E1BAC2]/60">
-          <span className="h-2 w-2 rotate-45 bg-[#E1BAC2]" aria-hidden />
-        </span>
+        <Image
+          src="/images/logo.png"
+          alt="Sanad Protocol"
+          width={32}
+          height={32}
+          className="h-8 w-8 shrink-0 object-contain"
+          priority
+        />
         <div>
           <div className="font-display text-base font-bold leading-none text-[#171414]">Sanad</div>
           <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-[#E1BAC2]">

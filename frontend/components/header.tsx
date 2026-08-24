@@ -59,7 +59,7 @@ export function Header() {
         {/* Logo — always visible */}
         <Link
           href="/"
-          className="flex items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-3 text-[#F5F5F3] transition-colors hover:bg-black sm:pr-5"
+          className="flex items-center justify-center rounded-full bg-[#171414] p-1.5 text-[#F5F5F3] transition-colors hover:bg-black"
           aria-label="Sanad home"
         >
           <Logo asLink={false} surface="dark" />

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Linkedin, X } from "lucide-react"
 import { Logo } from "@/components/logo"
 
@@ -28,11 +29,11 @@ export function Footer() {
   return (
     <footer className="site-footer overflow-hidden bg-deepGreen py-12 text-ivory sm:py-16">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="mb-14 grid grid-cols-1 gap-12 md:grid-cols-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 md:gap-10">
           {/* Brand & mission */}
-          <div className="space-y-4 md:col-span-5">
+          <div className="space-y-2 pb-4 md:col-span-5 md:pb-0">
             <div className="flex items-center gap-3">
-              <Logo />
+              <Logo size="lg" />
               <span className="block font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2]">
                 Gold-backed Credit Network
               </span>
@@ -60,11 +61,11 @@ export function Footer() {
           </div>
 
           {/* Navigate */}
-          <div className="space-y-3 text-xs md:col-span-2">
+          <div className="space-y-2 pb-4 text-xs md:col-span-2 md:pb-0">
             <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
               Navigate
             </h4>
-            <ul className="space-y-2 text-ivory/80">
+            <ul className="space-y-1 text-ivory/80">
               {quickLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="transition-colors hover:text-[#E1BAC2]">
@@ -76,11 +77,11 @@ export function Footer() {
           </div>
 
           {/* Legal */}
-          <div className="space-y-3 text-xs md:col-span-2">
+          <div className="space-y-2 pb-4 text-xs md:col-span-2 md:pb-0">
             <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
               Legal
             </h4>
-            <ul className="space-y-2 text-ivory/80">
+            <ul className="space-y-1 text-ivory/80">
               {legalLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="transition-colors hover:text-[#E1BAC2]">
@@ -92,11 +93,11 @@ export function Footer() {
           </div>
 
           {/* Portals */}
-          <div className="space-y-3 text-xs md:col-span-3">
+          <div className="space-y-2 text-xs md:col-span-3 ">
             <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
               Portals
             </h4>
-            <ul className="space-y-2 text-ivory/80">
+            <ul className="space-y-1 text-ivory/80">
               {portalLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="transition-colors hover:text-[#E1BAC2]">
@@ -109,13 +110,15 @@ export function Footer() {
         </div>
 
         {/* Watermark */}
-        <div className="relative -mx-4 mb-8 flex h-[20vh] min-h-[100px] items-center justify-center sm:-mx-6 sm:h-[30vh] lg:-mx-8">
-          <span
+        <div className="relative -mx-4 flex items-center justify-center overflow-hidden sm:-mx-6 lg:-mx-8">
+          <Image
+            src="/images/logo.png"
+            alt=""
             aria-hidden
-            className="select-none font-display text-[22vw] font-extrabold leading-none tracking-tight text-ivory/[0.04]"
-          >
-            SANAD
-          </span>
+            width={1600}
+            height={400}
+            className="h-auto w-full object-contain"
+          />
         </div>
 
         {/* Bottom bar */}

@@ -36,7 +36,7 @@ export function PawnshopHeader() {
         {/* Logo */}
         <Link
           href="/"
-          className="hidden items-center rounded-full bg-[#171414] py-1.5 pl-1.5 pr-5 text-[#F5F5F3] transition-colors hover:bg-black sm:flex"
+          className="hidden items-center justify-center rounded-full bg-[#171414] p-1.5 text-[#F5F5F3] transition-colors hover:bg-black sm:flex"
           aria-label="Sanad home"
         >
           <Logo asLink={false} surface="dark" />

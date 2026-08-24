@@ -1,19 +1,25 @@
 "use client"
 
+import Image from "next/image"
+
 export function BrandedLoader({ message = "Loading..." }: { message?: string }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F3]">
       <div className="flex flex-col items-center gap-6">
-        {/* Animated diamond logo */}
+        {/* Logo image with pulse ring */}
         <div className="relative">
           {/* Outer ring pulse */}
           <div className="absolute inset-0 animate-ping rounded-full border-2 border-[#E1BAC2]/30" />
           {/* Static ring */}
           <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#171414]/10 bg-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-            {/* Spinning diamond */}
-            <div className="animate-spin" style={{ animationDuration: "3s" }}>
-              <div className="h-8 w-8 rotate-45 border-2 border-[#E1BAC2] bg-gradient-to-br from-[#E1BAC2]/20 to-[#E1BAC2]/5" />
-            </div>
+            <Image
+              src="/images/logo.png"
+              alt="Sanad Protocol"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
+              priority
+            />
           </div>
         </div>
 

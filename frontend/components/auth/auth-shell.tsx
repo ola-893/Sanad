@@ -18,7 +18,7 @@ export function AuthShell({ kicker, title, subtitle, auditNote, children, footer
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center space-y-2 text-center">
           <div className="mx-auto mb-4">
-            <Logo />
+            <Logo size="lg" />
           </div>
           <p className="kicker-gold">{kicker}</p>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">{title}</h1>

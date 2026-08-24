@@ -35,6 +35,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preload" as="video" type="video/webm" href="/video/hero_2.webm" />
+      </head>
       <body className={`${hankenGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} font-sans`}>
         <QueryProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
