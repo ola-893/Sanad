@@ -19,8 +19,8 @@ const SEPOLIA_RPC = process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-se
 const CC3_RPC = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || process.env.ATTESTCOIN_PROOF_API_URL || 'https://prover.cc3-testnet.creditcoin.network';
 
-const SEPOLIA_VAULT_ADDRESS = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || '0xE037A229aF3886D0181B7727e8252F72B1d3d45B';
-const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F';
+const SEPOLIA_VAULT_ADDRESS = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || '0x218565BeC68691178FC61B28FCaEb78592088FDF';
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70';
 
 const INVESTOR_VAULT_ABI = [
   'function deposit(uint256 amount) external payable',
@@ -66,7 +66,7 @@ async function main() {
   console.log(`  • Calling deposit(${depositAmountUnits}) on Sepolia InvestorVault...`);
 
   const depositTx = await vaultContract.deposit(depositAmountUnits, {
-    value: 0n,
+    value: depositAmountUnits,
   });
   console.log(`  • Broadcast Sepolia Deposit Tx: ${depositTx.hash}`);
   console.log(`  • Sepolia Explorer: https://sepolia.etherscan.io/tx/${depositTx.hash}`);

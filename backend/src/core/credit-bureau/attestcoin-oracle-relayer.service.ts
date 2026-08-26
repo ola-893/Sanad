@@ -65,7 +65,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0xB7AfB0419AdA5820872701325e00015BFAD10023';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x74357E5FED91D6dDdd39847304b8651634693A00';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
   }

@@ -266,9 +266,8 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
 
         require(!toIsNull, "Target contract cannot be null");
-        if (investorVaultAddress != address(0)) {
-            require(to == investorVaultAddress, "Target contract does not match InvestorVault");
-        }
+        require(investorVaultAddress != address(0), "InvestorVault address not configured");
+        require(to == investorVaultAddress, "Target contract does not match InvestorVault");
         require(data.length >= 36, "Invalid calldata length for deposit(uint256)");
 
         // 4. Validate Function Selector (deposit(uint256) = 0xb6b55f25)
@@ -352,9 +351,8 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
 
         require(!toIsNull, "Target contract cannot be null");
-        if (repaymentGatewayAddress != address(0)) {
-            require(to == repaymentGatewayAddress, "Target contract does not match RepaymentGateway");
-        }
+        require(repaymentGatewayAddress != address(0), "RepaymentGateway address not configured");
+        require(to == repaymentGatewayAddress, "Target contract does not match RepaymentGateway");
         require(data.length >= 68, "Invalid calldata length for repay(uint256,uint256)");
 
         // 4. Validate Function Selector (repay(uint256,uint256) = 0xd8aed145)

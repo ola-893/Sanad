@@ -19,9 +19,9 @@ const CC3_RPC = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.credi
 const SEPOLIA_RPC = process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
 
-const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F';
-const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || '0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13';
-const SEPOLIA_GATEWAY_ADDRESS = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162';
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70';
+const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || '0x68359bD39Bf7A683a96808cAD38147d1baFa07f1';
+const SEPOLIA_GATEWAY_ADDRESS = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0x42F25F256762f17FAD2de8b2c6d650f87c8fe699';
 
 const REPAYMENT_GATEWAY_ABI = [
   'function repay(uint256 tokenId, uint256 amount) external payable',
@@ -78,29 +78,28 @@ async function main() {
   const currentBalance = await poolContract.tokenLoanBalance(testTokenId);
   console.log(`  • Initial Token #${testTokenId} Active Loan Balance: ${ethers.formatEther(currentBalance)} tCTC`);
 
-  // 2. Broadcast or Reuse Repayment Transaction on Ethereum Sepolia
-  console.log('\n[2/5] Repayment Transaction on Ethereum Sepolia...');
-  const knownSepoliaTx = process.env.TEST_SEPOLIA_TX || '0xf3035df49e280f6583710bcc402c25c40eabf6d87115c5d35440f62162b51265';
-  let repayTxHash = knownSepoliaTx;
-  let targetBlockNumber = 11534983;
+  // 2. Broadcast Fresh Repayment Transaction on Ethereum Sepolia
+  console.log('\n[2/5] Checking / Broadcasting Fresh Repayment Transaction on Ethereum Sepolia...');
+  const knownTx = process.env.TEST_SEPOLIA_TX || '0xfc462ae17e8e1b79ce6b20d51f60892f2af3cebd3dd625465573b08741761a36';
+  let repayTxHash = knownTx;
+  let targetBlockNumber = 11569752;
 
   try {
-    const tx = await sepoliaProvider.getTransaction(knownSepoliaTx);
+    const tx = await sepoliaProvider.getTransaction(knownTx);
     if (tx && tx.blockNumber) {
       targetBlockNumber = tx.blockNumber;
-      console.log(`  • Found Confirmed Sepolia Repay Tx: ${knownSepoliaTx} (Block #${targetBlockNumber})`);
+      console.log(`  • Found Confirmed Fresh Sepolia Repay Tx: ${repayTxHash} in Block #${targetBlockNumber}`);
     } else {
-      console.log(`  • Broadcasting fresh repay(${testTokenId}, 500) to Sepolia RepaymentGateway...`);
-      const newTx = await gatewayContract.repay(testTokenId, 500);
+      console.log(`  • Calling repay(${testTokenId}, 500) with msg.value = 500 wei on Sepolia RepaymentGateway...`);
+      const newTx = await gatewayContract.repay(testTokenId, 500, { value: 500n });
       const rc = await newTx.wait(1);
       repayTxHash = newTx.hash;
       targetBlockNumber = rc.blockNumber;
-      console.log(`  ✅ Broadcast New Repay Tx: ${repayTxHash} in Block #${targetBlockNumber}`);
+      console.log(`  ✅ Confirmed Fresh Sepolia Repay Tx: ${repayTxHash} in Block #${targetBlockNumber}`);
     }
   } catch (e: any) {
     console.log(`  ℹ️ Transaction lookup: ${e.message}`);
   }
-
   console.log(`  • Sepolia Explorer: https://sepolia.etherscan.io/tx/${repayTxHash}`);
 
   // 3. Generate Attestcoin Proof for Sepolia Tx (ChainKey: 1)
@@ -108,7 +107,7 @@ async function main() {
   const proofBuilder = new proofProvider.service.ProofBuilder(1, PROOF_BUILDER_URL);
 
   console.log(`  • Waiting for block #${targetBlockNumber} to be attested by CC3 Attestcoin Prover...`);
-  await proofBuilder.waitUntilHeightAttested(1, targetBlockNumber, 10000, 300000, 3000);
+  await proofBuilder.waitUntilHeightAttested(1, targetBlockNumber, 10000, 600000, 3000);
   console.log(`  ✅ Block #${targetBlockNumber} is attested in Prover cache!`);
 
   console.log('  • Fetching Merkle + Continuity Proof...');
