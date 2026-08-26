@@ -190,6 +190,15 @@ async function main() {
     console.log(`  ✅ PASSED: Mismatched token ID correctly rejected on-chain: ${err.message?.split('\n')[0]}`);
   }
 
+  // Test C: Zero-Value Unbacked Repayment Attempt (Prevent fake debt clearance without real ETH)
+  try {
+    console.log('  • Test C: Attempting repay(tokenId, 50000) with msg.value = 0 (Unbacked debt clearance attack)...');
+    await gatewayContract.repay.estimateGas(testTokenId, 50000n, { value: 0n });
+    console.error('  ❌ FAILED: Zero-value unbacked repayment was NOT rejected!');
+  } catch (err: any) {
+    console.log(`  ✅ PASSED: Zero-value unbacked repayment correctly reverted on Sepolia: ${err.message?.split('\n')[0]}`);
+  }
+
   console.log('\n========================================================================');
   console.log('🎉 PART 1 E2E VERIFICATION COMPLETE: ALL CHECKS PASSED!');
   console.log('========================================================================');

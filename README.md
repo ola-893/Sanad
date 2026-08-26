@@ -84,16 +84,16 @@ Across emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hol
 
 | Smart Contract | Address | Compiler & Status | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **`SanadCreditOracle.sol`** | `0xB7AfB0419AdA5820872701325e00015BFAD10023` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xB7AfB0419AdA5820872701325e00015BFAD10023) |
-| **`SanadLiquidityPool.sol`** | `0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xA2Ddf564f4F92A60cAD11AE95c49c25393D5e74F) |
-| **`SAGToken.sol`** | `0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0xF87125c68Ad8Af788f4c7C91151976c15C3aCf13) |
+| **`SanadCreditOracle.sol`** | `0x74357E5FED91D6dDdd39847304b8651634693A00` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x74357E5FED91D6dDdd39847304b8651634693A00) |
+| **`SanadLiquidityPool.sol`** | `0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70) |
+| **`SAGToken.sol`** | `0x68359bD39Bf7A683a96808cAD38147d1baFa07f1` | Solidity 0.8.20 (`viaIR: true`) | [Blockscout](https://creditcoin-testnet.blockscout.com/address/0x68359bD39Bf7A683a96808cAD38147d1baFa07f1) |
 
 ### Ethereum Sepolia Gateways (Chain ID: `11155111`)
 
 | Gateway Contract | Address | Purpose | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **`RepaymentGateway.sol`** | `0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162` | Cross-chain borrower loan repayment gateway | [Etherscan](https://sepolia.etherscan.io/address/0xB2bF16f54Fa082Dee7acEf3De2AD26079F4af162) |
-| **`InvestorVault.sol`** | `0xE037A229aF3886D0181B7727e8252F72B1d3d45B` | Cross-chain investor liquidity deposit gateway | [Etherscan](https://sepolia.etherscan.io/address/0xE037A229aF3886D0181B7727e8252F72B1d3d45B) |
+| **`RepaymentGateway.sol`** | `0x42F25F256762f17FAD2de8b2c6d650f87c8fe699` | Cross-chain borrower loan repayment gateway (strict msg.value validation) | [Etherscan](https://sepolia.etherscan.io/address/0x42F25F256762f17FAD2de8b2c6d650f87c8fe699) |
+| **`InvestorVault.sol`** | `0x218565BeC68691178FC61B28FCaEb78592088FDF` | Cross-chain investor liquidity deposit gateway (strict msg.value validation) | [Etherscan](https://sepolia.etherscan.io/address/0x218565BeC68691178FC61B28FCaEb78592088FDF) |
 
 ### Native CC3 Precompiles
 

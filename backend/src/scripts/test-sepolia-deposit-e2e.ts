@@ -169,6 +169,15 @@ async function main() {
     console.log(`  ✅ PASSED: Over-claimed deposit correctly rejected on-chain: ${err.message?.split('\n')[0]}`);
   }
 
+  // Test C: Zero-Value Unbacked Deposit Attempt (Prevent inflation without real ETH)
+  try {
+    console.log('  • Test C: Attempting deposit(1000000) with msg.value = 0 (Unbacked inflation attack)...');
+    await vaultContract.deposit.estimateGas(1000000n, { value: 0n });
+    console.error('  ❌ FAILED: Zero-value unbacked deposit was NOT rejected!');
+  } catch (err: any) {
+    console.log(`  ✅ PASSED: Zero-value unbacked deposit correctly reverted on Sepolia: ${err.message?.split('\n')[0]}`);
+  }
+
   console.log('\n========================================================================');
   console.log('🎉 PART 2 E2E VERIFICATION COMPLETE: ALL CHECKS PASSED!');
   console.log('========================================================================');

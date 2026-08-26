@@ -35,19 +35,19 @@ contract RepaymentGateway {
 
     /**
      * @notice Repays an active Sanad loan for a specific SAG Token ID on Sepolia.
-     * @dev Function selector is 0xee6e44b0.
+     * @dev Function selector is 0xd8aed145 (repay(uint256,uint256)).
+     *      Strictly enforces that msg.value is greater than zero and matches amount unconditionally.
      * @param tokenId SAG Token ID on Creditcoin CC3
-     * @param amount Amount repaid (in wei or token nominal units)
+     * @param amount Amount repaid (must match msg.value in wei)
      */
     function repay(uint256 tokenId, uint256 amount) external payable {
         require(tokenId > 0, "Invalid token ID");
         require(amount > 0, "Repayment amount must be greater than zero");
-        if (msg.value > 0) {
-            require(msg.value == amount, "msg.value does not match amount parameter");
-            if (treasury != address(this)) {
-                (bool ok, ) = treasury.call{value: msg.value}("");
-                require(ok, "Transfer to treasury failed");
-            }
+        require(msg.value == amount, "msg.value does not match amount parameter");
+
+        if (treasury != address(this)) {
+            (bool ok, ) = treasury.call{value: msg.value}("");
+            require(ok, "Transfer to treasury failed");
         }
 
         totalRepaidForToken[tokenId] += amount;

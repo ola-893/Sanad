@@ -11,17 +11,19 @@ contract InvestorVault {
     event DepositMade(address indexed investor, uint256 amount, uint256 timestamp);
 
     /**
-     * @notice Deposit funds for LP provisioning
-     * @param amount Claimed deposit volume/amount (e.g. USDC / native units)
+     * @notice Deposit native ETH funds for LP provisioning on Creditcoin CC3.
+     * @dev Function selector is 0xb6b55f25 (deposit(uint256)).
+     *      Strictly enforces that msg.value is greater than zero and matches amount exactly.
+     * @param amount Claimed deposit volume (must match msg.value exactly)
      */
     function deposit(uint256 amount) external payable {
         require(amount > 0, "Amount must be greater than zero");
+        require(msg.value == amount, "msg.value does not match amount parameter");
         emit DepositMade(msg.sender, amount, block.timestamp);
     }
 
     receive() external payable {
-        if (msg.value > 0) {
-            emit DepositMade(msg.sender, msg.value, block.timestamp);
-        }
+        require(msg.value > 0, "No ETH sent");
+        emit DepositMade(msg.sender, msg.value, block.timestamp);
     }
 }
