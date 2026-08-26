@@ -163,6 +163,12 @@ export default function BorrowerDashboardPage() {
                     Apply for New Loan
                   </Button>
                 </Link>
+                <Link href="/payment" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-3 rounded-xl border-[#171414]/20 hover:bg-[#171414]/5 text-[#171414]">
+                    <CreditCard className="h-4 w-4 text-cyan-600" />
+                    Make Loan Repayment (Sepolia / CC3)
+                  </Button>
+                </Link>
                 <div className="rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
                   <p className="text-xs font-medium text-[#171414] mb-2">How it works:</p>
                   <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">

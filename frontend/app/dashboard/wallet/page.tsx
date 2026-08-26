@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -133,6 +134,18 @@ export default function WalletPage() {
             <span className="text-lg font-mono font-bold text-[#4A4A4A]">ETH</span>
           </div>
           <p className="text-xs text-[#4A4A4A] mt-2">Sepolia Testnet — used for deposits & repayments</p>
+          <div className="flex gap-2 mt-3">
+            <Link href="/dashboard" className="flex-1">
+              <Button size="sm" variant="outline" className="w-full text-xs font-semibold rounded-xl border-[#171414]/15">
+                Supply Liquidity
+              </Button>
+            </Link>
+            <Link href="/payment" className="flex-1">
+              <Button size="sm" variant="outline" className="w-full text-xs font-semibold rounded-xl border-[#171414]/15">
+                Repay Loan
+              </Button>
+            </Link>
+          </div>
           <div className="mt-3 p-3 rounded-xl bg-[#F5F5F3] border border-[#171414]/5">
             <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#4A4A4A] mb-1">Need testnet ETH?</p>
             <a
