@@ -17,6 +17,8 @@ build/
 out/
 dist-ssr/
 *.tsbuildinfo
+cache/
+broadcast/
 
 # Python / AI cache
 __pycache__/

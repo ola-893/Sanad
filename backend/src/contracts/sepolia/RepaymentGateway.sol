@@ -76,6 +76,9 @@ contract RepaymentGateway {
     }
 
     receive() external payable {
-        // Fallback receive
+        if (treasury != address(this) && msg.value > 0) {
+            (bool ok, ) = treasury.call{value: msg.value}("");
+            require(ok, "Transfer to treasury failed");
+        }
     }
 }
