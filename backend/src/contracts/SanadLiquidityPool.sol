@@ -163,6 +163,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         require(amount > 0, "Amount must be greater than 0");
         require(lpBalances[msg.sender] >= amount, "Insufficient LP balance");
         require(totalPoolLiquidity >= amount, "Insufficient pool liquidity");
+        require(address(this).balance >= amount, "Insufficient native CTC cash in pool balance");
 
         lpBalances[msg.sender] -= amount;
         totalPoolLiquidity -= amount;
@@ -188,6 +189,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         address pawnshop = sagToken.ownerOf(tokenId);
         require(!sagToken.frozenAddress(pawnshop), "Compliance: Pawnshop address is frozen");
         require(totalPoolLiquidity >= amount, "Insufficient pool liquidity to fund loan");
+        require(address(this).balance >= amount, "Insufficient native CTC cash in pool balance");
 
         tokenLoanBalance[tokenId] = amount;
 
@@ -241,7 +243,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         IBlockProver.ContinuityProof calldata continuityProof,
         bytes32 sourceTxHash,
         uint256 claimedAmount
-    ) external returns (bool) {
+    ) external payable returns (bool) {
         require(!processedSourceTransactions[sourceTxHash], "Deposit transaction already settled");
 
         // 1. Execute verification against Creditcoin's native BlockProver (0xFD2)
@@ -321,7 +323,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         IBlockProver.ContinuityProof calldata continuityProof,
         bytes32 sourceTxHash,
         uint256 repaidAmountUSD
-    ) external returns (bool) {
+    ) external payable returns (bool) {
         require(!processedSourceTransactions[sourceTxHash], "Repayment transaction already settled");
 
         // Explicit compliance checks to block settlement on frozen loans/accounts
