@@ -1,7 +1,8 @@
-# Sanad Protocol (سند)
+# Sanad Protocol 
+
 **Trustless Cross-Chain Credit Scoring & Real-World Asset (RWA) Microfinance on Creditcoin 3**
 
-> **Sanad (سند)**: 
+> **Sanad**: 
 > 1. **Chain of Authentication**: Cryptographic provenance from physical gold vault appraisal to on-chain note settlement.
 > 2. **Credit Note & Title Deed**: In Islamic commercial law (*Fiqh al-Mu'amalat*), a *Sanad* is a formal debt/collateral certificate (*Sanad Rahn*).
 > 3. **Creditcoin L1 Core Alignment**: Transforming real-world microfinance and cross-chain DeFi activity into immutable, portable credit scoring on Creditcoin CC3.
