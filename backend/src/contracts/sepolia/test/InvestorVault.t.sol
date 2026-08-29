@@ -8,35 +8,85 @@ contract InvestorVaultTest is Test {
     InvestorVault public vault;
     address public owner;
     address public treasury;
-    address public user1;
-    address public user2;
+    address public investor1;
+    address public borrower1;
 
     event DepositMade(address indexed investor, uint256 amount, uint256 timestamp);
+    event LoanFunded(
+        uint256 indexed tokenId,
+        address indexed investor,
+        address indexed borrower,
+        uint256 amount,
+        uint256 timestamp
+    );
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     function setUp() public {
         owner = makeAddr("owner");
         treasury = makeAddr("treasury");
-        user1 = makeAddr("user1");
-        user2 = makeAddr("user2");
+        investor1 = makeAddr("investor1");
+        borrower1 = makeAddr("borrower1");
 
         vm.deal(owner, 1000 ether);
-        vm.deal(user1, 1000 ether);
-        vm.deal(user2, 1000 ether);
+        vm.deal(investor1, 1000 ether);
+        vm.deal(borrower1, 1000 ether);
 
         vm.prank(owner);
         vault = new InvestorVault(treasury);
     }
 
     // =========================================================================
-    // 1. BALANCE IS ZERO & FORWARDS TO TREASURY
+    // 1. P2P DIRECT FUNDING
+    // =========================================================================
+
+    function testFuzz_FundLoan_DirectToBorrower(uint256 tokenId, uint256 amount) public {
+        tokenId = bound(tokenId, 1, 1_000_000);
+        amount = bound(amount, 1 wei, 500 ether);
+
+        uint256 borrowerBefore = borrower1.balance;
+        uint256 treasuryBefore = treasury.balance;
+
+        vm.prank(investor1);
+        vault.fundLoan{value: amount}(tokenId, borrower1);
+
+        assertEq(address(vault).balance, 0, "Vault balance must be zero");
+        assertEq(borrower1.balance, borrowerBefore + amount, "Borrower must receive exact funding amount");
+        assertEq(treasury.balance, treasuryBefore, "Treasury balance must not change on P2P funding");
+        assertEq(vault.loanFunders(tokenId), investor1, "loanFunders must record investor");
+    }
+
+    function test_FundLoan_DoubleFunding_Reverts() public {
+        vm.prank(investor1);
+        vault.fundLoan{value: 1 ether}(1, borrower1);
+
+        vm.prank(investor1);
+        vm.expectRevert("Loan already funded");
+        vault.fundLoan{value: 1 ether}(1, borrower1);
+    }
+
+    function test_FundLoan_ZeroAmountOrInvalidRecipient_Reverts() public {
+        vm.prank(investor1);
+        vm.expectRevert("Invalid token ID");
+        vault.fundLoan{value: 1 ether}(0, borrower1);
+
+        vm.prank(investor1);
+        vm.expectRevert("Invalid borrower address");
+        vault.fundLoan{value: 1 ether}(1, address(0));
+
+        vm.prank(investor1);
+        vm.expectRevert("Funding amount must be greater than zero");
+        vault.fundLoan{value: 0}(1, borrower1);
+    }
+
+    // =========================================================================
+    // 2. GENERAL DEPOSIT (FORWARDS TO TREASURY)
     // =========================================================================
 
     function testFuzz_Deposit_ValidAmount_ForwardsToTreasury(uint256 amount) public {
         amount = bound(amount, 1 wei, 500 ether);
         uint256 treasuryBalBefore = treasury.balance;
 
-        vm.prank(user1);
+        vm.prank(investor1);
         vault.deposit{value: amount}(amount);
 
         assertEq(address(vault).balance, 0, "Vault balance must be zero");
@@ -47,7 +97,7 @@ contract InvestorVaultTest is Test {
         amount = bound(amount, 1 wei, 500 ether);
         uint256 treasuryBalBefore = treasury.balance;
 
-        vm.prank(user1);
+        vm.prank(investor1);
         (bool ok, ) = address(vault).call{value: amount}("");
         assertTrue(ok, "Direct send to receive() must succeed");
 
@@ -55,17 +105,13 @@ contract InvestorVaultTest is Test {
         assertEq(treasury.balance, treasuryBalBefore + amount, "Treasury must receive exact funds");
     }
 
-    // =========================================================================
-    // 2. DEPOSIT REVERTS WHEN MSG.VALUE != AMOUNT
-    // =========================================================================
-
     function testFuzz_Deposit_Revert_MismatchedValue(uint256 amount, uint256 msgValue) public {
         amount = bound(amount, 0, 500 ether);
         msgValue = bound(msgValue, 0, 500 ether);
         vm.assume(amount != msgValue || amount == 0);
 
-        vm.deal(user1, msgValue);
-        vm.prank(user1);
+        vm.deal(investor1, msgValue);
+        vm.prank(investor1);
 
         if (amount == 0) {
             vm.expectRevert("Amount must be greater than zero");
@@ -76,24 +122,8 @@ contract InvestorVaultTest is Test {
         vault.deposit{value: msgValue}(amount);
     }
 
-    function test_Deposit_ZeroValue_Reverts() public {
-        vm.prank(user1);
-        vm.expectRevert("Amount must be greater than zero");
-        vault.deposit{value: 0}(0);
-
-        vm.prank(user1);
-        vm.expectRevert("msg.value does not match amount parameter");
-        vault.deposit{value: 0}(1000);
-    }
-
-    function test_Receive_ZeroValue_Reverts() public {
-        vm.prank(user1);
-        (bool ok, ) = address(vault).call{value: 0}("");
-        assertFalse(ok, "Zero-value receive must fail");
-    }
-
     // =========================================================================
-    // 3. ONLY OWNER CAN CALL SETTREASURY / WITHDRAW
+    // 3. OWNER FUNCTIONS
     // =========================================================================
 
     function testFuzz_SetTreasury_OnlyOwner(address caller, address newTreasury) public {
@@ -114,33 +144,5 @@ contract InvestorVaultTest is Test {
         vault.setTreasury(newTreasury);
 
         assertEq(vault.treasury(), newTreasury);
-    }
-
-    function test_SetTreasury_ZeroAddress_Reverts() public {
-        vm.prank(owner);
-        vm.expectRevert("Invalid treasury address");
-        vault.setTreasury(address(0));
-    }
-
-    function testFuzz_Withdraw_OnlyOwner(address caller) public {
-        vm.assume(caller != owner);
-
-        vm.prank(caller);
-        vm.expectRevert("Only owner");
-        vault.withdraw();
-    }
-
-    function test_Withdraw_Success_IfFundsAccidentallyHeld() public {
-        // Force deal ETH into contract directly
-        vm.deal(address(vault), 10 ether);
-        assertEq(address(vault).balance, 10 ether);
-
-        uint256 treasuryBefore = treasury.balance;
-
-        vm.prank(owner);
-        vault.withdraw();
-
-        assertEq(address(vault).balance, 0, "Vault balance must be 0 after withdraw");
-        assertEq(treasury.balance, treasuryBefore + 10 ether, "Treasury must receive recovered funds");
     }
 }

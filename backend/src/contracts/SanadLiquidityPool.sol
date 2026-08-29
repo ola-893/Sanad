@@ -226,6 +226,19 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     // Global cumulative proven cross-chain capital recorded on CC3
     uint256 public totalCrossChainProvenCapital;
 
+    // Mapping of loan tokenId => cross-chain funding investor address
+    mapping(uint256 => address) public loanInvestors;
+
+    event CrossChainLoanFunded(
+        uint64 indexed chainKey,
+        bytes32 indexed sourceTxHash,
+        uint256 indexed tokenId,
+        address investor,
+        address borrower,
+        uint256 amount,
+        uint256 timestamp
+    );
+
     event RepaymentGatewayUpdated(address indexed oldGateway, address indexed newGateway);
     event InvestorVaultUpdated(address indexed oldVault, address indexed newVault);
     event CrossChainDepositVerified(
@@ -342,6 +355,121 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
 
         return true;
     }
+
+    /**
+     * @notice Verifies an Attestcoin inclusion proof on-chain for a peer-to-peer cross-chain loan funding event on Sepolia.
+     * @dev Follows Cr3dX separation: real ETH moved directly from investor to borrower on Sepolia in InvestorVault.fundLoan().
+     *      This CC3 function verifies the cryptographic proof and updates CC3 accounting/bookkeeping only.
+     *      NO native CTC is transferred out of the pool (address(this).balance and totalPoolLiquidity remain untouched).
+     *      The verified sender "from" extracted directly from the signed transaction envelope is the sole source of truth for investor identity.
+     *      The native transaction envelope "value" is the sole source of truth for the funding volume.
+     * @param tokenId SAG Token ID on Creditcoin CC3
+     * @param chainKey Chain Key (1 for Ethereum Sepolia)
+     * @param headerNumber Block header number where deposit was mined
+     * @param encodedTransaction Encoded transaction structure (txType, chunks)
+     * @param merkleProof Attestcoin Merkle proof
+     * @param continuityProof Attestcoin Continuity proof
+     * @param sourceTxHash Hash of the funding transaction on Sepolia
+     */
+    function verifyAndFundLoanCrossChain(
+        uint256 tokenId,
+        uint64 chainKey,
+        uint64 headerNumber,
+        bytes calldata encodedTransaction,
+        IBlockProver.MerkleProof calldata merkleProof,
+        IBlockProver.ContinuityProof calldata continuityProof,
+        bytes32 sourceTxHash
+    ) external returns (bool) {
+        require(!processedSourceTransactions[sourceTxHash], "Funding transaction already settled");
+
+        // Explicit compliance checks to prevent funding frozen collateral or frozen pawnshops
+        require(!sagToken.frozenToken(tokenId), "Compliance: Token is frozen");
+        address pawnshop = sagToken.ownerOf(tokenId);
+        require(!sagToken.frozenAddress(pawnshop), "Compliance: Pawnshop address is frozen");
+
+        // Ensure loan is awaiting funding (ActivePledged with zero loan balance)
+        require(tokenLoanBalance[tokenId] == 0, "Loan already funded");
+
+        // 1. Execute verification against Creditcoin native BlockProver (0xFD2)
+        IBlockProver blockProver = IBlockProver(BLOCK_PROVER_PRECOMPILE);
+        bool isValid = blockProver.verify(chainKey, headerNumber, encodedTransaction, merkleProof, continuityProof);
+        require(isValid, "Invalid Attestcoin cross-chain proof");
+
+        // 2. Decode outer ABI structure (uint8 txType, bytes[] chunks)
+        (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length >= 2, "Malformed encodedTransaction chunks");
+        require(txType <= 4, "Invalid transaction type");
+
+        // 3. Decode Chunk 0 (Common EVM transaction fields)
+        (
+            /* uint64 nonce */,
+            /* uint64 gasLimit */,
+            address from,
+            bool toIsNull,
+            address to,
+            uint256 value,
+            bytes memory data
+        ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
+
+        require(!toIsNull, "Target contract cannot be null");
+        require(investorVaultAddress != address(0), "InvestorVault address not configured");
+        require(to == investorVaultAddress, "Target contract does not match InvestorVault");
+        require(data.length >= 68, "Invalid calldata length for fundLoan(uint256,address)");
+
+        // 4. Validate Function Selector (fundLoan(uint256,address) = 0x6d1611c4)
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+        require(selector == 0x6d1611c4, "Invalid function selector for fundLoan(uint256,address)");
+
+        // 5. Decode Calldata Parameters (tokenId, borrower)
+        uint256 calldataTokenId;
+        address calldataBorrower;
+        assembly {
+            calldataTokenId := mload(add(data, 36))
+            calldataBorrower := mload(add(data, 68))
+        }
+        require(calldataTokenId == tokenId, "Token ID in calldata does not match claimed tokenId");
+        require(calldataBorrower == pawnshop, "Borrower in calldata does not match token owner");
+        require(value > 0, "Funding amount must be greater than zero");
+
+        // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
+        uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
+        require(receiptStatus == 1, "Source transaction was reverted on Ethereum Sepolia");
+
+        // 7. Mark source transaction as settled to prevent replay
+        processedSourceTransactions[sourceTxHash] = true;
+
+        // 8. Bookkeeping on CC3 (Cr3dX Separation: DO NOT disburse CTC!)
+        tokenLoanBalance[tokenId] = value;
+        loanInvestors[tokenId] = from;
+
+        // Record investor proven capital and credit reputation
+        investorProvenDeposits[from].push(
+            ProvenInvestorDeposit({
+                chainKey: chainKey,
+                sourceTxHash: sourceTxHash,
+                amount: value,
+                timestamp: block.timestamp
+            })
+        );
+        investorTotalProvenCapital[from] += value;
+        totalCrossChainProvenCapital += value;
+
+        emit CrossChainLoanFunded(
+            chainKey,
+            sourceTxHash,
+            tokenId,
+            from,
+            pawnshop,
+            value,
+            block.timestamp
+        );
+
+        return true;
+    }
+
 
     /**
      * @notice Verifies an Attestcoin inclusion proof on-chain and marks the loan repaid.
@@ -719,6 +847,11 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     /**
      * @notice Returns investor credit profile (withdrawable native LP balance vs. proven cross-chain capital)
      */
+
+    function getLoanInvestor(uint256 tokenId) external view returns (address) {
+        return loanInvestors[tokenId];
+    }
+
     function getInvestorCreditProfile(address investor) external view returns (
         uint256 withdrawableLpBalance,
         uint256 provenCrossChainCapital,
