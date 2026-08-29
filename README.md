@@ -115,6 +115,17 @@ Across emerging markets, over **50,000 pawnshops and Ar-Rahnu cooperatives** hol
 
 ---
 
+> [!IMPORTANT]
+> **Architecture Transparency — Two Distinct Trust Models**
+>
+> Sanad uses Creditcoin's Attestcoin BlockProver (`0xFD2`) for two different purposes with different trust properties:
+>
+> 1. **Credit Bureau (Trustless)**: The `SanadCreditOracle` proves historical DeFi repayment behavior (Aave, Compound, Maker, etc.) on Ethereum and records it on CC3. This is **fully trustless end-to-end** — the proof verifies the exact transaction, the oracle decodes it on-chain, and no intermediary can fabricate or alter the credit score. This is the flagship innovation.
+>
+> 2. **Cross-Chain Deposit & Repayment Settlement (Relayer-Funded)**: When an investor deposits ETH into `InvestorVault` on Sepolia, or a borrower repays via `RepaymentGateway`, the Attestcoin proof cryptographically verifies that the transaction happened — but Attestcoin proves facts, it does not move capital. The relayer wallet converts the proven ETH amount at a fixed demo rate (`DEMO_ETH_TO_CTC_RATE = 2500`) and attaches real CTC to the CC3 settlement transaction, so the pool's native balance stays solvent. This is a **custodial, relayer-funded rebalancing step**, not a trustless bridge. Production architecture would connect to decentralized oracle price feeds and an automated market-making layer.
+
+---
+
 ## 🚀 Quick Start & Reproduction
 
 ### Prerequisites

@@ -1,11 +1,11 @@
 export const SANAD_LIQUIDITY_POOL_ADDRESS =
   process.env.NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS ||
   process.env.NEXT_PUBLIC_LIQUIDITY_POOL_ADDRESS ||
-  '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70';
+  '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA';
 
 export const SAG_TOKEN_ADDRESS =
   process.env.NEXT_PUBLIC_SAG_TOKEN_ADDRESS ||
-  '0x68359bD39Bf7A683a96808cAD38147d1baFa07f1';
+  '0x42d3cEB022f4f05467742D8826eceEA6c18bEf42';
 
 export const SANAD_LIQUIDITY_POOL_ABI = [
   "constructor(address _sagToken)",
@@ -29,6 +29,12 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function lpBalances(address provider) external view returns (uint256)",
   "function totalPoolLiquidity() external view returns (uint256)",
 
+  // Proven Cross-Chain Investor Capital & Credit Ledger (Cr3dX Separation)
+  "function investorTotalProvenCapital(address investor) external view returns (uint256)",
+  "function totalCrossChainProvenCapital() external view returns (uint256)",
+  "function getInvestorProvenDeposits(address investor) external view returns (tuple(uint64 chainKey, bytes32 sourceTxHash, uint256 amount, uint256 timestamp)[])",
+  "function getInvestorCreditProfile(address investor) external view returns (uint256 withdrawableLpBalance, uint256 provenCrossChainCapital, uint256 provenDepositCount)",
+
   // Loan Funding & Cross-Chain / Same-Chain Settlement
   "function fundLoan(uint256 tokenId, uint256 amount) external",
   "function repayLoanDirect(uint256 tokenId) external payable",
@@ -46,5 +52,13 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function auctions(uint256 tokenId) external view returns (tuple(uint256 tokenId, uint256 startPriceUSD, uint256 reservePriceUSD, uint256 startTime, uint256 endTime, bool active))",
   "function gracePeriod() external view returns (uint256)",
   "function auctionDuration() external view returns (uint256)",
-  "function setGracePeriod(uint256 _gracePeriod) external"
+  "function setGracePeriod(uint256 _gracePeriod) external",
+  "function repaymentGatewayAddress() external view returns (address)",
+  "function setRepaymentGatewayAddress(address _repaymentGateway) external",
+  "event RepaymentGatewayUpdated(address indexed oldGateway, address indexed newGateway)",
+  "function investorVaultAddress() external view returns (address)",
+  "function setInvestorVaultAddress(address _investorVault) external",
+  "event InvestorVaultUpdated(address indexed oldVault, address indexed newVault)",
+  "function verifyAndRecordDeposit(uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 claimedAmount) external returns (bool)",
+  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 totalProvenCapital, uint256 timestamp)"
 ] as const;

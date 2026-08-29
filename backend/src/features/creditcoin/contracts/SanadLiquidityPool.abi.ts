@@ -20,6 +20,12 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function lpBalances(address provider) external view returns (uint256)",
   "function totalPoolLiquidity() external view returns (uint256)",
 
+  // Proven Cross-Chain Investor Capital & Credit Ledger (Cr3dX Separation)
+  "function investorTotalProvenCapital(address investor) external view returns (uint256)",
+  "function totalCrossChainProvenCapital() external view returns (uint256)",
+  "function getInvestorProvenDeposits(address investor) external view returns (tuple(uint64 chainKey, bytes32 sourceTxHash, uint256 amount, uint256 timestamp)[])",
+  "function getInvestorCreditProfile(address investor) external view returns (uint256 withdrawableLpBalance, uint256 provenCrossChainCapital, uint256 provenDepositCount)",
+
   // Loan Funding & Cross-Chain / Same-Chain Settlement
   "function fundLoan(uint256 tokenId, uint256 amount) external",
   "function repayLoanDirect(uint256 tokenId) external payable",
@@ -45,5 +51,5 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function setInvestorVaultAddress(address _investorVault) external",
   "event InvestorVaultUpdated(address indexed oldVault, address indexed newVault)",
   "function verifyAndRecordDeposit(uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 claimedAmount) external returns (bool)",
-  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 newLpBalance, uint256 timestamp)"
+  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 totalProvenCapital, uint256 timestamp)"
 ] as const;

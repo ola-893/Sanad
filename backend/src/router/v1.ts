@@ -19,6 +19,12 @@ import { pledgeRequestRoutes } from '@/features/pledge-request/index.js';
 
 const v1Router = express.Router();
 
+// Public Creditcoin & Attestcoin Protocol Routes (Verification & Settlement)
+v1Router.use('/creditcoin', creditcoinRoutes);
+v1Router.use('/credit-oracle', creditOracleRoutes);
+v1Router.post('/loan/repay/prove', (req, res) => new CreditOracleController().proveRepayment(req, res));
+v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveDeposit(req, res));
+
 // Use the feature routes
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
@@ -29,12 +35,6 @@ v1Router.use('/investor', authenticateJWT, investorRoutes);
 v1Router.use('/pawnshop', pawnshopProfileRoutes);
 v1Router.use('/pawnshop', authenticateJWT, pawnshopRoutes);
 v1Router.use('/gold-price', goldPriceRoutes);
-
-// Creditcoin & Attestcoin Protocol Routes
-v1Router.use('/creditcoin', creditcoinRoutes);
-v1Router.use('/credit-oracle', creditOracleRoutes);
-v1Router.post('/loan/repay/prove', (req, res) => new CreditOracleController().proveRepayment(req, res));
-v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveDeposit(req, res));
 
 // Borrower-to-Pawnshop Pledge Requests
 v1Router.use('/pledge-requests', pledgeRequestRoutes);
