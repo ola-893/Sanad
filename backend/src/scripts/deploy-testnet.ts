@@ -29,9 +29,8 @@ export async function deployToTestnet() {
   console.log('[1/4] Connecting to Creditcoin CC3 RPC...');
   console.log(`• Creditcoin 3 Testnet RPC: ${cc3Rpc}`);
 
-  const cc3Provider = new ethers.JsonRpcProvider(cc3Rpc, {
-    chainId: 102031,
-    name: 'Creditcoin3Testnet',
+  const cc3Provider = new ethers.JsonRpcProvider(cc3Rpc, 102031, {
+    staticNetwork: ethers.Network.from(102031),
   });
 
   const cc3Signer = new ethers.Wallet(privateKey, cc3Provider);

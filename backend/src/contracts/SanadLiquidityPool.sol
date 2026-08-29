@@ -205,6 +205,27 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     // Deployed Investor Vault Address on Sepolia (ChainKey: 1)
     address public investorVaultAddress;
 
+    // =========================================================================
+    // PROVEN CROSS-CHAIN INVESTOR CAPITAL & REPUTATION LEDGER (Cr3dX Separation)
+    // Value stays where it landed (Sepolia treasury). CC3 records cryptographic truth
+    // without inflating unbacked withdrawable native lpBalances.
+    // =========================================================================
+    struct ProvenInvestorDeposit {
+        uint64 chainKey;
+        bytes32 sourceTxHash;
+        uint256 amount;
+        uint256 timestamp;
+    }
+
+    // Investor Address => Array of proven cross-chain deposit events
+    mapping(address => ProvenInvestorDeposit[]) public investorProvenDeposits;
+
+    // Investor Address => Cumulative proven cross-chain capital
+    mapping(address => uint256) public investorTotalProvenCapital;
+
+    // Global cumulative proven cross-chain capital recorded on CC3
+    uint256 public totalCrossChainProvenCapital;
+
     event RepaymentGatewayUpdated(address indexed oldGateway, address indexed newGateway);
     event InvestorVaultUpdated(address indexed oldVault, address indexed newVault);
     event CrossChainDepositVerified(
@@ -212,7 +233,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         uint64 indexed chainKey,
         bytes32 indexed sourceTxHash,
         uint256 amount,
-        uint256 newLpBalance,
+        uint256 totalProvenCapital,
         uint256 timestamp
     );
 
@@ -297,12 +318,27 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         // 7. Mark source transaction as settled to prevent replay
         processedSourceTransactions[sourceTxHash] = true;
 
-        // 8. Credit the investor's LP share balance on Creditcoin
-        lpBalances[from] += effectiveDepositAmount;
-        totalPoolLiquidity += effectiveDepositAmount;
+        // 8. Record verified cross-chain deposit in investor credit/reputation history (Cr3dX Separation)
+        // Value stays where it landed (Sepolia treasury). CC3 records cryptographic truth without unbacked LP balance inflation.
+        investorProvenDeposits[from].push(
+            ProvenInvestorDeposit({
+                chainKey: chainKey,
+                sourceTxHash: sourceTxHash,
+                amount: effectiveDepositAmount,
+                timestamp: block.timestamp
+            })
+        );
+        investorTotalProvenCapital[from] += effectiveDepositAmount;
+        totalCrossChainProvenCapital += effectiveDepositAmount;
 
-        emit CrossChainDepositVerified(from, chainKey, sourceTxHash, effectiveDepositAmount, lpBalances[from], block.timestamp);
-        emit LiquidityDeposited(from, effectiveDepositAmount, totalPoolLiquidity);
+        emit CrossChainDepositVerified(
+            from,
+            chainKey,
+            sourceTxHash,
+            effectiveDepositAmount,
+            investorTotalProvenCapital[from],
+            block.timestamp
+        );
 
         return true;
     }
@@ -671,5 +707,27 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
      */
     function setGracePeriod(uint256 _gracePeriod) external onlyOwner {
         gracePeriod = _gracePeriod;
+    }
+
+    /**
+     * @notice Returns all verified cross-chain deposits for an investor
+     */
+    function getInvestorProvenDeposits(address investor) external view returns (ProvenInvestorDeposit[] memory) {
+        return investorProvenDeposits[investor];
+    }
+
+    /**
+     * @notice Returns investor credit profile (withdrawable native LP balance vs. proven cross-chain capital)
+     */
+    function getInvestorCreditProfile(address investor) external view returns (
+        uint256 withdrawableLpBalance,
+        uint256 provenCrossChainCapital,
+        uint256 provenDepositCount
+    ) {
+        return (
+            lpBalances[investor],
+            investorTotalProvenCapital[investor],
+            investorProvenDeposits[investor].length
+        );
     }
 }

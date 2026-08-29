@@ -50,8 +50,18 @@ export const CREDITCOIN_CONFIG: CreditcoinNetworkConfig = {
 
   // Deployed Contract Addresses on Creditcoin 3 Testnet
   contracts: {
-    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0x68359bD39Bf7A683a96808cAD38147d1baFa07f1',
-    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70',
-    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0x74357E5FED91D6dDdd39847304b8651634693A00',
+    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0x42d3cEB022f4f05467742D8826eceEA6c18bEf42',
+    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA',
+    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xE45e8F367C02B9d5f5A165827824351457Dd8353',
   },
 };
+
+/**
+ * Fixed demo conversion rate for cross-chain liquidity pool rebalancing.
+ * 1 ETH = 2,500 CTC (e.g. $2,500 ETH / $1.00 CTC).
+ * 
+ * NOTE: This is a fixed demo rate for hackathon cross-chain liquidity provisioning.
+ * Production architecture connects to decentralized oracle price feeds (e.g. Pyth / Chainlink).
+ */
+export const DEMO_ETH_TO_CTC_RATE = 2500n;
+

@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 import dotenv from 'dotenv';
-import { CREDITCOIN_CONFIG } from '@/features/creditcoin/creditcoin.config.js';
+import { CREDITCOIN_CONFIG, DEMO_ETH_TO_CTC_RATE } from '@/features/creditcoin/creditcoin.config.js';
 import { SANAD_LIQUIDITY_POOL_ABI } from '@/features/creditcoin/contracts/SanadLiquidityPool.abi.js';
 import { DiscoveredDeFiEvent, Protocol, EventType } from './defi-discovery.service.js';
 import { db } from '@/db/index.js';
@@ -65,7 +65,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0x74357E5FED91D6dDdd39847304b8651634693A00';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0xE45e8F367C02B9d5f5A165827824351457Dd8353';
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
   }
@@ -137,6 +137,33 @@ export class AttestcoinOracleRelayerService {
       console.warn(`[AttestcoinRelayer] Failed to fetch source tx receipt for ${sourceTxHash} on chain ${chainKey}:`, err.message);
       return undefined;
     }
+  }
+
+  /**
+   * Fetch the actual ETH msg.value from a Sepolia source transaction.
+   * This is the real amount of ETH the user sent, used to compute the CTC backing.
+   */
+  private async resolveSourceTxValue(sourceTxHash: string, chainKey: number): Promise<bigint> {
+    const rpcUrl = chainKey === 1
+      ? (process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com')
+      : (process.env.ETHEREUM_MAINNET_RPC_URL || 'https://eth.llamarpc.com');
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const tx = await provider.getTransaction(sourceTxHash);
+    if (!tx) {
+      throw new Error(`Source transaction ${sourceTxHash} not found on chain ${chainKey}`);
+    }
+    if (tx.value === 0n) {
+      throw new Error(`Source transaction ${sourceTxHash} has zero msg.value — nothing to back`);
+    }
+    return tx.value;
+  }
+
+  /**
+   * Convert ETH (wei) to CTC (wei) using the fixed demo rate.
+   * ethWei * DEMO_ETH_TO_CTC_RATE = ctcWei (both chains use 18-decimal native tokens).
+   */
+  private ethToCTC(ethWei: bigint): bigint {
+    return ethWei * DEMO_ETH_TO_CTC_RATE;
   }
 
   /**
@@ -399,7 +426,22 @@ export class AttestcoinOracleRelayerService {
         this.signer
       );
 
-      console.log(`[AttestcoinRelayer] Calling verifyAndSettleRepayment for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
+      // Resolve the actual ETH sent in the Sepolia repayment tx and convert to CTC
+      const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);
+      const ctcBackingWei = this.ethToCTC(sourceEthWei);
+      console.log(`[AttestcoinRelayer] Sepolia repayment value: ${ethers.formatEther(sourceEthWei)} ETH → ${ethers.formatEther(ctcBackingWei)} CTC (rate: ${DEMO_ETH_TO_CTC_RATE})`);
+
+      // Pre-flight: check relayer wallet has enough CTC to back this settlement
+      const relayerBalance = await this.cc3Provider.getBalance(this.signer.address);
+      if (relayerBalance < ctcBackingWei) {
+        throw new Error(
+          `Relayer wallet ${this.signer.address} has insufficient CTC to back repayment settlement. ` +
+          `Required: ${ethers.formatEther(ctcBackingWei)} CTC, Available: ${ethers.formatEther(relayerBalance)} CTC. ` +
+          `Fund the relayer wallet with testnet CTC from the faucet before retrying.`
+        );
+      }
+
+      console.log(`[AttestcoinRelayer] Calling verifyAndSettleRepayment for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress}), attaching ${ethers.formatEther(ctcBackingWei)} CTC...`);
       const tx = await poolContract.verifyAndSettleRepayment(
         tokenId,
         proofData.chainKey,
@@ -408,7 +450,8 @@ export class AttestcoinOracleRelayerService {
         proofData.merkleProof,
         proofData.continuityProof,
         sourceTxHash,
-        0 // 0 allows pool to derive exact amount from decoded calldata
+        0, // 0 allows pool to derive exact amount from decoded calldata
+        { value: ctcBackingWei }
       );
 
       console.log(`[AttestcoinRelayer] Repayment Settlement broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
@@ -473,6 +516,10 @@ export class AttestcoinOracleRelayerService {
         SANAD_LIQUIDITY_POOL_ABI,
         this.signer
       );
+
+      // Resolve the actual ETH sent in the Sepolia deposit tx
+      const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);
+      console.log(`[AttestcoinRelayer] Sepolia deposit value: ${ethers.formatEther(sourceEthWei)} ETH (Cr3dX Separation: recorded on CC3 as proven reputation capital without unbacked native LP dilution)`);
 
       console.log(`[AttestcoinRelayer] Calling verifyAndRecordDeposit on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndRecordDeposit(
