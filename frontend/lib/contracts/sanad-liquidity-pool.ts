@@ -36,6 +36,10 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function getInvestorCreditProfile(address investor) external view returns (uint256 withdrawableLpBalance, uint256 provenCrossChainCapital, uint256 provenDepositCount)",
 
   // Loan Funding & Cross-Chain / Same-Chain Settlement
+  "event CrossChainLoanFunded(uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 indexed tokenId, address investor, address borrower, uint256 amount, uint256 timestamp)",
+  "function verifyAndFundLoanCrossChain(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash) external returns (bool)",
+  "function loanInvestors(uint256 tokenId) external view returns (address)",
+  "function getLoanInvestor(uint256 tokenId) external view returns (address)",
   "function fundLoan(uint256 tokenId, uint256 amount) external",
   "function repayLoanDirect(uint256 tokenId) external payable",
   "function verifyAndSettleRepayment(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 repaidAmountUSD) external returns (bool)",

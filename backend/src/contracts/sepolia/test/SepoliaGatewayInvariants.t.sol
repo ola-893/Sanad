@@ -24,6 +24,22 @@ contract GatewayHandler is Test {
         treasury = _treasury;
     }
 
+    function fundLoan(uint256 tokenId, uint256 amount) external {
+        tokenId = bound(tokenId, 1, 100);
+        amount = bound(amount, 1 wei, 50 ether);
+
+        address caller = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "investor")))));
+        address borrower = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "borrower")))));
+        vm.deal(caller, amount);
+
+        vm.prank(caller);
+        try vault.fundLoan{value: amount}(tokenId, borrower) {
+            // Succeeded if not already funded
+        } catch {
+            // Reverted as expected if already funded
+        }
+    }
+
     function deposit(uint256 amount, bool matchMsgValue) external {
         amount = bound(amount, 1 wei, 50 ether);
         uint256 msgValue = matchMsgValue ? amount : amount + 1 wei;
@@ -114,7 +130,7 @@ contract SepoliaGatewayInvariantsTest is StdInvariant, Test {
 
         vm.startPrank(owner);
         vault = new InvestorVault(treasury);
-        gateway = new RepaymentGateway(treasury);
+        gateway = new RepaymentGateway(treasury, address(vault));
         vm.stopPrank();
 
         handler = new GatewayHandler(vault, gateway, owner, treasury);

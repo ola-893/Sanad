@@ -101,8 +101,8 @@ async function rotateKey() {
   console.log('\n[4/4] Updating local .env with new private key...');
   const envPath = path.join(rootDir, '.env');
   let envContent = fs.readFileSync(envPath, 'utf8');
-  envContent = envContent.replace(/CREDITCOIN_PRIVATE_KEY=".*"/, `CREDITCOIN_PRIVATE_KEY="${newWallet.privateKey}"`);
-  envContent = envContent.replace(/PRIVATE_KEY=".*"/, `PRIVATE_KEY="${newWallet.privateKey}"`);
+  envContent = envContent.replace(/CREDITCOIN_PRIVATE_KEY=["']?[^"\x27\r\n]+["']?/, `CREDITCOIN_PRIVATE_KEY="${newWallet.privateKey}"`);
+  envContent = envContent.replace(/PRIVATE_KEY=["']?[^"\x27\r\n]+["']?/, `PRIVATE_KEY="${newWallet.privateKey}"`);
   fs.writeFileSync(envPath, envContent);
   console.log('  ✅ Saved new private key into backend/.env (not tracked in git)');
 

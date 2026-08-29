@@ -3,15 +3,25 @@ pragma solidity ^0.8.24;
 
 /**
  * @title InvestorVault
- * @notice Minimal Sepolia Gateway contract for cross-chain liquidity provision into Sanad on Creditcoin CC3.
- *         Investors call deposit(uint256 amount) on Ethereum Sepolia, which is cryptographically proven
+ * @notice Sepolia Gateway contract for cross-chain liquidity provision and peer-to-peer loan funding into Sanad on Creditcoin CC3.
+ *         Investors call fundLoan(uint256 tokenId, address borrower) on Ethereum Sepolia, which is cryptographically proven
  *         on Creditcoin CC3 via the Attestcoin BlockProver precompile.
  */
 contract InvestorVault {
     address public owner;
     address public treasury;
 
+    // Mapping of loan tokenId -> investor funder address
+    mapping(uint256 => address) public loanFunders;
+
     event DepositMade(address indexed investor, uint256 amount, uint256 timestamp);
+    event LoanFunded(
+        uint256 indexed tokenId,
+        address indexed investor,
+        address indexed borrower,
+        uint256 amount,
+        uint256 timestamp
+    );
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     modifier onlyOwner() {
@@ -25,7 +35,30 @@ contract InvestorVault {
     }
 
     /**
-     * @notice Deposit native ETH funds for LP provisioning on Creditcoin CC3.
+     * @notice Fund a specific loan directly on Sepolia (Peer-to-Peer Cross-Chain Funding).
+     * @dev Function selector is 0x6d1611c4 (fundLoan(uint256,address)).
+     *      Immediately forwards msg.value directly to borrower.
+     *      Records loanFunders[tokenId] on Sepolia before the transfer for direct repayment routing.
+     * @param tokenId SAG Token ID on Creditcoin CC3
+     * @param borrower Borrower / pawnshop recipient address on Sepolia
+     */
+    function fundLoan(uint256 tokenId, address borrower) external payable {
+        require(tokenId > 0, "Invalid token ID");
+        require(borrower != address(0), "Invalid borrower address");
+        require(msg.value > 0, "Funding amount must be greater than zero");
+        require(loanFunders[tokenId] == address(0), "Loan already funded");
+
+        // Record loan funder before transfer (Checks-Effects-Interactions)
+        loanFunders[tokenId] = msg.sender;
+
+        (bool ok, ) = borrower.call{value: msg.value}("");
+        require(ok, "Forward to borrower failed");
+
+        emit LoanFunded(tokenId, msg.sender, borrower, msg.value, block.timestamp);
+    }
+
+    /**
+     * @notice Deposit native ETH funds for general LP provisioning on Creditcoin CC3.
      * @dev Function selector is 0xb6b55f25 (deposit(uint256)).
      *      Strictly enforces that msg.value is greater than zero and matches amount exactly.
      *      Immediately forwards funds to treasury address.
