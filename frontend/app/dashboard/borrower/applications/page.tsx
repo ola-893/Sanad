@@ -261,7 +261,7 @@ export default function BorrowerApplicationsPage() {
                           <p className="text-[10px] font-mono uppercase text-muted-foreground mb-1">Gold Verification</p>
                           <div className="flex items-center gap-2 text-xs">
                             {app.verificationStatus === "verified" ? (
-                              <><CheckCircle2 className="h-3 w-3 text-purple-600" /> <span className="font-medium">Verified</span>                            {app.loanDurationMonths && <span className="ml-2 text-purple-700">Loan: {app.loanDurationMonths} min (test)</span>}</>
+                              <><CheckCircle2 className="h-3 w-3 text-purple-600" /> <span className="font-medium">Verified</span>                            {app.loanDurationMonths && <span className="ml-2 text-purple-700">Loan: {app.loanDurationMonths} months</span>}</>
                             ) : (
                               <><XCircle className="h-3 w-3 text-red-600" /> <span className="font-medium">Rejected</span></>
                             )}
@@ -313,7 +313,7 @@ export default function BorrowerApplicationsPage() {
                         {app.requestedAmount && <span className="rounded-full bg-[#171414]/5 px-2 py-0.5">Loan: ${Number(app.requestedAmount).toLocaleString()}</span>}
                         {app.loanDurationMonths && (
                           <span className="rounded-full bg-purple-100 text-purple-700 px-2 py-0.5">
-                            {app.loanDurationMonths} min (test){app.loanMaturityDate ? ` - due ${new Date(app.loanMaturityDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                            {app.loanDurationMonths} months{app.loanMaturityDate ? ` - due ${new Date(app.loanMaturityDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : ''}
                           </span>
                         )}
                         {app.borrowerCreditScore !== undefined && app.borrowerCreditScore > 0 && (

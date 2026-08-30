@@ -499,20 +499,45 @@ export class PledgeRequestController {
         return;
       }
 
-      const { sagTokenId } = req.body || {};
-      if (!sagTokenId) {
-        res.status(400).json({ success: false, error: "sagTokenId is required (from on-chain mint)" });
+      // Auto-mint SAG on CC3 using pledge request data
+      const { SagTokenService } = await import("@/features/creditcoin/sag-token.service.js");
+      const sagService = new SagTokenService();
+
+      const goldDetails = request.goldDetails as any;
+      const weightGrams = request.verifiedWeightG || goldDetails.weightG;
+      const karat = request.verifiedKarat || goldDetails.karat;
+      const appraisedValue = request.verifiedAppraisedValueUsd || goldDetails.estimatedValue;
+      const loanAmount = request.paymentAmountUsd || appraisedValue * 0.7;
+      const tenureDays = (request.loanDurationMonths || 1) * 30;
+
+      console.log(`[PledgeRequest] Auto-minting SAG: weight=${weightGrams}g, karat=${karat}, value=$${appraisedValue}, loan=$${loanAmount}`);
+
+      const mintResult = await sagService.mintCollateral({
+        pawnshopAddress: request.pawnshopWallet,
+        borrowerAddress: request.borrowerWallet,
+        weightGrams: Number(weightGrams),
+        karat: Number(karat),
+        appraisedValueUSD: Number(appraisedValue),
+        loanAmount: Number(loanAmount),
+        tenureDays: Number(tenureDays),
+        ipfsMetadataUri: "", // Optional
+      });
+
+      if (!mintResult.success) {
+        res.status(500).json({ success: false, error: mintResult.error || "Failed to mint SAG token on CC3" });
         return;
       }
 
-      const updated = await recordSagMint(request.id, sagTokenId);
+      const investmentTarget = req.body?.investmentTargetUsd || request.paymentAmountUsd || Number(appraisedValue) * 0.7;
+      const minInvestment = req.body?.minInvestmentUsd || 100;
+      const updated = await recordSagMint(request.id, mintResult.tokenId!, Number(investmentTarget), Number(minInvestment));
 
       // Notify investor-facing systems via Socket.IO
       const socket = getSocketService();
       if (socket?.io) {
         socket.io.emit("sag:minted", {
           requestId: request.id,
-          sagTokenId,
+          sagTokenId: mintResult.tokenId,
           borrowerId: request.borrowerId,
           pawnshopId: request.pawnshopId,
           goldDetails: request.goldDetails,
@@ -521,8 +546,12 @@ export class PledgeRequestController {
 
       res.status(200).json({
         success: true,
-        message: "SAG token minted. Investors can now fund this loan.",
-        data: updated,
+        message: "SAG token minted on CC3. Investors can now fund this loan.",
+        data: {
+          ...updated,
+          sagTxHash: mintResult.transactionHash,
+          sagExplorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${mintResult.transactionHash}`,
+        },
       });
     } catch (error) {
       console.error("Error minting SAG:", error);

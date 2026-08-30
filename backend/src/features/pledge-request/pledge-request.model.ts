@@ -52,6 +52,11 @@ export const PledgeRequestModel = MainSchema.table("pledge_request", {
   loanDurationMonths: integer("loan_duration_months"),
   loanMaturityDate: timestamp("loan_maturity_date"),
 
+  // V3: Investment tracking
+  investmentTargetUsd: numeric("investment_target_usd"),
+  investmentFilledUsd: numeric("investment_filled_usd").default("0"),
+  minInvestmentUsd: numeric("min_investment_usd").default("100"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

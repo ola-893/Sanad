@@ -119,6 +119,28 @@ export default function DashboardPage() {
             />
           </div>
 
+          {/* SAG Tokens Link */}
+          <Card className={glass}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E1BAC2]/20">
+                    <Gem className="h-5 w-5 text-[#171414]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#171414]">SAG Tokens</p>
+                    <p className="text-xs text-muted-foreground">Browse and invest in gold-backed collateral tokens</p>
+                  </div>
+                </div>
+                <Link href="/investor/sag">
+                  <Button className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black">
+                    <Gem className="h-4 w-4" /> View SAGs
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Native CTC Liquidity Pool Manager */}
           <LiquidityPoolManager />
 

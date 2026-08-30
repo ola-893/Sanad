@@ -142,11 +142,12 @@ export async function verifyGold(
   if (data.verifiedAppraisedValueUsd !== undefined) updateData.verifiedAppraisedValueUsd = String(data.verifiedAppraisedValueUsd);
 
   // Loan duration: save duration and calculate maturity date
+  // Display: 3, 6, 12 months. Actual: 15, 30, 60 minutes (for testing)
   if (data.loanDurationMonths && data.verificationStatus === "verified") {
     updateData.loanDurationMonths = data.loanDurationMonths;
-    // For testing: duration is in minutes. For production: convert to months.
+    const durationMinutes = data.loanDurationMonths * 5; // 3mo=15min, 6mo=30min, 12mo=60min
     const maturity = new Date();
-    maturity.setMinutes(maturity.getMinutes() + data.loanDurationMonths);
+    maturity.setMinutes(maturity.getMinutes() + durationMinutes);
     updateData.loanMaturityDate = maturity;
   }
 
@@ -190,17 +191,26 @@ export async function recordPayment(
  */
 export async function recordSagMint(
   id: string,
-  sagTokenId: string
+  sagTokenId: string,
+  investmentTargetUsd?: number,
+  minInvestmentUsd?: number
 ): Promise<PledgeRequestModelType | null> {
+  const updateData: Record<string, unknown> = {
+    sagTokenId,
+    sagMintedAt: new Date(),
+    sagId: sagTokenId,
+    status: "sag_minted",
+    updatedAt: new Date(),
+  };
+  if (investmentTargetUsd !== undefined) {
+    updateData.investmentTargetUsd = String(investmentTargetUsd);
+  }
+  if (minInvestmentUsd !== undefined) {
+    updateData.minInvestmentUsd = String(minInvestmentUsd);
+  }
   const [result] = await db
     .update(PledgeRequestModel)
-    .set({
-      sagTokenId,
-      sagMintedAt: new Date(),
-      sagId: sagTokenId,
-      status: "sag_minted",
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(eq(PledgeRequestModel.id, id))
     .returning();
   return result || null;
