@@ -59,6 +59,7 @@ export default function PawnshopPaymentsPage() {
   const [payCc3Hash, setPayCc3Hash] = useState("")
   const [payAmount, setPayAmount] = useState("")
   const [processing, setProcessing] = useState(false)
+  const [ethPrice, setEthPrice] = useState(0)
 
   const fetchVerifiedRequests = async () => {
     setLoading(true)
@@ -74,6 +75,10 @@ export default function PawnshopPaymentsPage() {
 
   useEffect(() => {
     fetchVerifiedRequests()
+    // Fetch ETH price
+    apiInstance.get("/eth-price")
+      .then((res) => setEthPrice(res.data?.data?.usd || 0))
+      .catch(() => setEthPrice(4500))
   }, [])
 
   const openPayModal = (req: PledgeRequest) => {
@@ -169,6 +174,11 @@ export default function PawnshopPaymentsPage() {
                     <p className="text-2xl font-bold text-[#171414]">
                       ${requests.reduce((sum, r) => sum + Math.round((r.verifiedAppraisedValueUsd || r.goldDetails.estimatedValue) * 0.7), 0).toLocaleString()}
                     </p>
+                    {ethPrice > 0 && (
+                      <p className="text-xs text-emerald-600 font-mono">
+                        ~{requests.reduce((sum, r) => sum + Math.round((r.verifiedAppraisedValueUsd || r.goldDetails.estimatedValue) * 0.7), 0) / ethPrice} ETH
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">Total to Pay (70% LTV)</p>
                   </div>
                 </div>
@@ -254,6 +264,9 @@ export default function PawnshopPaymentsPage() {
                           <div>
                             <p className="text-[10px] font-mono uppercase text-muted-foreground">70% LTV Payment</p>
                             <p className="text-lg font-bold text-emerald-600">${ltvAmount.toLocaleString()}</p>
+                            {ethPrice > 0 && (
+                              <p className="text-xs text-emerald-600/70 font-mono">~{(ltvAmount / ethPrice).toFixed(4)} ETH</p>
+                            )}
                           </div>
                         </div>
 
@@ -302,22 +315,42 @@ export default function PawnshopPaymentsPage() {
             <CardContent className="space-y-4">
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-xs text-amber-800">
-                  <strong>Before proceeding:</strong> Send ${payAmount} ETH to the borrower on Sepolia via MetaMask, then paste the transaction hash below.
+                  <strong>Before proceeding:</strong> Send {ethPrice > 0 && payAmount ? `~${(Number(payAmount) / ethPrice).toFixed(4)} ETH ($${payAmount})` : `$${payAmount}`} to the borrower on Sepolia via MetaMask, then paste the transaction hash below.
                 </p>
               </div>
 
               <div className="rounded-xl bg-muted p-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Borrower:</span>
-                  <span className="font-mono text-xs">{payModal.borrowerWallet.slice(0, 10)}...{payModal.borrowerWallet.slice(-6)}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Borrower Wallet:</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs font-mono bg-background rounded-lg px-3 py-2 border border-[#171414]/10 break-all">
+                      {payModal.borrowerWallet}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(payModal.borrowerWallet)
+                        toast.success("Wallet address copied!")
+                      }}
+                      className="shrink-0 rounded-lg border border-[#171414]/10 bg-background px-3 py-2 text-xs font-medium hover:bg-[#171414]/5 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm mt-1">
+                <div className="flex items-center justify-between text-sm mt-3">
                   <span className="text-muted-foreground">Appraised Value:</span>
                   <span>${(payModal.verifiedAppraisedValueUsd || payModal.goldDetails.estimatedValue).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm mt-1 font-medium">
                   <span>Payment (70% LTV):</span>
-                  <span className="text-emerald-600">${payAmount}</span>
+                  <div className="text-right">
+                    <span className="text-emerald-600">${payAmount}</span>
+                    {ethPrice > 0 && payAmount && (
+                      <span className="block text-xs font-mono text-emerald-600/70">~{(Number(payAmount) / ethPrice).toFixed(4)} ETH</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
