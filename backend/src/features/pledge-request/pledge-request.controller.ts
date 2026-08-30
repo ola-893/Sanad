@@ -532,6 +532,47 @@ export class PledgeRequestController {
       const minInvestment = req.body?.minInvestmentUsd || 100;
       const updated = await recordSagMint(request.id, mintResult.tokenId!, Number(investmentTarget), Number(minInvestment));
 
+      // Create SAG record in sag table for pawnshop dashboard
+      try {
+        const { createSag } = await import("@/features/sag/sag.repository.js");
+        await createSag({
+          tokenId: mintResult.tokenId!,
+          sagName: `${goldDetails.assetType || 'Gold'} ${karat}K - ${weightGrams}g`,
+          sagDescription: `Gold collateral NFT backed by ${weightGrams}g of ${karat}K gold. Appraised value: $${appraisedValue}.`,
+          sagProperties: {
+            assetType: goldDetails.assetType || 'Gold',
+            karat: Number(karat),
+            weightG: Number(weightGrams),
+            valuation: Number(appraisedValue),
+            enableMinting: true,
+            mintShare: 100,
+            soldShare: 0,
+            investorFinancingType: 'fractional',
+            investorRoiPercentage: 12,
+            investorRoiFixedAmount: 0,
+            currency: 'USD',
+            loanPercentage: 70,
+            loan: Number(investmentTarget),
+            pawnerInterestP: 0,
+            tenorM: Number(tenureDays),
+            purity: Number(goldDetails.purity || 999),
+            imageUrl: request.goldImages || [],
+            investmentTargetUsd: Number(investmentTarget),
+            minInvestmentUsd: Number(minInvestment),
+            investmentFilledUsd: 0,
+            loanDurationMonths: Number(tenureDays / 30),
+            borrowerWallet: request.borrowerWallet,
+            pawnshopWallet: request.pawnshopWallet,
+          },
+          originalOwner: request.pawnshopWallet,
+          status: 'active',
+          approvalStatus: 'approved',
+        });
+        console.log(`[PledgeRequest] Created SAG record for token ${mintResult.tokenId}`);
+      } catch (sagErr: any) {
+        console.warn('[PledgeRequest] Failed to create SAG record:', sagErr.message);
+      }
+
       // Notify investor-facing systems via Socket.IO
       const socket = getSocketService();
       if (socket?.io) {

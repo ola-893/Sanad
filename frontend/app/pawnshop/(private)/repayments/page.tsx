@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { toast } from "sonner"
 import {
@@ -60,6 +62,8 @@ export default function PawnshopRepaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"funded" | "sag_minted">("funded")
   const [ethPrice, setEthPrice] = useState(0)
+  const [sagModal, setSagModal] = useState<PledgeRequest | null>(null)
+  const [processing, setProcessing] = useState(false)
 
   const fetchRepayments = async () => {
     setLoading(true)
@@ -290,6 +294,18 @@ export default function PawnshopRepaymentsPage() {
                             Borrower Credit Score: {req.borrowerCreditScore}
                           </div>
                         )}
+
+                        {/* Mint SAG button for funded loans without SAG */}
+                        {req.status === 'funded' && !req.sagTokenId && (
+                          <div className="mt-3 pt-3 border-t border-[#171414]/5">
+                            <Button
+                              onClick={() => setSagModal(req)}
+                              className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                            >
+                              <Gem className="h-4 w-4" /> Mint SAG Token
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -299,6 +315,119 @@ export default function PawnshopRepaymentsPage() {
           )}
         </div>
       </div>
+
+      {/* Mint SAG Modal */}
+      {sagModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader>
+              <CardTitle className="font-display">Mint SAG Token on CC3</CardTitle>
+              <CardDescription>
+                Auto-mint the gold collateral NFT on Creditcoin CC3
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Gold Attributes Summary */}
+              <div className="rounded-xl bg-[#FAFAF8] border border-[#171414]/10 p-4">
+                <p className="text-[10px] font-mono uppercase text-muted-foreground mb-3">Gold Collateral Attributes</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Asset:</span>
+                    <span className="ml-2 font-medium">{sagModal.goldDetails?.assetType} {sagModal.goldDetails?.karat}K</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Weight:</span>
+                    <span className="ml-2 font-medium">{sagModal.verifiedWeightG || sagModal.goldDetails?.weightG}g</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Karat:</span>
+                    <span className="ml-2 font-medium">{sagModal.verifiedKarat || sagModal.goldDetails?.karat}K</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Appraised:</span>
+                    <span className="ml-2 font-medium">${(sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Loan (70%):</span>
+                    <span className="ml-2 font-medium text-emerald-600">${(sagModal.paymentAmountUsd || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Duration:</span>
+                    <span className="ml-2 font-medium">{sagModal.loanDurationMonths} months</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Investment Amount */}
+              <div className="space-y-2">
+                <Label>Investment Target (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    id="repayInvestmentTarget"
+                    defaultValue={sagModal.paymentAmountUsd || Math.round((sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue || 0) * 0.7)}
+                    className="rounded-xl pl-7"
+                  />
+                </div>
+              </div>
+
+              {/* Minimum Investment */}
+              <div className="space-y-2">
+                <Label>Minimum Investment per Investor (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    id="repayMinInvestment"
+                    defaultValue={100}
+                    min={10}
+                    className="rounded-xl pl-7"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSagModal(null)} disabled={processing} className="rounded-xl">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!sagModal) return
+                    setProcessing(true)
+                    try {
+                      const targetEl = document.getElementById('repayInvestmentTarget') as HTMLInputElement
+                      const minEl = document.getElementById('repayMinInvestment') as HTMLInputElement
+                      const investmentTarget = targetEl ? Number(targetEl.value) : 0
+                      const minInvestment = minEl ? Number(minEl.value) : 100
+
+                      toast.info("Minting SAG token on CC3...")
+                      const res = await apiInstance.patch(`/pledge-requests/${sagModal.id}/mint-sag`, {
+                        investmentTargetUsd: investmentTarget,
+                        minInvestmentUsd: minInvestment,
+                      })
+                      if (res.data?.data?.sagTxHash) {
+                        toast.success("SAG token minted on CC3!")
+                      }
+                      setSagModal(null)
+                      fetchRepayments()
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.error || "Failed to mint SAG token")
+                    } finally {
+                      setProcessing(false)
+                    }
+                  }}
+                  disabled={processing}
+                  className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                >
+                  {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Mint SAG Token on CC3
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </ProtectedRoute>
   )
 }

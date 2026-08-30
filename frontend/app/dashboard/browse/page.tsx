@@ -4,19 +4,21 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/auth/protected-route'
+import { toast } from 'sonner'
 import {
   Gem,
   Loader2,
-  ExternalLink,
-  Shield,
-  Scale,
   Clock,
   TrendingUp,
-  X,
-  ChevronRight,
+  Wallet,
+  ExternalLink,
   Search,
   Filter,
+  X,
 } from 'lucide-react'
 import apiInstance from '@/lib/axios-v1'
 
@@ -30,17 +32,20 @@ interface SagToken {
   sagStatus: string
   tokenId: string
   sagProperties: {
+    assetType?: string
+    karat?: number
     weightG: number
     purity: number
     loan: number
     tenorM: number
-    arRahnuName?: string
-    loanPurpose?: string
-    risk_level?: string
-    ltv?: number
-    action?: string
-    rationale?: string
-    eval_id?: string
+    investorRoiPercentage?: number
+    investmentTargetUsd?: number
+    minInvestmentUsd?: number
+    investmentFilledUsd?: number
+    loanDurationMonths?: number
+    imageUrl?: string[]
+    borrowerWallet?: string
+    pawnshopWallet?: string
   }
   createdAt: string
   updatedAt: string
@@ -48,120 +53,101 @@ interface SagToken {
 
 const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'
 
-function propertyOf(sag: SagToken, key: string): string | number | null {
-  const props = sag.sagProperties as Record<string, unknown> | null
-  const value = props?.[key]
-  return value === undefined || value === null ? null : value as string | number
-}
-
-const statusColors: Record<string, string> = {
-  approved: 'border-success/30 bg-success/10 text-success',
-  pending: 'border-warning/30 bg-warning/10 text-warning',
-  rejected: 'border-destructive/30 bg-destructive/10 text-destructive',
-  active: 'border-success/30 bg-success/10 text-success',
-  funded: 'border-primary/30 bg-primary/10 text-primary',
-  closed: 'border-muted bg-muted/50 text-muted-foreground',
-}
-
-function SagCard({ sag, onClick }: { sag: SagToken; onClick: () => void }) {
-  const weight = propertyOf(sag, 'weightG') as number | null
-  const purity = propertyOf(sag, 'purity') as number | null
-  const loan = propertyOf(sag, 'loan') as number | null
-  const tenor = propertyOf(sag, 'tenorM') as number | null
-  const risk = propertyOf(sag, 'risk_level') as string | null
+function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number; onInvest: (sag: SagToken) => void }) {
+  const props = sag.sagProperties
+  const weight = props?.weightG || 0
+  const karat = props?.karat || (props?.purity >= 990 ? 24 : props?.purity >= 916 ? 22 : 18)
+  const loan = props?.loan || 0
+  const investmentTarget = props?.investmentTargetUsd || loan
+  const investmentFilled = props?.investmentFilledUsd || 0
+  const remaining = investmentTarget - investmentFilled
+  const progress = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
+  const roi = props?.investorRoiPercentage || 12
+  const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
+  const ethAmount = ethPrice > 0 ? (investmentTarget / ethPrice).toFixed(4) : '---'
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
-  const statusColor = statusColors[status] || 'border-muted bg-muted/50 text-muted-foreground'
-
-  const karat = purity != null ? (purity >= 990 ? 24 : purity >= 916 ? 22 : 18) : null
+  const isFunded = remaining <= 0
 
   return (
-    <Card
-      className={`${glass} group cursor-pointer overflow-hidden transition-all duration-300 hover:bg-white/80 hover:shadow-lg hover:shadow-[#171414]/5 hover:-translate-y-0.5`}
-      onClick={onClick}
-    >
+    <Card className={`${glass} overflow-hidden transition-all duration-300 hover:shadow-lg`}>
       <CardContent className="p-0">
-        {/* Gold gradient header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#E1BAC2]/20 via-[#F5F5F3] to-[#E1BAC2]/10 px-5 pt-5 pb-4">
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[#E1BAC2]/15" />
-          <div className="absolute -left-4 -bottom-4 h-16 w-16 rounded-full bg-[#171414]/5" />
-
-          <div className="relative flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="gradient-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm">
-                <Gem className="h-5 w-5 text-[#171414]" />
-              </div>
-              <div>
-                <h3 className="font-display text-base font-bold text-[#171414]">
-                  {sag.sagName || `SAG #${sag.tokenId || sag.sagId}`}
-                </h3>
-                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                  {sag.sagType || 'Conventional'}
-                </p>
-              </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#171414]/5">
+          <div className="flex items-center gap-3">
+            <div className="gradient-gold flex h-10 w-10 items-center justify-center rounded-xl">
+              <Gem className="h-5 w-5 text-[#171414]" />
             </div>
-            <Badge variant="outline" className={`${statusColor} text-[10px] font-mono`}>
-              {status}
-            </Badge>
+            <div>
+              <h3 className="font-display text-sm font-bold text-[#171414]">
+                {sag.sagName || `SAG #${sag.tokenId}`}
+              </h3>
+              <p className="text-[10px] text-muted-foreground">Token #{sag.tokenId}</p>
+            </div>
           </div>
+          <Badge variant="outline" className={isFunded ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
+            {isFunded ? 'Funded' : 'Open'}
+          </Badge>
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 divide-x divide-[#171414]/5 border-t border-[#171414]/8">
-          <div className="px-5 py-3.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-              Weight
-            </p>
-            <p className="mt-0.5 text-sm font-bold tabular-nums text-[#171414]">
-              {weight != null ? `${weight}g` : '—'}
-            </p>
+        {/* Investment Target */}
+        <div className="px-5 py-4">
+          <div className="flex items-end justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-mono uppercase text-muted-foreground">Investment Target</p>
+              <p className="text-2xl font-bold text-[#171414]">${investmentTarget.toLocaleString()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-emerald-600 font-mono">~{ethAmount} ETH</p>
+              <p className="text-[10px] text-muted-foreground">@${ethPrice.toLocaleString()}/ETH</p>
+            </div>
           </div>
-          <div className="px-5 py-3.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-              Karat
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-[#171414]">
-              {karat != null ? `${karat}K` : '—'}
-            </p>
-          </div>
-          <div className="px-5 py-3.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-              Loan
-            </p>
-            <p className="mt-0.5 text-sm font-bold tabular-nums text-primary">
-              {loan != null ? `$${Number(loan).toLocaleString()}` : '—'}
-            </p>
-          </div>
-          <div className="px-5 py-3.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-              Tenor
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-[#171414]">
-              {tenor != null ? `${tenor}mo` : '—'}
-            </p>
-          </div>
-        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[#171414]/8 px-5 py-3">
-          <div className="flex items-center gap-1.5">
-            {risk && (
-              <Badge
-                variant="outline"
-                className={
-                  risk === 'LOW'
-                    ? 'border-success/30 bg-success/10 text-success text-[9px]'
-                    : risk === 'MEDIUM'
-                    ? 'border-warning/30 bg-warning/10 text-warning text-[9px]'
-                    : 'border-destructive/30 bg-destructive/10 text-destructive text-[9px]'
-                }
+          {/* Progress */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-[10px] mb-1">
+              <span className="text-muted-foreground">${investmentFilled.toLocaleString()} funded</span>
+              <span className="text-muted-foreground">${remaining.toLocaleString()} left</span>
+            </div>
+            <Progress value={progress} className="h-1.5" />
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="rounded-lg bg-muted/50 p-2">
+              <p className="text-[9px] text-muted-foreground">Weight</p>
+              <p className="text-xs font-bold">{weight}g</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-2">
+              <p className="text-[9px] text-muted-foreground">Karat</p>
+              <p className="text-xs font-bold">{karat}K</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-2">
+              <p className="text-[9px] text-muted-foreground">ROI/mo</p>
+              <p className="text-xs font-bold text-emerald-600">{roi}%</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-2">
+              <p className="text-[9px] text-muted-foreground">Duration</p>
+              <p className="text-xs font-bold">{duration}mo</p>
+            </div>
+          </div>
+
+          {/* Action */}
+          <div className="mt-4">
+            {isFunded ? (
+              <div className="text-center">
+                <p className="text-xs text-emerald-600 font-medium">Target investment reached</p>
+                <Button disabled className="w-full mt-2 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed">
+                  Fully Funded
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => onInvest(sag)}
+                className="w-full rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
               >
-                {risk} Risk
-              </Badge>
+                <Wallet className="h-4 w-4" /> Invest Now
+              </Button>
             )}
-          </div>
-          <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground group-hover:text-[#171414] transition-colors">
-            Details
-            <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </div>
         </div>
       </CardContent>
@@ -169,190 +155,16 @@ function SagCard({ sag, onClick }: { sag: SagToken; onClick: () => void }) {
   )
 }
 
-function SagDetailModal({ sag, onClose }: { sag: SagToken; onClose: () => void }) {
-  const weight = propertyOf(sag, 'weightG') as number | null
-  const purity = propertyOf(sag, 'purity') as number | null
-  const loan = propertyOf(sag, 'loan') as number | null
-  const tenor = propertyOf(sag, 'tenorM') as number | null
-  const risk = propertyOf(sag, 'risk_level') as string | null
-  const ltv = propertyOf(sag, 'ltv') as number | null
-  const rationale = propertyOf(sag, 'rationale') as string | null
-  const arRahnuName = propertyOf(sag, 'arRahnuName') as string | null
-  const loanPurpose = propertyOf(sag, 'loanPurpose') as string | null
-  const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
-  const karat = purity != null ? (purity >= 990 ? 24 : purity >= 916 ? 22 : 18) : null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#171414]/40 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#171414]/15 bg-white shadow-2xl">
-        {/* Header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#E1BAC2]/20 via-[#F5F5F3] to-[#E1BAC2]/10 px-6 pt-6 pb-5">
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[#E1BAC2]/15" />
-          <div className="absolute -left-6 -bottom-6 h-20 w-20 rounded-full bg-[#171414]/5" />
-
-          <div className="relative">
-            <button
-              onClick={onClose}
-              className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/60 text-[#4A4A4A] transition-colors hover:bg-white/80 hover:text-[#171414]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="gradient-gold flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm">
-                <Gem className="h-6 w-6 text-[#171414]" />
-              </div>
-              <div>
-                <h2 className="font-display text-xl font-extrabold text-[#171414]">
-                  {sag.sagName || `SAG #${sag.tokenId || sag.sagId}`}
-                </h2>
-                <p className="font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                  {sag.sagType || 'Conventional'} &middot; {status}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="space-y-5 px-6 py-5">
-          {/* Key metrics */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-              <div className="flex items-center gap-2">
-                <Scale className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Weight
-                </p>
-              </div>
-              <p className="mt-1 text-lg font-bold tabular-nums text-[#171414]">
-                {weight != null ? `${weight}g` : '—'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-              <div className="flex items-center gap-2">
-                <Gem className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Purity
-                </p>
-              </div>
-              <p className="mt-1 text-lg font-bold text-[#171414]">
-                {purity != null ? `${purity}‰ (${karat}K)` : '—'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Loan Amount
-                </p>
-              </div>
-              <p className="mt-1 text-lg font-bold tabular-nums text-primary">
-                {loan != null ? `$${Number(loan).toLocaleString()}` : '—'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Tenor
-                </p>
-              </div>
-              <p className="mt-1 text-lg font-bold text-[#171414]">
-                {tenor != null ? `${tenor} months` : '—'}
-              </p>
-            </div>
-          </div>
-
-          {/* Details list */}
-          <div className="space-y-2">
-            {ltv != null && (
-              <div className="flex items-center justify-between rounded-xl border border-[#171414]/8 px-4 py-2.5">
-                <span className="text-xs text-muted-foreground">Loan-to-Value (LTV)</span>
-                <span className="text-sm font-bold tabular-nums text-[#171414]">{ltv}%</span>
-              </div>
-            )}
-            {risk && (
-              <div className="flex items-center justify-between rounded-xl border border-[#171414]/8 px-4 py-2.5">
-                <span className="text-xs text-muted-foreground">Risk Level</span>
-                <Badge
-                  variant="outline"
-                  className={
-                    risk === 'LOW'
-                      ? 'border-success/30 bg-success/10 text-success text-[10px]'
-                      : risk === 'MEDIUM'
-                      ? 'border-warning/30 bg-warning/10 text-warning text-[10px]'
-                      : 'border-destructive/30 bg-destructive/10 text-destructive text-[10px]'
-                  }
-                >
-                  {risk}
-                </Badge>
-              </div>
-            )}
-            {arRahnuName && (
-              <div className="flex items-center justify-between rounded-xl border border-[#171414]/8 px-4 py-2.5">
-                <span className="text-xs text-muted-foreground">Ar-Rahnu Partner</span>
-                <span className="text-sm font-medium text-[#171414]">{arRahnuName}</span>
-              </div>
-            )}
-            {loanPurpose && (
-              <div className="flex items-center justify-between rounded-xl border border-[#171414]/8 px-4 py-2.5">
-                <span className="text-xs text-muted-foreground">Loan Purpose</span>
-                <span className="text-sm font-medium text-[#171414]">{loanPurpose}</span>
-              </div>
-            )}
-            {sag.tokenId && (
-              <div className="flex items-center justify-between rounded-xl border border-[#171414]/8 px-4 py-2.5">
-                <span className="text-xs text-muted-foreground">Token ID</span>
-                <a
-                  href={`${explorerBase}/token/erc721/${sag.tokenId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  {sag.tokenId.slice(0, 12)}...
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* AI Evaluation */}
-          {rationale && (
-            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  AI Evaluation
-                </p>
-              </div>
-              <p className="text-sm leading-relaxed text-[#4A4A4A]">{rationale}</p>
-            </div>
-          )}
-
-          {/* Created date */}
-          <div className="text-center">
-            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-              Created {new Date(sag.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function BrowsePage() {
   const [sags, setSags] = useState<SagToken[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedSag, setSelectedSag] = useState<SagToken | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [ethPrice, setEthPrice] = useState(0)
+  const [investModal, setInvestModal] = useState<SagToken | null>(null)
+  const [investAmount, setInvestAmount] = useState('')
+  const [processing, setProcessing] = useState(false)
 
   useEffect(() => {
     apiInstance
@@ -367,6 +179,10 @@ export default function BrowsePage() {
         setError('Failed to load SAG tokens')
       })
       .finally(() => setLoading(false))
+
+    apiInstance.get('/eth-price')
+      .then((res) => setEthPrice(res.data?.data?.usd || 0))
+      .catch(() => setEthPrice(4500))
   }, [])
 
   const filtered = sags.filter((sag) => {
@@ -381,6 +197,14 @@ export default function BrowsePage() {
     return matchesSearch && matchesStatus
   })
 
+  const openInvestModal = (sag: SagToken) => {
+    setInvestModal(sag)
+    const target = sag.sagProperties?.investmentTargetUsd || sag.sagProperties?.loan || 0
+    const filled = sag.sagProperties?.investmentFilledUsd || 0
+    const remaining = target - filled
+    setInvestAmount(String(Math.min(remaining, 1000)))
+  }
+
   return (
     <ProtectedRoute requiredRole="investor">
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -392,7 +216,7 @@ export default function BrowsePage() {
               Browse SAG Tokens
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Shariah-compliant gold collateral financing on Creditcoin
+              Invest in gold-backed collateral tokens and earn returns
             </p>
           </div>
 
@@ -464,7 +288,8 @@ export default function BrowsePage() {
                   <SagCard
                     key={sag.sagId}
                     sag={sag}
-                    onClick={() => setSelectedSag(sag)}
+                    ethPrice={ethPrice}
+                    onInvest={openInvestModal}
                   />
                 ))}
               </div>
@@ -473,9 +298,80 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* Detail Modal */}
-      {selectedSag && (
-        <SagDetailModal sag={selectedSag} onClose={() => setSelectedSag(null)} />
+      {/* Invest Modal */}
+      {investModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold">Invest in {investModal.sagName}</h3>
+                <button onClick={() => { setInvestModal(null); setInvestAmount('') }}>
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              <div className="rounded-xl bg-muted p-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>Target: <span className="font-medium">${(investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0).toLocaleString()}</span></div>
+                  <div>ROI: <span className="font-medium text-emerald-600">{investModal.sagProperties?.investorRoiPercentage || 12}%/mo</span></div>
+                  <div>Weight: <span className="font-medium">{investModal.sagProperties?.weightG}g</span></div>
+                  <div>Duration: <span className="font-medium">{investModal.sagProperties?.loanDurationMonths || 3} months</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Investment Amount (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    value={investAmount}
+                    onChange={(e) => setInvestAmount(e.target.value)}
+                    className="rounded-xl pl-7"
+                    min={investModal.sagProperties?.minInvestmentUsd || 100}
+                  />
+                </div>
+                {ethPrice > 0 && investAmount && (
+                  <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(4)} ETH</p>
+                )}
+                <p className="text-[10px] text-muted-foreground">Min: ${investModal.sagProperties?.minInvestmentUsd || 100}</p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setInvestModal(null); setInvestAmount('') }} disabled={processing}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!investModal || !investAmount) return
+                    setProcessing(true)
+                    try {
+                      await apiInstance.post('/investor/invest', {
+                        sagTokenId: investModal.tokenId,
+                        amountUsd: Number(investAmount),
+                      })
+                      toast.success('Investment recorded!')
+                      setInvestModal(null)
+                      setInvestAmount('')
+                      // Refresh
+                      const res = await apiInstance.get('/sag/')
+                      if (res.data.success) setSags(res.data.data ?? [])
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.error || 'Investment failed')
+                    } finally {
+                      setProcessing(false)
+                    }
+                  }}
+                  disabled={processing || !investAmount}
+                  className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                >
+                  {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Record Investment
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </ProtectedRoute>
   )

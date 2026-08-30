@@ -147,6 +147,84 @@ export class InvestorController {
       res.status(500).json({ success: false, error: error.message || 'Internal server error' });
     }
   }
+
+  /**
+   * POST /investor/invest -- Record an investment in a SAG token
+   */
+  async recordInvestment(req: Request, res: Response): Promise<void> {
+    try {
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
+      if (!investorInfo) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
+      const { sagTokenId, amountUsd } = req.body;
+      if (!sagTokenId || !amountUsd) {
+        res.status(400).json({ success: false, error: 'sagTokenId and amountUsd are required' });
+        return;
+      }
+
+      // Find the pledge request by sagTokenId
+      const { pool } = await import('@/db/index.js');
+      const result = await pool.query(
+        `SELECT id, investment_target_usd, investment_filled_usd, min_investment_usd, status
+         FROM main.pledge_request WHERE sag_token_id = $1`,
+        [sagTokenId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'SAG token not found' });
+        return;
+      }
+
+      const request = result.rows[0];
+      const target = Number(request.investment_target_usd) || 0;
+      const filled = Number(request.investment_filled_usd) || 0;
+      const minInvestment = Number(request.min_investment_usd) || 100;
+      const remaining = target - filled;
+
+      // Validation: check if target is reached
+      if (remaining <= 0) {
+        res.status(400).json({ success: false, error: 'Investment target has been reached. No more investments accepted.' });
+        return;
+      }
+
+      // Validation: check minimum investment
+      if (amountUsd < minInvestment) {
+        res.status(400).json({ success: false, error: `Minimum investment is $${minInvestment}` });
+        return;
+      }
+
+      // Validation: check if investment exceeds remaining
+      if (amountUsd > remaining) {
+        res.status(400).json({ success: false, error: `Investment exceeds remaining amount. Maximum: $${Math.round(remaining)}` });
+        return;
+      }
+
+      // Update investment filled
+      const newFilled = filled + amountUsd;
+      await pool.query(
+        `UPDATE main.pledge_request SET investment_filled_usd = $1, updated_at = NOW() WHERE id = $2`,
+        [String(newFilled), request.id]
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Investment recorded successfully',
+        data: {
+          sagTokenId,
+          amountUsd,
+          totalFilled: newFilled,
+          target,
+          fullyFunded: newFilled >= target,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error recording investment:', error);
+      res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+    }
+  }
 }
 
 export const investorController = new InvestorController();
