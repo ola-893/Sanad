@@ -13,14 +13,24 @@ export const SEPOLIA_REPAYMENT_GATEWAY_ADDRESS =
 
 export const INVESTOR_VAULT_ABI = [
   'function deposit(uint256 amount) external payable',
-  'function getInvestorDeposits(address investor) external view returns (uint256)',
-  'event DepositMade(address indexed investor, uint256 amount, uint256 timestamp)'
+  'function fundLoan(uint256 tokenId, address pawnshop, uint256 appraisedValueUSD) external payable',
+  'function disburseLoan(uint256 tokenId, address borrower, uint256 amount) external payable',
+  'function loanFunders(uint256 tokenId) external view returns (address)',
+  'function loanPawnshops(uint256 tokenId) external view returns (address)',
+  'function loanAppraisedValue(uint256 tokenId) external view returns (uint256)',
+  'function loanDisbursed(uint256 tokenId) external view returns (bool)',
+  'event DepositMade(address indexed investor, uint256 amount, uint256 timestamp)',
+  'event LoanFunded(uint256 indexed tokenId, address indexed investor, address indexed pawnshop, uint256 amount, uint256 appraisedValueUSD, uint256 timestamp)',
+  'event LoanDisbursed(uint256 indexed tokenId, address indexed pawnshop, address indexed borrower, uint256 amount, uint256 appraisedValueUSD, uint256 timestamp)'
 ] as const;
 
 export const REPAYMENT_GATEWAY_ABI = [
   'function repay(uint256 tokenId, uint256 amount) external payable',
+  'function settleInvestor(uint256 tokenId, uint256 amount) external payable',
   'function totalRepaidForToken(uint256 tokenId) external view returns (uint256)',
-  'event RepaymentMade(address indexed borrower, uint256 indexed tokenId, uint256 amount, uint256 timestamp)'
+  'function investorVaultAddress() external view returns (address)',
+  'event RepaymentMade(address indexed borrower, uint256 indexed tokenId, uint256 amount, uint256 timestamp)',
+  'event InvestorSettled(uint256 indexed tokenId, address indexed pawnshop, address indexed investor, uint256 amount, uint256 timestamp)'
 ] as const;
 
 /**

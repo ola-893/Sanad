@@ -64,7 +64,7 @@ async function main() {
   const vaultFactory = new ethers.ContractFactory(vaultCompiled.abi, vaultCompiled.bytecode, sepoliaSigner);
   
   console.log('  • Broadcasting InvestorVault deployment...');
-  const vaultContract = await vaultFactory.deploy();
+  const vaultContract = await vaultFactory.deploy(sepoliaSigner.address);
   await vaultContract.waitForDeployment();
   const vaultAddress = await vaultContract.getAddress();
   console.log(`  ✅ Deployed Fixed InvestorVault on Sepolia: ${vaultAddress}`);
@@ -117,7 +117,7 @@ async function main() {
   const gatewayFactory = new ethers.ContractFactory(gatewayCompiled.abi, gatewayCompiled.bytecode, sepoliaSigner);
   
   console.log('  • Broadcasting RepaymentGateway deployment...');
-  const gatewayContract = await gatewayFactory.deploy(sepoliaSigner.address);
+  const gatewayContract = await gatewayFactory.deploy(sepoliaSigner.address, vaultAddress);
   await gatewayContract.waitForDeployment();
   const gatewayAddress = await gatewayContract.getAddress();
   console.log(`  ✅ Deployed Fixed RepaymentGateway on Sepolia: ${gatewayAddress}`);

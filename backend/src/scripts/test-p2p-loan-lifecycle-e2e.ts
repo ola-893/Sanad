@@ -31,7 +31,7 @@ function findImports(importPath: string) {
 }
 
 function compileAll() {
-  console.log("\n[1/6] Compiling CC3 & Sepolia smart contracts...");
+  console.log("\n[1/7] Compiling CC3 & Sepolia smart contracts...");
   const contractsDir = path.resolve(process.cwd(), "src", "contracts");
   const sepoliaDir = path.resolve(contractsDir, "sepolia");
 
@@ -91,7 +91,8 @@ function compileAll() {
 
 async function main() {
   console.log("========================================================================");
-  console.log("🚀 PEER-TO-PEER CROSS-CHAIN LOAN LIFECYCLE & REPAYMENT ROUTING E2E");
+  console.log("🚀 PEER-TO-PEER CROSS-CHAIN 3-PARTY 4-HOP LOAN LIFECYCLE E2E TEST");
+  console.log("   (Investor -> Pawnshop -> Borrower -> Pawnshop -> Investor)");
   console.log("========================================================================");
 
   const pkAdmin = process.env.CREDITCOIN_PRIVATE_KEY || process.env.PRIVATE_KEY!;
@@ -102,41 +103,44 @@ async function main() {
   const adminCC3 = new ethers.Wallet(pkAdmin, cc3Provider);
   const adminSepolia = new ethers.Wallet(pkAdmin, sepoliaProvider);
 
-  // Generate clean, dedicated ephemeral wallets for Investor & Pawnshop/Borrower
+  // Generate 3 clean, dedicated ephemeral wallets: Investor, Pawnshop, Borrower
   const investorWallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey, sepoliaProvider);
-  const investorSepolia = investorWallet;
-  const investorCC3 = new ethers.Wallet(investorWallet.privateKey, cc3Provider);
-
   const pawnshopWallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey, sepoliaProvider);
-  const pawnshopCC3 = new ethers.Wallet(pawnshopWallet.privateKey, cc3Provider);
+  const borrowerWallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey, sepoliaProvider);
 
   console.log("\n• Admin Wallet (Rotated & Secure): " + adminCC3.address);
-  console.log("• Investor Wallet (Clean Ephemeral): " + investorSepolia.address);
-  console.log("• Pawnshop Wallet (Clean Ephemeral): " + pawnshopWallet.address);
+  console.log("• Party 1: Investor Wallet:        " + investorWallet.address);
+  console.log("• Party 2: Pawnshop Wallet:        " + pawnshopWallet.address);
+  console.log("• Party 3: Borrower Wallet:        " + borrowerWallet.address);
 
-  // Fund investor with 0.005 ETH (for 0.001 ETH loan funding + gas)
-  console.log("\nFunding Ephemeral Investor with 0.005 ETH for funding & gas...");
+  // Fund ephemeral wallets on Sepolia
+  console.log("\nFunding Ephemeral Wallets on Sepolia...");
   const fundInvestorTx = await adminSepolia.sendTransaction({
-    to: investorSepolia.address,
+    to: investorWallet.address,
     value: ethers.parseEther("0.005"),
   });
   await fundInvestorTx.wait();
-  console.log("  ✅ Investor funded on Sepolia (Tx: " + fundInvestorTx.hash + ")");
+  console.log("  ✅ Investor funded with 0.005 ETH (Tx: " + fundInvestorTx.hash + ")");
 
-  // Fund pawnshop on Sepolia with 0.003 ETH for gas & CC3 for fees
-  console.log("Funding Ephemeral Pawnshop with 0.003 ETH for Sepolia gas...");
   const fundPawnshopTx = await adminSepolia.sendTransaction({
     to: pawnshopWallet.address,
-    value: ethers.parseEther("0.003"),
+    value: ethers.parseEther("0.005"),
   });
   await fundPawnshopTx.wait();
-  console.log("  ✅ Pawnshop funded on Sepolia (Tx: " + fundPawnshopTx.hash + ")");
+  console.log("  ✅ Pawnshop funded with 0.005 ETH (Tx: " + fundPawnshopTx.hash + ")");
+
+  const fundBorrowerTx = await adminSepolia.sendTransaction({
+    to: borrowerWallet.address,
+    value: ethers.parseEther("0.005"),
+  });
+  await fundBorrowerTx.wait();
+  console.log("  ✅ Borrower funded with 0.005 ETH (Tx: " + fundBorrowerTx.hash + ")");
 
   // 1. Compile contracts
   const compiled = compileAll();
 
   // 2. Deploy CC3 Contracts
-  console.log("\n[2/6] Deploying Fresh Protocol Contracts on Creditcoin CC3 & Sepolia...");
+  console.log("\n[2/7] Deploying Fresh Protocol Contracts on Creditcoin CC3 & Sepolia...");
   const oracleFactory = new ethers.ContractFactory(compiled.SanadCreditOracle.abi, compiled.SanadCreditOracle.evm.bytecode.object, adminCC3);
   const oracleContract = await oracleFactory.deploy();
   await oracleContract.waitForDeployment();
@@ -190,72 +194,84 @@ async function main() {
   await (await (poolContract as any).depositLiquidity({ value: baselineDeposit })).wait();
   console.log("  ✅ Deposited 5.0 tCTC native liquidity into CC3 pool for baseline accounting");
 
-  // Update .env and configs everywhere
-  const envPath = path.resolve(process.cwd(), ".env");
-  if (fs.existsSync(envPath)) {
-    let envContent = fs.readFileSync(envPath, "utf8");
-    envContent = envContent.replace(/SANAD_CREDIT_ORACLE_ADDRESS=.*/, "SANAD_CREDIT_ORACLE_ADDRESS=\"" + oracleAddr + "\"");
-    envContent = envContent.replace(/SAG_TOKEN_ADDRESS=.*/, "SAG_TOKEN_ADDRESS=\"" + sagAddr + "\"");
-    envContent = envContent.replace(/SANAD_LIQUIDITY_POOL_ADDRESS=.*/, "SANAD_LIQUIDITY_POOL_ADDRESS=\"" + poolAddr + "\"");
-    envContent = envContent.replace(/SEPOLIA_INVESTOR_VAULT_ADDRESS=.*/, "SEPOLIA_INVESTOR_VAULT_ADDRESS=\"" + vaultAddr + "\"");
-    envContent = envContent.replace(/SEPOLIA_REPAYMENT_GATEWAY_ADDRESS=.*/, "SEPOLIA_REPAYMENT_GATEWAY_ADDRESS=\"" + repayAddr + "\"");
-    fs.writeFileSync(envPath, envContent, "utf8");
-    console.log("  ✅ Updated .env with new addresses");
-  }
-
   // 4. STEP 1: Mint SAG Collateral in ActivePledged (Awaiting Funding)
-  console.log("\n[3/6] STEP 1: Minting SAG Gold Collateral Note on CC3 (Awaiting Funding)...");
+  console.log("\n[3/7] STEP 1: Minting SAG Gold Collateral Note on CC3 (Awaiting Funding)...");
+  const appraisedValueUSD = ethers.parseUnits("3500", 6); // 3,500,000,000 (6 decimals per SAGToken specification)
+  const loanPrincipalUSD = ethers.parseUnits("2500", 6);
+  const monthlyUjrahUSD = ethers.parseUnits("25", 6);
   const mintParams = {
     pawnshop: pawnshopWallet.address,
-    borrower: pawnshopWallet.address,
-    weightGrams: 50,
+    borrower: borrowerWallet.address,
+    weightGrams: 5000, // 50.00g (2 decimals)
     karat: 24,
-    appraisedValueUSD: 3500,
-    loanAmount: 2500,
+    appraisedValueUSD: appraisedValueUSD,
+    loanAmount: loanPrincipalUSD,
     tenureDays: 30,
-    monthlyUjrahUSD: 25,
+    monthlyUjrahUSD: monthlyUjrahUSD,
     ipfsUri: "ipfs://QmP2PLoanTestCollateralMetadata",
   };
 
   const mintTx = await (sagContract as any).mintCollateral(mintParams);
   await mintTx.wait();
   const tokenId = 1n;
-  console.log("  ✅ Minted SAG Collateral Token ID: #" + tokenId + " (Pawnshop: " + pawnshopWallet.address + ")");
-  console.log("     Token Status: ActivePledged | Initial tokenLoanBalance: 0");
+  console.log("  ✅ Minted SAG Collateral Token ID: #" + tokenId);
+  console.log("     Pawnshop: " + pawnshopWallet.address + " | Borrower: " + borrowerWallet.address);
+  console.log("     Appraised Value USD (6 decimals): " + appraisedValueUSD + " ($3,500.00 USD) | Loan Principal: " + loanPrincipalUSD);
 
-  // 5. STEP 2: Real Sepolia Transaction: Investor Funds Loan via InvestorVault.fundLoan
-  console.log("\n[4/6] STEP 2: Investor Directly Funds Loan on Ethereum Sepolia...");
+  // 5. STEP 2: Hop 1 (Investor -> Pawnshop on Sepolia)
+  console.log("\n[4/7] STEP 2: HOP 1 - Investor Directly Funds Pawnshop on Sepolia...");
   const fundingAmountWei = ethers.parseEther("0.001"); // 0.001 ETH
-  const pawnshopSepoliaBalBefore = await sepoliaProvider.getBalance(pawnshopWallet.address);
-  console.log("  • Pawnshop Balance Before Funding: " + ethers.formatEther(pawnshopSepoliaBalBefore) + " ETH");
-  console.log("  • Investor calling fundLoan(tokenId: " + tokenId + ", borrower: " + pawnshopWallet.address + ") with " + ethers.formatEther(fundingAmountWei) + " ETH...");
+  const pawnshopBalBeforeHop1 = await sepoliaProvider.getBalance(pawnshopWallet.address);
+  const treasuryBalBeforeHop1 = await sepoliaProvider.getBalance(treasuryAddress);
 
-  const vaultWithInvestor = new ethers.Contract(vaultAddr, compiled.InvestorVault.abi, investorSepolia);
-  const fundTx = await (vaultWithInvestor as any).fundLoan(tokenId, pawnshopWallet.address, {
+  console.log("  • Pawnshop Sepolia Balance Before Hop 1: " + ethers.formatEther(pawnshopBalBeforeHop1) + " ETH");
+  console.log("  • Calling InvestorVault.fundLoan(tokenId: " + tokenId + ", pawnshop: " + pawnshopWallet.address + ", appraisedUSD: " + appraisedValueUSD + ")...");
+
+  const vaultWithInvestor = new ethers.Contract(vaultAddr, compiled.InvestorVault.abi, investorWallet);
+  const fundTx = await (vaultWithInvestor as any).fundLoan(tokenId, pawnshopWallet.address, appraisedValueUSD, {
     value: fundingAmountWei,
   });
   console.log("  • Broadcast Sepolia Funding Tx: " + fundTx.hash);
-  console.log("  • Sepolia Explorer: https://sepolia.etherscan.io/tx/" + fundTx.hash);
   const fundReceipt = await fundTx.wait();
   console.log("  ✅ Sepolia Funding Confirmed in Block #" + fundReceipt.blockNumber + "!");
 
-  const pawnshopSepoliaBalAfter = await sepoliaProvider.getBalance(pawnshopWallet.address);
-  const balanceIncrease = pawnshopSepoliaBalAfter - pawnshopSepoliaBalBefore;
-  console.log("  • Pawnshop Balance After Funding:  " + ethers.formatEther(pawnshopSepoliaBalAfter) + " ETH");
-  console.log("  • Balance Delta:                   +" + ethers.formatEther(balanceIncrease) + " ETH");
-  if (balanceIncrease !== fundingAmountWei) {
-    throw new Error("Pawnshop balance did not increase by exact funding amount in same transaction!");
+  const pawnshopBalAfterHop1 = await sepoliaProvider.getBalance(pawnshopWallet.address);
+  const treasuryBalAfterHop1 = await sepoliaProvider.getBalance(treasuryAddress);
+
+  const hop1PawnshopDelta = pawnshopBalAfterHop1 - pawnshopBalBeforeHop1;
+  const hop1TreasuryDelta = treasuryBalAfterHop1 - treasuryBalBeforeHop1;
+
+  console.log("  • Pawnshop Balance Delta (Hop 1): +" + ethers.formatEther(hop1PawnshopDelta) + " ETH");
+  console.log("  • Treasury Balance Delta (Hop 1): +" + ethers.formatEther(hop1TreasuryDelta) + " ETH");
+
+  if (hop1PawnshopDelta !== fundingAmountWei) {
+    throw new Error("Hop 1 Failure: Pawnshop did not receive exact funding amount in same transaction!");
   }
-  console.log("  ✅ VERIFIED: Value moved directly to borrower on Sepolia in same transaction!");
+  if (hop1TreasuryDelta !== 0n) {
+    throw new Error("Hop 1 Failure: Treasury balance changed during peer-to-peer pawnshop funding!");
+  }
 
   const recordedFunder = await (vaultContract as any).loanFunders(tokenId);
-  console.log("  • InvestorVault.loanFunders(" + tokenId + "): " + recordedFunder + " (Investor: " + investorSepolia.address + ")");
-  if (recordedFunder.toLowerCase() !== investorSepolia.address.toLowerCase()) {
+  const recordedPawnshop = await (vaultContract as any).loanPawnshops(tokenId);
+  const recordedAppraisal = await (vaultContract as any).loanAppraisedValue(tokenId);
+
+  console.log("  • InvestorVault.loanFunders(" + tokenId + "):       " + recordedFunder);
+  console.log("  • InvestorVault.loanPawnshops(" + tokenId + "):     " + recordedPawnshop);
+  console.log("  • InvestorVault.loanAppraisedValue(" + tokenId + "): " + recordedAppraisal);
+
+  if (recordedFunder.toLowerCase() !== investorWallet.address.toLowerCase()) {
     throw new Error("loanFunders on Sepolia does not match investor address!");
   }
+  if (recordedPawnshop.toLowerCase() !== pawnshopWallet.address.toLowerCase()) {
+    throw new Error("loanPawnshops on Sepolia does not match pawnshop address!");
+  }
+  if (BigInt(recordedAppraisal) !== BigInt(appraisedValueUSD)) {
+    throw new Error("loanAppraisedValue on Sepolia does not match audit valuation!");
+  }
+  console.log("  ✅ HOP 1 VERIFIED: Value moved directly from Investor to Pawnshop with full audit trail!");
 
   // 6. STEP 3: Cryptographic Proof & CC3 Settlement (verifyAndFundLoanCrossChain)
-  console.log("\n[5/6] STEP 3: Requesting Attestcoin Proof & Verifying on CC3 (verifyAndFundLoanCrossChain)...");
+  console.log("\n[5/7] STEP 3: Requesting Attestcoin Proof & Verifying on CC3 (verifyAndFundLoanCrossChain)...");
   console.log("  • Waiting for Sepolia block #" + fundReceipt.blockNumber + " to be attested in Prover cache...");
 
   const ProofBuilder = (proofProvider as any).service?.ProofBuilder || (proofProvider as any).ProofBuilder;
@@ -268,21 +284,14 @@ async function main() {
   const proofData = proofResult.data;
 
   console.log("  ✅ Block #" + fundReceipt.blockNumber + " Attestcoin Proof Generated!");
-  console.log("  • Merkle Root: " + proofData.merkleProof.root);
 
   // CC3 state before
   const poolBalBefore = await cc3Provider.getBalance(poolAddr);
   const poolLiqBefore = await (poolContract as any).totalPoolLiquidity();
   const tokenLoanBalBefore = await (poolContract as any).tokenLoanBalance(tokenId);
 
-  console.log("  • CC3 Pool Native Balance Before: " + ethers.formatEther(poolBalBefore) + " tCTC");
-  console.log("  • CC3 totalPoolLiquidity Before:  " + ethers.formatEther(poolLiqBefore) + " tCTC");
-  console.log("  • tokenLoanBalance Before:        " + tokenLoanBalBefore.toString());
-
   console.log("  • Calling verifyAndFundLoanCrossChain on CC3...");
   const txBytes = proofData.txBytes || proofData.encodedTransaction;
-  console.log("  • Proof data keys:", Object.keys(proofData));
-  console.log("  • txBytes length:", txBytes ? txBytes.length : "undefined");
   const verifyTx = await (poolContract as any).verifyAndFundLoanCrossChain(
     tokenId,
     proofData.chainKey,
@@ -292,75 +301,128 @@ async function main() {
     proofData.continuityProof,
     fundTx.hash
   );
-  console.log("  • Broadcast CC3 Settle Tx: " + verifyTx.hash);
   const verifyReceipt = await verifyTx.wait();
   console.log("  ✅ CC3 Settlement Confirmed in Block #" + verifyReceipt.blockNumber + "!");
-  console.log("     CC3 Explorer: https://creditcoin-testnet.blockscout.com/tx/" + verifyTx.hash);
 
   // CC3 state after
   const poolBalAfter = await cc3Provider.getBalance(poolAddr);
   const poolLiqAfter = await (poolContract as any).totalPoolLiquidity();
   const tokenLoanBalAfter = await (poolContract as any).tokenLoanBalance(tokenId);
   const loanInvestorCC3 = await (poolContract as any).loanInvestors(tokenId);
-  const investorProvenCap = await (poolContract as any).investorTotalProvenCapital(investorSepolia.address);
+  const investorProvenCap = await (poolContract as any).investorTotalProvenCapital(investorWallet.address);
 
-  console.log("\n  --- CC3 ON-CHAIN VERIFICATION RESULTS ---");
-  console.log("  • tokenLoanBalance After:         " + tokenLoanBalAfter.toString() + " wei (+" + ethers.formatEther(tokenLoanBalAfter) + " ETH)");
-  console.log("  • loanInvestors(tokenId):         " + loanInvestorCC3 + " (Investor)");
-  console.log("  • investorTotalProvenCapital:     " + investorProvenCap.toString() + " units (Reputation)");
-  console.log("  • CC3 Pool Native Balance After:  " + ethers.formatEther(poolBalAfter) + " tCTC (Delta: " + ethers.formatEther(poolBalAfter - poolBalBefore) + " tCTC)");
-  console.log("  • CC3 totalPoolLiquidity After:   " + ethers.formatEther(poolLiqAfter) + " tCTC (Delta: " + ethers.formatEther(poolLiqAfter - poolLiqBefore) + " tCTC)");
+  console.log("  • CC3 tokenLoanBalance:         " + tokenLoanBalAfter.toString() + " wei");
+  console.log("  • CC3 loanInvestors(" + tokenId + "):         " + loanInvestorCC3);
+  console.log("  • CC3 investorTotalProvenCapital: " + investorProvenCap.toString() + " units");
 
   if (poolBalAfter !== poolBalBefore || poolLiqAfter !== poolLiqBefore) {
     throw new Error("CRITICAL REGRESSION: Pool native balance or totalPoolLiquidity changed during cross-chain loan funding!");
   }
-  console.log("  ✅ CRITICAL REGRESSION TEST PASSED: Pool native balance and totalPoolLiquidity remained 100% untouched!");
+  console.log("  ✅ CRITICAL VERIFICATION PASSED: Pool balance untouched (Zero CTC Leakage)!");
 
-  // 7. STEP 4: Live Sepolia Targeted Direct Repayment (RepaymentGateway.repay)
-  console.log("\n[6/6] STEP 4: Borrower Repays Loan on Sepolia with Direct Investor Payout...");
-  const investorBalBeforeRepay = await sepoliaProvider.getBalance(investorSepolia.address);
-  const treasuryBalBeforeRepay = await sepoliaProvider.getBalance(treasuryAddress);
+  // 7. STEP 4: Hop 2 (Pawnshop -> Borrower Disbursement on Sepolia)
+  console.log("\n[6/7] STEP 4: HOP 2 - Pawnshop Disburses Funds to Borrower on Sepolia...");
+  const borrowerBalBeforeHop2 = await sepoliaProvider.getBalance(borrowerWallet.address);
+  console.log("  • Borrower Sepolia Balance Before Hop 2: " + ethers.formatEther(borrowerBalBeforeHop2) + " ETH");
 
-  console.log("  • Investor Sepolia Balance Before: " + ethers.formatEther(investorBalBeforeRepay) + " ETH");
-  console.log("  • Treasury Sepolia Balance Before: " + ethers.formatEther(treasuryBalBeforeRepay) + " ETH");
+  const vaultWithPawnshop = new ethers.Contract(vaultAddr, compiled.InvestorVault.abi, pawnshopWallet);
+  const disburseTx = await (vaultWithPawnshop as any).disburseLoan(tokenId, borrowerWallet.address, fundingAmountWei, {
+    value: fundingAmountWei,
+  });
+  console.log("  • Broadcast Sepolia Disbursement Tx: " + disburseTx.hash);
+  const disburseReceipt = await disburseTx.wait();
+  console.log("  ✅ Sepolia Disbursement Confirmed in Block #" + disburseReceipt.blockNumber + "!");
 
-  console.log("  • Borrower (Pawnshop) calling RepaymentGateway.repay(tokenId: " + tokenId + ", amount: " + fundingAmountWei + ")...");
-  const repayWithPawnshop = new ethers.Contract(repayAddr, compiled.RepaymentGateway.abi, pawnshopWallet);
-  const repayTx = await (repayWithPawnshop as any).repay(tokenId, fundingAmountWei, {
+  const borrowerBalAfterHop2 = await sepoliaProvider.getBalance(borrowerWallet.address);
+  const hop2BorrowerDelta = borrowerBalAfterHop2 - borrowerBalBeforeHop2;
+  console.log("  • Borrower Balance Delta (Hop 2): +" + ethers.formatEther(hop2BorrowerDelta) + " ETH");
+
+  if (hop2BorrowerDelta !== fundingAmountWei) {
+    throw new Error("Hop 2 Failure: Borrower did not receive exact disbursement amount!");
+  }
+  const isDisbursed = await (vaultContract as any).loanDisbursed(tokenId);
+  if (!isDisbursed) {
+    throw new Error("Hop 2 Failure: loanDisbursed is false on InvestorVault!");
+  }
+  console.log("  ✅ HOP 2 VERIFIED: Funds disbursed directly from Pawnshop to Borrower!");
+
+  // 8. STEP 5 & 6: Hop 3 & Hop 4 (Repayment: Borrower -> Pawnshop -> Investor)
+  console.log("\n[7/7] STEP 5 & 6: HOP 3 & HOP 4 - Borrower Repayment & Pawnshop Investor Settlement...");
+  
+  // Hop 3: Borrower -> Pawnshop via RepaymentGateway.repay
+  console.log("\n  --- HOP 3: Borrower -> Pawnshop via RepaymentGateway.repay ---");
+  const pawnshopBalBeforeHop3 = await sepoliaProvider.getBalance(pawnshopWallet.address);
+  const treasuryBalBeforeHop3 = await sepoliaProvider.getBalance(treasuryAddress);
+
+  const repayWithBorrower = new ethers.Contract(repayAddr, compiled.RepaymentGateway.abi, borrowerWallet);
+  const repayTx = await (repayWithBorrower as any).repay(tokenId, fundingAmountWei, {
     value: fundingAmountWei,
   });
   console.log("  • Broadcast Sepolia Repayment Tx: " + repayTx.hash);
-  console.log("  • Sepolia Explorer: https://sepolia.etherscan.io/tx/" + repayTx.hash);
   const repayReceipt = await repayTx.wait();
   console.log("  ✅ Sepolia Repayment Confirmed in Block #" + repayReceipt.blockNumber + "!");
 
-  const investorBalAfterRepay = await sepoliaProvider.getBalance(investorSepolia.address);
-  const treasuryBalAfterRepay = await sepoliaProvider.getBalance(treasuryAddress);
+  const pawnshopBalAfterHop3 = await sepoliaProvider.getBalance(pawnshopWallet.address);
+  const treasuryBalAfterHop3 = await sepoliaProvider.getBalance(treasuryAddress);
 
-  const investorReceived = investorBalAfterRepay - investorBalBeforeRepay;
-  const treasuryReceived = treasuryBalAfterRepay - treasuryBalBeforeRepay;
+  const hop3PawnshopDelta = pawnshopBalAfterHop3 - pawnshopBalBeforeHop3;
+  const hop3TreasuryDelta = treasuryBalAfterHop3 - treasuryBalBeforeHop3;
 
-  console.log("\n  --- REPAYMENT ROUTING AUDIT RESULTS ---");
-  console.log("  • Investor Balance Delta: +" + ethers.formatEther(investorReceived) + " ETH (Received full loan repayment directly)");
-  console.log("  • Treasury Balance Delta: +" + ethers.formatEther(treasuryReceived) + " ETH (Bypassed - generic treasury received 0)");
+  console.log("  • Pawnshop Balance Delta (Hop 3): +" + ethers.formatEther(hop3PawnshopDelta) + " ETH");
+  console.log("  • Treasury Balance Delta (Hop 3): +" + ethers.formatEther(hop3TreasuryDelta) + " ETH");
 
-  if (investorReceived !== fundingAmountWei) {
-    throw new Error("Investor did not receive direct repayment!");
+  if (hop3PawnshopDelta !== fundingAmountWei) {
+    throw new Error("Hop 3 Failure: Pawnshop did not receive exact repayment funds!");
   }
-  console.log("  ✅ VERIFIED: Targeted peer-to-peer repayment successfully routed directly to investor!");
+  if (hop3TreasuryDelta !== 0n) {
+    throw new Error("Hop 3 Failure: Treasury balance changed during borrower-to-pawnshop repayment!");
+  }
+  console.log("  ✅ HOP 3 VERIFIED: Targeted repayment successfully routed from Borrower to Pawnshop!");
+
+  // Hop 4: Pawnshop -> Investor via RepaymentGateway.settleInvestor
+  console.log("\n  --- HOP 4: Pawnshop -> Investor via RepaymentGateway.settleInvestor ---");
+  const investorBalBeforeHop4 = await sepoliaProvider.getBalance(investorWallet.address);
+  const treasuryBalBeforeHop4 = await sepoliaProvider.getBalance(treasuryAddress);
+
+  const repayWithPawnshop = new ethers.Contract(repayAddr, compiled.RepaymentGateway.abi, pawnshopWallet);
+  const settleTx = await (repayWithPawnshop as any).settleInvestor(tokenId, fundingAmountWei, {
+    value: fundingAmountWei,
+  });
+  console.log("  • Broadcast Sepolia Settle Investor Tx: " + settleTx.hash);
+  const settleReceipt = await settleTx.wait();
+  console.log("  ✅ Sepolia Settle Investor Confirmed in Block #" + settleReceipt.blockNumber + "!");
+
+  const investorBalAfterHop4 = await sepoliaProvider.getBalance(investorWallet.address);
+  const treasuryBalAfterHop4 = await sepoliaProvider.getBalance(treasuryAddress);
+
+  const hop4InvestorDelta = investorBalAfterHop4 - investorBalBeforeHop4;
+  const hop4TreasuryDelta = treasuryBalAfterHop4 - treasuryBalBeforeHop4;
+
+  console.log("  • Investor Balance Delta (Hop 4): +" + ethers.formatEther(hop4InvestorDelta) + " ETH");
+  console.log("  • Treasury Balance Delta (Hop 4): +" + ethers.formatEther(hop4TreasuryDelta) + " ETH");
+
+  if (hop4InvestorDelta !== fundingAmountWei) {
+    throw new Error("Hop 4 Failure: Investor did not receive exact settlement funds!");
+  }
+  if (hop4TreasuryDelta !== 0n) {
+    throw new Error("Hop 4 Failure: Treasury balance changed during pawnshop-to-investor settlement!");
+  }
+  console.log("  ✅ HOP 4 VERIFIED: Pawnshop successfully settled funding Investor on-chain!");
 
   console.log("\n========================================================================");
-  console.log("🎉 PEER-TO-PEER CROSS-CHAIN LOAN LIFECYCLE 100% VERIFIED ON-CHAIN");
+  console.log("🎉 3-PARTY 4-HOP CROSS-CHAIN LOAN LIFECYCLE 100% VERIFIED ON-CHAIN");
   console.log("========================================================================");
-  console.log("1. CC3 SAGToken Collateral Mint:     Token ID #" + tokenId);
-  console.log("2. Sepolia P2P Loan Funding Tx:       " + fundTx.hash);
-  console.log("3. CC3 Attestcoin Proof Settlement:  " + verifyTx.hash);
-  console.log("4. Sepolia Direct Repayment Tx:      " + repayTx.hash);
-  console.log("5. CC3 Pool Solvency Ratio:          1.0000 (100% Backed, Zero CTC Leakage)");
+  console.log("1. CC3 SAG Collateral Note:            Token ID #" + tokenId);
+  console.log("2. Hop 1 (Investor -> Pawnshop):       " + fundTx.hash);
+  console.log("3. CC3 Cryptographic Settlement:       " + verifyTx.hash);
+  console.log("4. Hop 2 (Pawnshop -> Borrower):       " + disburseTx.hash);
+  console.log("5. Hop 3 (Borrower -> Pawnshop Repay): " + repayTx.hash);
+  console.log("6. Hop 4 (Pawnshop -> Investor Settle):" + settleTx.hash);
+  console.log("7. Pool Solvency & Isolation:          100% Preserved (0 CTC Leaked)");
   console.log("========================================================================");
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error("\n❌ E2E Test Failed:", err);
   process.exit(1);
 });
