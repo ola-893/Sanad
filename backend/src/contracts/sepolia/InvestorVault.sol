@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 /**
  * @title InvestorVault
  * @notice Sepolia Gateway contract for cross-chain liquidity provision and peer-to-peer loan funding into Sanad on Creditcoin CC3.
- *         Investors call fundLoan(uint256 tokenId, address borrower) on Ethereum Sepolia, which is cryptographically proven
- *         on Creditcoin CC3 via the Attestcoin BlockProver precompile.
+ *         Investors call fundLoan(uint256 tokenId, address pawnshop, uint256 appraisedValueUSD) on Ethereum Sepolia, which
+ *         forwards funds to the pawnshop and is cryptographically proven on Creditcoin CC3 via the Attestcoin BlockProver precompile.
+ *         Pawnshops then call disburseLoan(uint256 tokenId, address borrower, uint256 amount) to forward funds to the borrower.
  */
 contract InvestorVault {
     address public owner;
@@ -13,13 +14,28 @@ contract InvestorVault {
 
     // Mapping of loan tokenId -> investor funder address
     mapping(uint256 => address) public loanFunders;
+    // Mapping of loan tokenId -> pawnshop recipient address
+    mapping(uint256 => address) public loanPawnshops;
+    // Mapping of loan tokenId -> stored USD appraisal valuation (audit trail)
+    mapping(uint256 => uint256) public loanAppraisedValue;
+    // Mapping of loan tokenId -> disbursement status
+    mapping(uint256 => bool) public loanDisbursed;
 
     event DepositMade(address indexed investor, uint256 amount, uint256 timestamp);
     event LoanFunded(
         uint256 indexed tokenId,
         address indexed investor,
+        address indexed pawnshop,
+        uint256 amount,
+        uint256 appraisedValueUSD,
+        uint256 timestamp
+    );
+    event LoanDisbursed(
+        uint256 indexed tokenId,
+        address indexed pawnshop,
         address indexed borrower,
         uint256 amount,
+        uint256 appraisedValueUSD,
         uint256 timestamp
     );
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
@@ -35,26 +51,53 @@ contract InvestorVault {
     }
 
     /**
-     * @notice Fund a specific loan directly on Sepolia (Peer-to-Peer Cross-Chain Funding).
-     * @dev Function selector is 0x6d1611c4 (fundLoan(uint256,address)).
-     *      Immediately forwards msg.value directly to borrower.
-     *      Records loanFunders[tokenId] on Sepolia before the transfer for direct repayment routing.
+     * @notice Fund a specific loan directly on Sepolia (Peer-to-Peer Cross-Chain Funding: Investor -> Pawnshop).
+     * @dev Function selector is 0xfdc6f341 (fundLoan(uint256,address,uint256)).
+     *      Immediately forwards msg.value directly to the pawnshop.
+     *      Records loanFunders[tokenId], loanPawnshops[tokenId], and loanAppraisedValue[tokenId].
      * @param tokenId SAG Token ID on Creditcoin CC3
-     * @param borrower Borrower / pawnshop recipient address on Sepolia
+     * @param pawnshop Pawnshop recipient address on Sepolia
+     * @param appraisedValueUSD USD-denominated appraisal valuation from SAGToken (audit trail)
      */
-    function fundLoan(uint256 tokenId, address borrower) external payable {
+    function fundLoan(uint256 tokenId, address pawnshop, uint256 appraisedValueUSD) external payable {
         require(tokenId > 0, "Invalid token ID");
-        require(borrower != address(0), "Invalid borrower address");
+        require(pawnshop != address(0), "Invalid pawnshop address");
         require(msg.value > 0, "Funding amount must be greater than zero");
         require(loanFunders[tokenId] == address(0), "Loan already funded");
 
-        // Record loan funder before transfer (Checks-Effects-Interactions)
+        // Record loan origination state before transfer (Checks-Effects-Interactions)
         loanFunders[tokenId] = msg.sender;
+        loanPawnshops[tokenId] = pawnshop;
+        loanAppraisedValue[tokenId] = appraisedValueUSD;
+
+        (bool ok, ) = pawnshop.call{value: msg.value}("");
+        require(ok, "Forward to pawnshop failed");
+
+        emit LoanFunded(tokenId, msg.sender, pawnshop, msg.value, appraisedValueUSD, block.timestamp);
+    }
+
+    /**
+     * @notice Disburse funded loan proceeds from the pawnshop to the end borrower (Pawnshop -> Borrower).
+     * @dev Function selector is 0xff408ad3 (disburseLoan(uint256,address,uint256)).
+     *      Immediately forwards msg.value directly to the borrower.
+     *      Strictly enforces that only the assigned pawnshop can disburse, and prevents double disbursement.
+     * @param tokenId SAG Token ID on Creditcoin CC3
+     * @param borrower End borrower recipient address on Sepolia
+     * @param amount Disbursement amount in wei (must match msg.value exactly)
+     */
+    function disburseLoan(uint256 tokenId, address borrower, uint256 amount) external payable {
+        require(msg.sender == loanPawnshops[tokenId], "Only assigned pawnshop can disburse");
+        require(borrower != address(0), "Invalid borrower address");
+        require(amount > 0, "Disbursement amount must be greater than zero");
+        require(msg.value == amount, "msg.value does not match amount parameter");
+        require(!loanDisbursed[tokenId], "Loan already disbursed");
+
+        loanDisbursed[tokenId] = true;
 
         (bool ok, ) = borrower.call{value: msg.value}("");
         require(ok, "Forward to borrower failed");
 
-        emit LoanFunded(tokenId, msg.sender, borrower, msg.value, block.timestamp);
+        emit LoanDisbursed(tokenId, msg.sender, borrower, amount, loanAppraisedValue[tokenId], block.timestamp);
     }
 
     /**

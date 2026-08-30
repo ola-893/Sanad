@@ -24,19 +24,38 @@ contract GatewayHandler is Test {
         treasury = _treasury;
     }
 
-    function fundLoan(uint256 tokenId, uint256 amount) external {
+    function fundLoan(uint256 tokenId, uint256 amount, uint256 appraisedUSD) external {
         tokenId = bound(tokenId, 1, 100);
         amount = bound(amount, 1 wei, 50 ether);
+        appraisedUSD = bound(appraisedUSD, 1, 10_000_000);
 
         address caller = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "investor")))));
-        address borrower = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "borrower")))));
+        address pawnshop = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "pawnshop")))));
         vm.deal(caller, amount);
 
         vm.prank(caller);
-        try vault.fundLoan{value: amount}(tokenId, borrower) {
+        try vault.fundLoan{value: amount}(tokenId, pawnshop, appraisedUSD) {
             // Succeeded if not already funded
         } catch {
             // Reverted as expected if already funded
+        }
+    }
+
+    function disburseLoan(uint256 tokenId, uint256 amount) external {
+        tokenId = bound(tokenId, 1, 100);
+        amount = bound(amount, 1 wei, 50 ether);
+
+        address pawnshop = vault.loanPawnshops(tokenId);
+        if (pawnshop == address(0)) return;
+
+        address borrower = address(uint160(uint256(keccak256(abi.encodePacked(msg.sender, "borrower")))));
+        vm.deal(pawnshop, amount);
+
+        vm.prank(pawnshop);
+        try vault.disburseLoan{value: amount}(tokenId, borrower, amount) {
+            // Succeeded if not already disbursed
+        } catch {
+            // Reverted as expected if already disbursed
         }
     }
 
@@ -77,6 +96,23 @@ contract GatewayHandler is Test {
             ghost_totalRepaidForToken[tokenId] = newRepaid;
         } catch {
             // Reverted as expected if mismatched
+        }
+    }
+
+    function settleInvestor(uint256 tokenId, uint256 amount) external {
+        tokenId = bound(tokenId, 1, 100);
+        amount = bound(amount, 1 wei, 50 ether);
+
+        address pawnshop = vault.loanPawnshops(tokenId);
+        if (pawnshop == address(0)) return;
+
+        vm.deal(pawnshop, amount);
+
+        vm.prank(pawnshop);
+        try gateway.settleInvestor{value: amount}(tokenId, amount) {
+            // Succeeded if valid
+        } catch {
+            // Reverted as expected
         }
     }
 

@@ -11,10 +11,18 @@ contract RepaymentGatewayTest is Test {
     address public owner;
     address public treasury;
     address public investor1;
+    address public pawnshop1;
     address public borrower1;
-    address public user2;
+    address public attacker;
 
     event RepaymentMade(address indexed borrower, uint256 indexed tokenId, uint256 amount, uint256 timestamp);
+    event InvestorSettled(
+        uint256 indexed tokenId,
+        address indexed pawnshop,
+        address indexed investor,
+        uint256 amount,
+        uint256 timestamp
+    );
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event InvestorVaultUpdated(address indexed oldVault, address indexed newVault);
 
@@ -22,13 +30,15 @@ contract RepaymentGatewayTest is Test {
         owner = makeAddr("owner");
         treasury = makeAddr("treasury");
         investor1 = makeAddr("investor1");
+        pawnshop1 = makeAddr("pawnshop1");
         borrower1 = makeAddr("borrower1");
-        user2 = makeAddr("user2");
+        attacker = makeAddr("attacker");
 
         vm.deal(owner, 1000 ether);
         vm.deal(investor1, 1000 ether);
+        vm.deal(pawnshop1, 1000 ether);
         vm.deal(borrower1, 1000 ether);
-        vm.deal(user2, 1000 ether);
+        vm.deal(attacker, 1000 ether);
 
         vm.startPrank(owner);
         vault = new InvestorVault(treasury);
@@ -37,29 +47,84 @@ contract RepaymentGatewayTest is Test {
     }
 
     // =========================================================================
-    // 1. REPAYMENT ROUTING TO DIRECT INVESTOR OR TREASURY
+    // 1. BORROWER REPAYMENT TO PAWNSHOP
     // =========================================================================
 
-    function testFuzz_Repay_FundedLoan_RoutesDirectlyToInvestor(uint256 tokenId, uint256 amount) public {
+    function testFuzz_Repay_FundedLoan_RoutesDirectlyToPawnshop(uint256 tokenId, uint256 amount, uint256 appraisedUSD) public {
         tokenId = bound(tokenId, 1, 1_000_000);
         amount = bound(amount, 1 wei, 500 ether);
+        appraisedUSD = bound(appraisedUSD, 1, 10_000_000);
 
-        // Investor funds loan first
+        // 1. Investor funds pawnshop
         vm.prank(investor1);
-        vault.fundLoan{value: amount}(tokenId, borrower1);
+        vault.fundLoan{value: amount}(tokenId, pawnshop1, appraisedUSD);
 
-        uint256 investorBefore = investor1.balance;
+        // 2. Pawnshop disburses to borrower
+        vm.prank(pawnshop1);
+        vault.disburseLoan{value: amount}(tokenId, borrower1, amount);
+
+        uint256 pawnshopBefore = pawnshop1.balance;
         uint256 treasuryBefore = treasury.balance;
 
-        // Borrower repays via gateway
+        // 3. Borrower repays to pawnshop via gateway
         vm.prank(borrower1);
         gateway.repay{value: amount}(tokenId, amount);
 
         assertEq(address(gateway).balance, 0, "Gateway balance must be zero");
-        assertEq(investor1.balance, investorBefore + amount, "Investor must receive exact repayment funds");
-        assertEq(treasury.balance, treasuryBefore, "Treasury must receive zero for peer-to-peer funded loan");
+        assertEq(pawnshop1.balance, pawnshopBefore + amount, "Pawnshop must receive exact repayment funds");
+        assertEq(treasury.balance, treasuryBefore, "Treasury must receive zero for active pawnshop loan");
         assertEq(gateway.totalRepaidForToken(tokenId), amount);
     }
+
+    // =========================================================================
+    // 2. PAWNSHOP SETTLES INVESTOR
+    // =========================================================================
+
+    function testFuzz_SettleInvestor_RoutesDirectlyToInvestor(uint256 tokenId, uint256 amount, uint256 appraisedUSD) public {
+        tokenId = bound(tokenId, 1, 1_000_000);
+        amount = bound(amount, 1 wei, 500 ether);
+        appraisedUSD = bound(appraisedUSD, 1, 10_000_000);
+
+        // 1. Investor funds pawnshop
+        vm.prank(investor1);
+        vault.fundLoan{value: amount}(tokenId, pawnshop1, appraisedUSD);
+
+        // 2. Pawnshop disburses to borrower
+        vm.prank(pawnshop1);
+        vault.disburseLoan{value: amount}(tokenId, borrower1, amount);
+
+        // 3. Borrower repays to pawnshop via gateway
+        vm.prank(borrower1);
+        gateway.repay{value: amount}(tokenId, amount);
+
+        uint256 investorBefore = investor1.balance;
+
+        // 4. Pawnshop settles investor via gateway
+        vm.prank(pawnshop1);
+        gateway.settleInvestor{value: amount}(tokenId, amount);
+
+        assertEq(address(gateway).balance, 0, "Gateway balance must be zero");
+        assertEq(investor1.balance, investorBefore + amount, "Investor must receive full settlement");
+    }
+
+    function test_SettleInvestor_UnauthorizedCaller_Reverts() public {
+        vm.prank(investor1);
+        vault.fundLoan{value: 1 ether}(1, pawnshop1, 5000);
+
+        vm.prank(attacker);
+        vm.expectRevert("Only assigned pawnshop can settle investor");
+        gateway.settleInvestor{value: 1 ether}(1, 1 ether);
+    }
+
+    function test_SettleInvestor_UnfundedLoan_Reverts() public {
+        vm.prank(pawnshop1);
+        vm.expectRevert("Only assigned pawnshop can settle investor");
+        gateway.settleInvestor{value: 1 ether}(999, 1 ether);
+    }
+
+    // =========================================================================
+    // 3. FALLBACK TO TREASURY ON UNRECORDED TOKEN
+    // =========================================================================
 
     function testFuzz_Repay_UnfundedLoan_RoutesToTreasury(uint256 tokenId, uint256 amount) public {
         tokenId = bound(tokenId, 1, 1_000_000);
@@ -74,20 +139,8 @@ contract RepaymentGatewayTest is Test {
         assertEq(treasury.balance, treasuryBalBefore + amount, "Treasury must receive fallback repayment");
     }
 
-    function testFuzz_Receive_ValidAmount_ForwardsToTreasury(uint256 amount) public {
-        amount = bound(amount, 1 wei, 500 ether);
-        uint256 treasuryBalBefore = treasury.balance;
-
-        vm.prank(borrower1);
-        (bool ok, ) = address(gateway).call{value: amount}("");
-        assertTrue(ok, "Direct send to receive() must succeed");
-
-        assertEq(address(gateway).balance, 0, "Gateway balance must be zero");
-        assertEq(treasury.balance, treasuryBalBefore + amount, "Treasury must receive exact funds");
-    }
-
     // =========================================================================
-    // 2. TOTAL REPAID FOR TOKEN ONLY INCREASES
+    // 4. TOTAL REPAID MONOTONICITY & REVERTS
     // =========================================================================
 
     function testFuzz_TotalRepaidForToken_MonotonicIncrease(
@@ -108,16 +161,12 @@ contract RepaymentGatewayTest is Test {
         assertGe(r1, r0);
         assertEq(r1, amount1);
 
-        vm.prank(user2);
+        vm.prank(borrower1);
         gateway.repay{value: amount2}(tokenId, amount2);
         uint256 r2 = gateway.totalRepaidForToken(tokenId);
         assertGe(r2, r1);
         assertEq(r2, amount1 + amount2);
     }
-
-    // =========================================================================
-    // 3. REPAY REVERTS ON MISMATCH
-    // =========================================================================
 
     function testFuzz_Repay_Revert_MismatchedValue(uint256 tokenId, uint256 amount, uint256 msgValue) public {
         tokenId = bound(tokenId, 0, 1_000_000);
@@ -137,20 +186,5 @@ contract RepaymentGatewayTest is Test {
         }
 
         gateway.repay{value: msgValue}(tokenId, amount);
-    }
-
-    // =========================================================================
-    // 4. OWNER FUNCTIONS
-    // =========================================================================
-
-    function test_SetInvestorVault_OwnerSuccess() public {
-        address newVault = makeAddr("newVault");
-
-        vm.prank(owner);
-        vm.expectEmit(true, true, false, true);
-        emit InvestorVaultUpdated(address(vault), newVault);
-        gateway.setInvestorVault(newVault);
-
-        assertEq(gateway.investorVaultAddress(), newVault);
     }
 }

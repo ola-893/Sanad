@@ -234,8 +234,9 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         bytes32 indexed sourceTxHash,
         uint256 indexed tokenId,
         address investor,
-        address borrower,
+        address pawnshop,
         uint256 amount,
+        uint256 appraisedValueUSD,
         uint256 timestamp
     );
 
@@ -414,34 +415,40 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         require(!toIsNull, "Target contract cannot be null");
         require(investorVaultAddress != address(0), "InvestorVault address not configured");
         require(to == investorVaultAddress, "Target contract does not match InvestorVault");
-        require(data.length >= 68, "Invalid calldata length for fundLoan(uint256,address)");
+        require(data.length >= 100, "Invalid calldata length for fundLoan(uint256,address,uint256)");
 
-        // 4. Validate Function Selector (fundLoan(uint256,address) = 0x6d1611c4)
+        // 4. Validate Function Selector (fundLoan(uint256,address,uint256) = 0xfdc6f341)
         bytes4 selector;
         assembly {
             selector := mload(add(data, 32))
         }
-        require(selector == 0x6d1611c4, "Invalid function selector for fundLoan(uint256,address)");
+        require(selector == 0xfdc6f341, "Invalid function selector for fundLoan(uint256,address,uint256)");
 
-        // 5. Decode Calldata Parameters (tokenId, borrower)
+        // 5. Decode Calldata Parameters (tokenId, pawnshop, appraisedValueUSD)
         uint256 calldataTokenId;
-        address calldataBorrower;
+        address calldataPawnshop;
+        uint256 calldataAppraisedUSD;
         assembly {
             calldataTokenId := mload(add(data, 36))
-            calldataBorrower := mload(add(data, 68))
+            calldataPawnshop := mload(add(data, 68))
+            calldataAppraisedUSD := mload(add(data, 100))
         }
         require(calldataTokenId == tokenId, "Token ID in calldata does not match claimed tokenId");
-        require(calldataBorrower == pawnshop, "Borrower in calldata does not match token owner");
+        require(calldataPawnshop == pawnshop, "Pawnshop in calldata does not match token owner");
+
+        // 6. Cross-check claimed appraisedValueUSD against trusted on-chain SAGToken collateral record
+        SAGToken.GoldCollateral memory collateral = sagToken.getCollateral(tokenId);
+        require(calldataAppraisedUSD == collateral.appraisedValueUSD, "Appraised value USD mismatch with SAG collateral note");
         require(value > 0, "Funding amount must be greater than zero");
 
-        // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
+        // 7. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
         uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
         require(receiptStatus == 1, "Source transaction was reverted on Ethereum Sepolia");
 
-        // 7. Mark source transaction as settled to prevent replay
+        // 8. Mark source transaction as settled to prevent replay
         processedSourceTransactions[sourceTxHash] = true;
 
-        // 8. Bookkeeping on CC3 (Cr3dX Separation: DO NOT disburse CTC!)
+        // 9. Bookkeeping on CC3 (Cr3dX Separation: DO NOT disburse CTC!)
         tokenLoanBalance[tokenId] = value;
         loanInvestors[tokenId] = from;
 
@@ -464,6 +471,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
             from,
             pawnshop,
             value,
+            calldataAppraisedUSD,
             block.timestamp
         );
 
