@@ -175,20 +175,34 @@ export async function signMessage(address: string, message: string): Promise<str
  * Get ETH balance for an address
  */
 export async function getETHBalance(address: string): Promise<string> {
-  const provider = getMetaMaskProvider();
-  if (!provider) {
-    throw new Error('MetaMask is not installed');
+  try {
+    // Always fetch from Sepolia public RPC for accurate balance
+    const response = await fetch('https://ethereum-sepolia-rpc.publicnode.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getBalance',
+        params: [address, 'latest'],
+        id: 1,
+      }),
+    });
+    const data = await response.json();
+    const balanceHex = data.result || '0x0';
+    const balanceWei = parseInt(balanceHex, 16);
+    const balanceETH = (balanceWei / 1e18).toFixed(4);
+    return balanceETH;
+  } catch {
+    // Fallback to MetaMask provider
+    const provider = getMetaMaskProvider();
+    if (!provider) return '0.0000';
+    const balanceHex = await provider.request({
+      method: 'eth_getBalance',
+      params: [address, 'latest'],
+    });
+    const balanceWei = parseInt(balanceHex, 16);
+    return (balanceWei / 1e18).toFixed(4);
   }
-
-  const balanceHex = await provider.request({
-    method: 'eth_getBalance',
-    params: [address, 'latest'],
-  });
-
-  // Convert hex wei to ETH
-  const balanceWei = parseInt(balanceHex, 16);
-  const balanceETH = (balanceWei / 1e18).toFixed(4);
-  return balanceETH;
 }
 
 /**

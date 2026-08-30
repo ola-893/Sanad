@@ -274,19 +274,31 @@ export async function getBorrowerProfileForPledge(userId: string): Promise<{
   const wallet = userResult.rows[0]?.wallet_id;
   if (!wallet) return null;
 
-  // Get credit profile from credit bureau (local DB fallback)
+  // Get credit profile from CC3 on-chain (source of truth)
   let creditScore = 0;
   let creditTier = "Unscored";
   try {
-    const kycResult = await pool.query(
-      `SELECT credit_score, credit_tier FROM main.kyc_submission WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
-    if (kycResult.rows[0]) {
-      creditScore = kycResult.rows[0].credit_score || 0;
-      creditTier = kycResult.rows[0].credit_tier || "Unscored";
+    const { AttestcoinOracleRelayerService } = await import("@/core/credit-bureau/attestcoin-oracle-relayer.service.js");
+    const relayer = new AttestcoinOracleRelayerService();
+    const onChainProfile = await relayer.getOnChainCreditProfile(wallet);
+    if (onChainProfile) {
+      creditScore = onChainProfile.score || 0;
+      creditTier = onChainProfile.tier || "Unscored";
     }
-  } catch {}
+  } catch (err: any) {
+    console.warn('[PledgeRequest] Failed to fetch on-chain credit profile, falling back to KYC:', err.message);
+    // Fallback to local KYC table
+    try {
+      const kycResult = await pool.query(
+        `SELECT credit_score, credit_tier FROM main.kyc_submission WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+      if (kycResult.rows[0]) {
+        creditScore = kycResult.rows[0].credit_score || 0;
+        creditTier = kycResult.rows[0].credit_tier || "Unscored";
+      }
+    } catch {}
+  }
 
   // Get proven events from the proven_events table
   const events: unknown[] = [];

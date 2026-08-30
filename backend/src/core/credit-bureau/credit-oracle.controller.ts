@@ -141,6 +141,35 @@ export class CreditOracleController {
   }
 
   /**
+   * POST /api/v1/credit-oracle/prepare-pawnshop-proof
+   * Returns unsigned CC3 transaction data for MetaMask to sign
+   */
+  public async preparePawnshopProof(req: Request, res: Response): Promise<void> {
+    try {
+      const { sourceTxHash, chainKey, borrowerAddress } = req.body;
+      if (!sourceTxHash || typeof sourceTxHash !== 'string' || !sourceTxHash.startsWith('0x')) {
+        res.status(400).json({ success: false, message: 'Valid sourceTxHash required' });
+        return;
+      }
+
+      const result = await this.relayerService.preparePawnshopProof(
+        sourceTxHash,
+        chainKey ? Number(chainKey) : 1,
+        borrowerAddress,
+      );
+
+      if (!result.success) {
+        res.status(500).json({ success: false, message: result.error });
+        return;
+      }
+
+      res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
+
+  /**
    * POST /api/credit-oracle/prove-pawnshop-payment
    * Proves a pawnshop-to-borrower ETH payment on CC3 via Attestcoin BlockProver
    */

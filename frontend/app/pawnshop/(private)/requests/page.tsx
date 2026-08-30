@@ -173,7 +173,23 @@ export default function PawnshopRequestsPage() {
     try {
       const params = filter !== "all" ? `?status=${filter}` : ""
       const res = await apiInstance.get(`/pledge-requests/mine${params}`)
-      setRequests(res.data.data || [])
+      const fetchedRequests = res.data.data || []
+      setRequests(fetchedRequests)
+
+      // Refresh credit scores in background for pending requests
+      for (const req of fetchedRequests) {
+        if (req.status === 'pending' && req.id) {
+          apiInstance.patch(`/pledge-requests/${req.id}/refresh-credit`)
+            .then((refreshRes) => {
+              if (refreshRes.data?.data) {
+                setRequests(prev => prev.map(r =>
+                  r.id === req.id ? { ...r, ...refreshRes.data.data } : r
+                ))
+              }
+            })
+            .catch(() => {})
+        }
+      }
     } catch {
       setRequests([])
     } finally {

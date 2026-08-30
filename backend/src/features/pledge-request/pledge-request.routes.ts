@@ -10,6 +10,7 @@ router.post('/', pledgeRequestController.create.bind(pledgeRequestController));
 router.get('/mine', pledgeRequestController.getMine.bind(pledgeRequestController));
 router.get('/pawnshops', pledgeRequestController.listPawnshops.bind(pledgeRequestController));
 router.get('/:id', pledgeRequestController.getById.bind(pledgeRequestController));
+router.patch('/:id/refresh-credit', pledgeRequestController.refreshCreditScore.bind(pledgeRequestController));
 router.patch('/:id/accept', pledgeRequestController.accept.bind(pledgeRequestController));
 router.patch('/:id/reject', pledgeRequestController.reject.bind(pledgeRequestController));
 

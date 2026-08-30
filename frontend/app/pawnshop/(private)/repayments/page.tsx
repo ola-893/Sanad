@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { toast } from "sonner"
 import {
   Loader2,
   RefreshCw,
@@ -279,18 +280,8 @@ export default function PawnshopRepaymentsPage() {
                               rel="noopener noreferrer"
                               className="text-cyan-600 hover:underline flex items-center gap-1"
                             >
-                              Sepolia Tx <ExternalLink className="h-2.5 w-2.5" />
+                              View on Blockscout <ExternalLink className="h-2.5 w-2.5" />
                             </a>
-                            {req.paymentCc3TxHash && (
-                              <a
-                                href={`https://creditcoin-testnet.blockscout.com/tx/${req.paymentCc3TxHash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#171414] hover:underline flex items-center gap-1"
-                              >
-                                CC3 Proof <ExternalLink className="h-2.5 w-2.5" />
-                              </a>
-                            )}
                           </div>
                         )}
 
