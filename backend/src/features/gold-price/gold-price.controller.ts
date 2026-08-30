@@ -41,8 +41,6 @@ export const createGoldPriceController = async (req: Request, res: Response) => 
             ...validatedData,
             date: date,
             pricePerGramUsd: validatedData.pricePerGramUsd.toString(),
-            pricePerGramMyr: validatedData.pricePerGramMyr.toString(),
-            exchangeRate: validatedData.exchangeRate.toString()
         };
 
         const result = await createGoldPrice(goldPriceData);
@@ -201,8 +199,6 @@ export const updateGoldPriceController = async (req: Request, res: Response) => 
         const updateData = {
             ...validatedData,
             pricePerGramUsd: validatedData.pricePerGramUsd?.toString(),
-            pricePerGramMyr: validatedData.pricePerGramMyr?.toString(),
-            exchangeRate: validatedData.exchangeRate?.toString()
         };
         
         const result = await updateGoldPrice(String(id), updateData);

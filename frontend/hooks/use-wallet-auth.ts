@@ -93,14 +93,33 @@ export function useWalletAuth(): WalletAuthState & WalletAuthActions {
               (sessionWallet && sessionWallet.toLowerCase() === existing.toLowerCase());
 
             if (hasToken && hasMatchingWallet) {
-              // Token exists for this wallet — user can skip sign step
-              setWalletAuthenticated(true);
-              // Also sync walletAddress into authState if missing
-              if (token && !walletInAuth) {
-                localStorage.setItem('authState', JSON.stringify({
-                  ...auth,
-                  walletAddress: existing,
-                }));
+              // Token exists for this wallet — validate it's still active on the backend
+              try {
+                const validResponse = await apiInstance.get('/auth/user/profile');
+                if (validResponse.data?.data) {
+                  setWalletAuthenticated(true);
+                  // Also sync walletAddress into authState if missing
+                  if (token && !walletInAuth) {
+                    localStorage.setItem('authState', JSON.stringify({
+                      ...auth,
+                      walletAddress: existing,
+                    }));
+                  }
+                } else {
+                  // Token invalid — clear stale session
+                  localStorage.removeItem('authState');
+                  sessionStorage.removeItem('accessToken');
+                  sessionStorage.removeItem('refreshToken');
+                  sessionStorage.removeItem('walletAddress');
+                  sessionStorage.removeItem('userType');
+                }
+              } catch {
+                // Backend unreachable or token expired — clear stale session
+                localStorage.removeItem('authState');
+                sessionStorage.removeItem('accessToken');
+                sessionStorage.removeItem('refreshToken');
+                sessionStorage.removeItem('walletAddress');
+                sessionStorage.removeItem('userType');
               }
             }
           } catch {

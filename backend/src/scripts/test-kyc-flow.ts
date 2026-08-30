@@ -107,7 +107,7 @@ async function runKycFlowVerification() {
         sagType: 'GOLD',
         sagProperties: {
           assetType: 'GOLD',
-          currency: 'MYR',
+          currency: 'USD',
           valuation: 5000,
           karat: 22,
           weightG: 50,
@@ -166,7 +166,7 @@ async function runKycFlowVerification() {
         icFrontPicture: 'uploads/hafiz_mykad_front.jpg',
         icBackPicture: 'uploads/hafiz_mykad_back.jpg',
         documentType: 'MyKad',
-        nationality: 'Malaysia',
+        nationality: 'Nigeria',
       },
       { authorization: `Bearer ${userToken}` }
     );

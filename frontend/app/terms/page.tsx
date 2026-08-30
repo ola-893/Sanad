@@ -157,7 +157,7 @@ export default function TermsPage() {
 
           <h2 className="mt-12 mb-4 font-display text-2xl font-extrabold tracking-tight text-[#171414]">13. Governing Law and Dispute Resolution</h2>
           <p>
-            These Terms shall be governed by and construed in accordance with the laws of Malaysia, without regard to
+            These Terms shall be governed by and construed in accordance with the laws of Nigeria, without regard to
             its conflict of law provisions.
           </p>
           <p>

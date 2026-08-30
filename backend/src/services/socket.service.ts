@@ -104,7 +104,7 @@ export interface SagCreationCompleteData {
     goldEvaluation?: {
       risk_level: string;
       ltv: number;
-      collateral_value_myr: number;
+      collateral_value_usd: number;
       action: string;
       rationale: string;
       eval_id: string;

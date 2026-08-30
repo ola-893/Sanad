@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  Loader2,
   type LucideIcon,
 } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -60,25 +61,51 @@ export default function BorrowerDashboardPage() {
   const [newEventsCount, setNewEventsCount] = useState(0)
   const [scanningEvents, setScanningEvents] = useState(false)
 
-  // Auto-scan for new unproven DeFi events
+  // Auto-scan for new unproven DeFi events on dashboard load
   useEffect(() => {
     if (!walletAddress) return
-    setScanningEvents(true)
-    apiInstance.post("/credit-oracle/discover", { address: walletAddress })
-      .then(async (res) => {
-        const events = res.data?.data?.selectedTopEvents || []
-        if (events.length === 0) return
-        // Check how many are already proven
+    let cancelled = false
+    let retryCount = 0
+    const MAX_RETRIES = 2
+
+    async function scanForEvents() {
+      setScanningEvents(true)
+      try {
+        // Discover DeFi events from Sepolia + Mainnet
+        const { data: discoverRes } = await apiInstance.post("/credit-oracle/discover", { address: walletAddress })
+        const events = discoverRes?.data?.selectedTopEvents || []
+        if (events.length === 0 || cancelled) return
+
+        // Fetch on-chain profile to check proven count
         try {
-          const profileRes = await apiInstance.get(`/credit-oracle/profile/${walletAddress}`)
-          const provenCount = profileRes.data?.data?.provenEventsCount || 0
-          if (events.length > provenCount) {
+          const { data: profileRes } = await apiInstance.get(`/credit-oracle/profile/${walletAddress}`)
+          const provenCount = profileRes?.data?.provenEventsCount || 0
+          if (!cancelled && events.length > provenCount) {
             setNewEventsCount(events.length - provenCount)
           }
-        } catch {}
-      })
-      .catch(() => {})
-      .finally(() => setScanningEvents(false))
+        } catch (profileErr: any) {
+          // Profile fetch failed (token expired / network) — still show banner if events exist
+          if (!cancelled) {
+            setNewEventsCount(events.length)
+          }
+        }
+      } catch (err: any) {
+        console.warn('[BorrowerDashboard] DeFi auto-scan failed:', err?.message || err)
+        // Retry once after 3s if this is a transient failure
+        if (!cancelled && retryCount < MAX_RETRIES) {
+          retryCount++
+          setTimeout(() => {
+            if (!cancelled) scanForEvents()
+          }, 3000)
+          return
+        }
+      } finally {
+        if (!cancelled) setScanningEvents(false)
+      }
+    }
+
+    scanForEvents()
+    return () => { cancelled = true }
   }, [walletAddress])
 
   const activeLoans = loans.filter(l => l.status === 'active' || l.approvalStatus === 'approved')
@@ -90,6 +117,19 @@ export default function BorrowerDashboardPage() {
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <div className="mx-auto max-w-7xl space-y-6">
           <DashboardHeader portal="Borrower Portal" subtitle="Your gold financing overview" />
+
+          {/* Scanning indicator */}
+          {scanningEvents && newEventsCount === 0 && (
+            <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#171414]/5">
+                <Loader2 className="h-4 w-4 text-[#171414]/40 animate-spin" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#171414]/60">Scanning for DeFi events...</p>
+                <p className="text-xs text-[#171414]/30">Checking your Ethereum lending history on Sepolia and Mainnet</p>
+              </div>
+            </div>
+          )}
 
           {/* New Events Alert */}
           {newEventsCount > 0 && (
@@ -163,7 +203,7 @@ export default function BorrowerDashboardPage() {
                     Apply for New Loan
                   </Button>
                 </Link>
-                <Link href="/payment" className="block">
+                <Link href="/dashboard/borrower/repay" className="block">
                   <Button variant="outline" className="w-full justify-start gap-3 rounded-xl border-[#171414]/20 hover:bg-[#171414]/5 text-[#171414]">
                     <CreditCard className="h-4 w-4 text-cyan-600" />
                     Make Loan Repayment (Sepolia / CC3)
@@ -220,7 +260,7 @@ export default function BorrowerDashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-[#171414]">
-                          {(loan.sagProperties?.loan || 0).toLocaleString()} MYR
+                          ${(loan.sagProperties?.loan || 0).toLocaleString()}
                         </p>
                         <Badge variant="outline" className={`text-[9px] font-mono ${
                           loan.approvalStatus === 'approved' ? "border-emerald-200 bg-emerald-50 text-emerald-700" :

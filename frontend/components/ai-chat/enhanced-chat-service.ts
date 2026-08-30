@@ -25,7 +25,7 @@ type EnhancedResponse = {
   }
 }
 
-// Function to fetch current gold price in Malaysia
+// Function to fetch current gold price in USD
 async function fetchGoldPrice(): Promise<{
   value: number
   unit: string
@@ -41,10 +41,10 @@ async function fetchGoldPrice(): Promise<{
 
     // Mock gold price data
     return {
-      value: 305.67, // Malaysian Ringgit per gram
+      value: 95.50, // USD per gram
       unit: "gram",
       currency: "CTC",
-      timestamp: new Date().toLocaleString("en-MY", {
+      timestamp: new Date().toLocaleString("en-NG", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -174,7 +174,7 @@ export async function generateEnhancedResponse(query: string, history: Message[]
   switch (analysis.intent) {
     case "goldPrice":
       if (response.goldPrice) {
-        response.text = `The current gold price in Malaysia is ${response.goldPrice.value} ${response.goldPrice.currency} per ${response.goldPrice.unit}. This rate affects the financing amount you can receive when using gold jewelry as collateral. For our Ar-Rahnu service, we typically offer 70-80% of the assessed gold value as financing.`
+        response.text = `The current gold price is $${response.goldPrice.value} ${response.goldPrice.currency} per ${response.goldPrice.unit}. This rate affects the financing amount you can receive when using gold jewelry as collateral. For our Ar-Rahnu service, we typically offer 70-80% of the assessed gold value as financing.`
       } else {
         response.text =
           "I'm unable to fetch the current gold price at the moment. Our financing rates for gold jewelry are typically 70-80% of the current market value. For the most accurate and up-to-date pricing, please contact our customer service or visit one of our branches."

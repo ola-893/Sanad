@@ -32,8 +32,8 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # --- Local modules ---
 from sources import (
-    get_gold_price_myr,
-    get_yesterday_gold_price_myr,
+    get_gold_price_usd,
+    get_yesterday_gold_price_usd,
     detect_abnormal_price_change,
     get_volatility,
     get_fx_rate,
@@ -176,7 +176,7 @@ TIER_LTV_ADJUSTMENTS = {
 }
 
 class LoanInput(BaseModel):
-    principal_myr: float = Field(gt=0)
+    principal_usd: float = Field(gt=0)
     gold_weight_g: float = Field(gt=0)
     purity: int = Field(ge=500, le=999)
     tenure_days: int = Field(ge=1)
@@ -192,22 +192,22 @@ class LoanInput(BaseModel):
         return v
 
 class RiskMetrics(BaseModel):
-    gold_price_myr_per_g: float
+    gold_price_usd_per_g: float
     purity_factor: float
     haircut_bps: int
     haircut_factor: float
-    collateral_value_myr: float
-    principal_myr: float
+    collateral_value_usd: float
+    principal_usd: float
     ltv: float
     risk_level: Literal["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"]
     base_max_safe_ltv: float
     credit_tier_ltv_delta: float
     max_safe_ltv: float
     margin_call_ltv: float
-    max_recommended_loan_myr: float
+    max_recommended_loan_usd: float
     vol_window_days: int
     gold_volatility: Optional[float] = None
-    fx_usd_myr: Optional[float] = None
+    fx_usd: Optional[float] = None
     shop_rating: Optional[str] = None
     credit_tier: str = "Unscored"
     credit_score: int = 500
@@ -261,7 +261,7 @@ def calculate_risk_level(ltv: float) -> Literal["VERY_LOW", "LOW", "MEDIUM", "HI
 
 def compute_metrics(
     loan: LoanInput,
-    gold_price_myr_per_g: float,
+    gold_price_usd_per_g: float,
     haircut_bps: int,
     max_safe_ltv: float,
     margin_call_ltv: float,
@@ -282,23 +282,23 @@ def compute_metrics(
     adjusted_margin_call_ltv = round(base_margin_call_ltv + margin_delta, 4)
     requires_review = tier_config["requires_review"]
 
-    print(f"[INFO] Computing metrics with Credit Tier '{tier}' (Score: {score}) - Gold price: {gold_price_myr_per_g} MYR/g, Weight: {loan.gold_weight_g}g, Purity: {loan.purity}", file=sys.stderr)
+    print(f"[INFO] Computing metrics with Credit Tier '{tier}' (Score: {score}) - Gold price: {gold_price_usd_per_g} USD/g, Weight: {loan.gold_weight_g}g, Purity: {loan.purity}", file=sys.stderr)
     with tracer.start_as_current_span("compute_metrics") as span:
         purity_factor = loan.purity / 999.0
         haircut_factor = max(0.0, 1.0 - haircut_bps / 10_000.0)
 
-        raw_value = loan.gold_weight_g * purity_factor * gold_price_myr_per_g
-        collateral_value_myr = raw_value * haircut_factor
-        ltv = loan.principal_myr / max(collateral_value_myr, 1e-9)
+        raw_value = loan.gold_weight_g * purity_factor * gold_price_usd_per_g
+        collateral_value_usd = raw_value * haircut_factor
+        ltv = loan.principal_usd / max(collateral_value_usd, 1e-9)
         risk_level = calculate_risk_level(ltv)
-        max_recommended_loan = round(collateral_value_myr * adjusted_max_safe_ltv, 2)
+        max_recommended_loan = round(collateral_value_usd * adjusted_max_safe_ltv, 2)
 
         gold_vol = None
         fx = None
 
         try:
             with tracer.start_as_current_span("get_gold_volatility") as s_vol:
-                gold_vol = float(get_volatility("XAU/MYR", window=vol_window_days))
+                gold_vol = float(get_volatility("XAU/USD", window=vol_window_days))
                 s_vol.set_attribute("result.gold_volatility", gold_vol)
                 print(f"[INFO] Gold volatility: {gold_vol:.2%} over {vol_window_days} days", file=sys.stderr)
         except Exception as e:
@@ -307,42 +307,42 @@ def compute_metrics(
 
         try:
             with tracer.start_as_current_span("get_fx_rate") as s_fx:
-                fx = float(get_fx_rate("USD/MYR"))
-                s_fx.set_attribute("result.usd_myr", fx)
-                print(f"[INFO] USD/MYR rate: {fx}", file=sys.stderr)
+                fx = float(get_fx_rate("USD/USD"))
+                s_fx.set_attribute("result.usd", fx)
+                print(f"[INFO] USD/USD rate: {fx}", file=sys.stderr)
         except Exception as e:
             print(f"[WARN] Failed to fetch FX rate: {e}", file=sys.stderr)
             pass
 
         span.set_attribute("metrics.ltv", round(ltv, 6))
         span.set_attribute("metrics.risk_level", risk_level)
-        span.set_attribute("metrics.collateral_value_myr", round(collateral_value_myr, 2))
+        span.set_attribute("metrics.collateral_value_usd", round(collateral_value_usd, 2))
         span.set_attribute("metrics.credit_tier", tier)
         span.set_attribute("metrics.credit_score", score)
         span.set_attribute("metrics.max_safe_ltv", adjusted_max_safe_ltv)
-        span.set_attribute("metrics.max_recommended_loan_myr", max_recommended_loan)
+        span.set_attribute("metrics.max_recommended_loan_usd", max_recommended_loan)
         span.set_attribute("inputs.purity_factor", purity_factor)
         span.set_attribute("inputs.haircut_bps", haircut_bps)
         
-        print(f"[INFO] Metrics computed - Tier: {tier} (LTV Delta: {ltv_delta:+.1%}), Max Safe LTV: {adjusted_max_safe_ltv:.1%}, Max Safe Loan: {max_recommended_loan:.2f} MYR, Requested LTV: {ltv:.2%}", file=sys.stderr)
+        print(f"[INFO] Metrics computed - Tier: {tier} (LTV Delta: {ltv_delta:+.1%}), Max Safe LTV: {adjusted_max_safe_ltv:.1%}, Max Safe Loan: {max_recommended_loan:.2f} USD, Requested LTV: {ltv:.2%}", file=sys.stderr)
 
         return RiskMetrics(
-            gold_price_myr_per_g=gold_price_myr_per_g,
+            gold_price_usd_per_g=gold_price_usd_per_g,
             purity_factor=purity_factor,
             haircut_bps=haircut_bps,
             haircut_factor=haircut_factor,
-            collateral_value_myr=collateral_value_myr,
-            principal_myr=loan.principal_myr,
+            collateral_value_usd=collateral_value_usd,
+            principal_usd=loan.principal_usd,
             ltv=ltv,
             risk_level=risk_level,
             base_max_safe_ltv=base_max_safe_ltv,
             credit_tier_ltv_delta=ltv_delta,
             max_safe_ltv=adjusted_max_safe_ltv,
             margin_call_ltv=adjusted_margin_call_ltv,
-            max_recommended_loan_myr=max_recommended_loan,
+            max_recommended_loan_usd=max_recommended_loan,
             vol_window_days=vol_window_days,
             gold_volatility=gold_vol,
-            fx_usd_myr=fx,
+            fx_usd=fx,
             shop_rating=None,
             credit_tier=tier,
             credit_score=score,
@@ -642,20 +642,20 @@ def call_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str,
         ltv = metrics.get("ltv", 0.70) if metrics else 0.70
         max_safe = metrics.get("max_safe_ltv", 0.70) if metrics else 0.70
         margin_call = metrics.get("margin_call_ltv", 0.85) if metrics else 0.85
-        max_loan = metrics.get("max_recommended_loan_myr", 0.0) if metrics else 0.0
+        max_loan = metrics.get("max_recommended_loan_usd", 0.0) if metrics else 0.0
         requires_review = metrics.get("requires_compliance_review", False) if metrics else False
 
         if requires_review:
-            fallback = f"Action: monitor\nRationale: Borrower is flagged HighRisk ({score} pts) due to on-chain liquidation history on Ethereum lending protocols. Safe LTV ceiling restricted to {max_safe:.1%} (Max Loan: {max_loan:.2f} MYR). Mandatory compliance review required prior to SAG note issuance."
+            fallback = f"Action: monitor\nRationale: Borrower is flagged HighRisk ({score} pts) due to on-chain liquidation history on Ethereum lending protocols. Safe LTV ceiling restricted to {max_safe:.1%} (Max Loan: {max_loan:.2f} USD). Mandatory compliance review required prior to SAG note issuance."
         elif ltv <= max_safe:
             if tier == "Gold":
-                fallback = f"Action: approve\nRationale: Verified Gold Tier borrower ({score} pts) with spotless on-chain repayment history. Qualified for prime +10% LTV boost up to {max_safe:.1%} (Max Loan: {max_loan:.2f} MYR). Requested LTV of {ltv:.1%} is fully approved for instant financing."
+                fallback = f"Action: approve\nRationale: Verified Gold Tier borrower ({score} pts) with spotless on-chain repayment history. Qualified for prime +10% LTV boost up to {max_safe:.1%} (Max Loan: {max_loan:.2f} USD). Requested LTV of {ltv:.1%} is fully approved for instant financing."
             elif tier == "Silver":
-                fallback = f"Action: approve\nRationale: Verified Silver Tier borrower ({score} pts) with active clean repayment history. Qualified for +5% LTV boost up to {max_safe:.1%} (Max Loan: {max_loan:.2f} MYR). Requested LTV of {ltv:.1%} is approved."
+                fallback = f"Action: approve\nRationale: Verified Silver Tier borrower ({score} pts) with active clean repayment history. Qualified for +5% LTV boost up to {max_safe:.1%} (Max Loan: {max_loan:.2f} USD). Requested LTV of {ltv:.1%} is approved."
             else:
-                fallback = f"Action: approve\nRationale: Requested loan represents {ltv:.1%} LTV, within the standard {max_safe:.1%} Ar-Rahnu collateral safety ceiling (Max Loan: {max_loan:.2f} MYR). Fully collateralized."
+                fallback = f"Action: approve\nRationale: Requested loan represents {ltv:.1%} LTV, within the standard {max_safe:.1%} Ar-Rahnu collateral safety ceiling (Max Loan: {max_loan:.2f} USD). Fully collateralized."
         elif ltv < margin_call:
-            fallback = f"Action: monitor\nRationale: Requested loan represents {ltv:.1%} LTV, which exceeds the safe threshold ({max_safe:.1%}) for {tier} tier but remains below margin call threshold ({margin_call:.1%}). Recommend downsizing loan to {max_loan:.2f} MYR."
+            fallback = f"Action: monitor\nRationale: Requested loan represents {ltv:.1%} LTV, which exceeds the safe threshold ({max_safe:.1%}) for {tier} tier but remains below margin call threshold ({margin_call:.1%}). Recommend downsizing loan to {max_loan:.2f} USD."
         else:
             fallback = f"Action: margin_call\nRationale: Requested loan represents {ltv:.1%} LTV, which breaches the margin call threshold of {margin_call:.1%}. Exceeds safe collateral buffer."
 
@@ -717,7 +717,7 @@ def evaluate_loan(loan: LoanInput, cfg: Dict[str, Any], tracer: Tracer) -> Evalu
     timestamp_utc = datetime.now(timezone.utc).isoformat()
     
     print(f"[INFO] ========== Starting loan evaluation (ID: {eval_id}) ==========", file=sys.stderr)
-    print(f"[INFO] Loan inputs - Principal: {loan.principal_myr} MYR, Weight: {loan.gold_weight_g}g, Purity: {loan.purity}, Tenure: {loan.tenure_days} days", file=sys.stderr)
+    print(f"[INFO] Loan inputs - Principal: {loan.principal_usd} USD, Weight: {loan.gold_weight_g}g, Purity: {loan.purity}, Tenure: {loan.tenure_days} days", file=sys.stderr)
 
     with tracer.start_as_current_span("evaluate_loan") as span:
         span.set_attribute("eval.id", eval_id)
@@ -740,12 +740,12 @@ def evaluate_loan(loan: LoanInput, cfg: Dict[str, Any], tracer: Tracer) -> Evalu
         # 1) Fetch gold price and detect abnormalities
         print("[INFO] Step 1: Fetching current gold price...", file=sys.stderr)
         with tracer.start_as_current_span("fetch_gold_price") as span_price:
-            gold_price = float(get_gold_price_myr())
-            span_price.set_attribute("result.gold_price_myr_per_g", gold_price)
+            gold_price = float(get_gold_price_usd())
+            span_price.set_attribute("result.gold_price_usd_per_g", gold_price)
             
             # Fetch yesterday's price for comparison
-            yesterday_price = get_yesterday_gold_price_myr()
-            span_price.set_attribute("result.yesterday_gold_price_myr_per_g", yesterday_price or 0.0)
+            yesterday_price = get_yesterday_gold_price_usd()
+            span_price.set_attribute("result.yesterday_gold_price_usd_per_g", yesterday_price or 0.0)
             
             # Detect abnormal price changes
             price_deviation_threshold = cfg["PRICE_DEVIATION_THRESHOLD"]
@@ -773,20 +773,20 @@ def evaluate_loan(loan: LoanInput, cfg: Dict[str, Any], tracer: Tracer) -> Evalu
                 # Admin-friendly summary attributes
                 span_price.set_attribute("admin.price_change_summary", 
                     f"Gold price {abnormal_detection['deviation_percent']:.1f}% deviation detected")
-                span_price.set_attribute("admin.current_price_myr", gold_price)
-                span_price.set_attribute("admin.yesterday_price_myr", yesterday_price)
-                span_price.set_attribute("admin.price_difference_myr", abs(gold_price - yesterday_price))
+                span_price.set_attribute("admin.current_price_usd", gold_price)
+                span_price.set_attribute("admin.yesterday_price_usd", yesterday_price)
+                span_price.set_attribute("admin.price_difference_usd", abs(gold_price - yesterday_price))
                 
                 # Critical event with detailed context
                 span_price.add_event("CRITICAL_GOLD_PRICE_ANOMALY", {
                     "alert_type": "GOLD_PRICE_ABNORMAL",
                     "severity": "CRITICAL",
                     "priority": "P0",
-                    "current_price_myr": gold_price,
-                    "yesterday_price_myr": yesterday_price,
+                    "current_price_usd": gold_price,
+                    "yesterday_price_usd": yesterday_price,
                     "deviation_percent": abnormal_detection["deviation_percent"],
                     "threshold_percent": price_deviation_threshold,
-                    "price_difference_myr": abs(gold_price - yesterday_price),
+                    "price_difference_usd": abs(gold_price - yesterday_price),
                     "direction": "increase" if gold_price > yesterday_price else "decrease",
                     "admin_action_required": True,
                     "timestamp": datetime.now(timezone.utc).isoformat()
@@ -805,7 +805,7 @@ def evaluate_loan(loan: LoanInput, cfg: Dict[str, Any], tracer: Tracer) -> Evalu
         print("[INFO] Step 2: Computing risk metrics...", file=sys.stderr)
         metrics = compute_metrics(
             loan=loan,
-            gold_price_myr_per_g=gold_price,
+            gold_price_usd_per_g=gold_price,
             haircut_bps=cfg["JEWELLERY_HAIRCUT_BPS"],
             max_safe_ltv=cfg["MAX_SAFE_LTV"],
             margin_call_ltv=cfg["MARGIN_CALL_LTV"],

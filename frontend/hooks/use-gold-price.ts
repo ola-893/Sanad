@@ -7,8 +7,6 @@ export interface GoldPrice {
   id: string
   date: string
   pricePerGramUsd: string
-  pricePerGramMyr: string
-  exchangeRate: string
   createdAt: string
 }
 

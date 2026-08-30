@@ -67,7 +67,7 @@ export type SagFilter = {
 export const GoldEvaluatorOutputSchema = z.object({
     risk_level: z.string(),
     ltv: z.number(),
-    collateral_value_myr: z.number(),
+    collateral_value_usd: z.number(),
     action: z.string(),
     rationale: z.string(),
     eval_id: z.string()

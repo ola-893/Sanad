@@ -61,7 +61,7 @@ export const createSagController = async (req: Request, res: Response) => {
         }
 
         const goldEvaluateJson = {
-            "principal_myr": sagData.sagProperties.loan,
+            "principal_usd": sagData.sagProperties.loan,
             "gold_weight_g": sagData.sagProperties.weightG,
             "purity": sagData.sagProperties.purity,
             "tenure_days": sagData.sagProperties.tenorM * 30,
@@ -70,7 +70,7 @@ export const createSagController = async (req: Request, res: Response) => {
             "credit_score": borrowerCreditScore,
         };
 
-        console.log(`[AI Evaluator] Evaluating loan for borrower (User: '${borrowerUserId}', Wallet: '${borrowerWallet}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_myr} MYR`);
+        console.log(`[AI Evaluator] Evaluating loan for borrower (User: '${borrowerUserId}', Wallet: '${borrowerWallet}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_usd} USD`);
         
         if (!sagData) {
             return res.status(400).json({ error: 'SAG data is required' });

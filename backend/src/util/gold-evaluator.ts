@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 interface GoldEvaluatorInput {
-  principal_myr: number;
+  principal_usd: number;
   gold_weight_g: number;
   purity: number;
   tenure_days: number;
@@ -17,15 +17,15 @@ interface RiskMetrics {
   purity_factor: number;
   haircut_bps: number;
   haircut_factor: number;
-  collateral_value_myr: number;
-  principal_myr: number;
+  collateral_value_usd: number;
+  principal_usd: number;
   ltv: number;
   risk_level: 'VERY_LOW' | 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
   base_max_safe_ltv: number;
   credit_tier_ltv_delta: number;
   max_safe_ltv: number;
   margin_call_ltv: number;
-  max_recommended_loan_myr: number;
+  max_recommended_loan_usd: number;
   vol_window_days: number;
   gold_volatility: number | null;
   fx_usd_myr: number | null;

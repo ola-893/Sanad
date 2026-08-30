@@ -245,8 +245,8 @@ export class SuyulaBotService {
       return {
         text:
           language === "my"
-            ? `Berdasarkan pelaburan RM${amount} untuk ${months} bulan, anggaran pulangan anda adalah RM${estimatedReturn.toFixed(2)}.`
-            : `Based on an investment of RM${amount} for ${months} months, your estimated return is RM${estimatedReturn.toFixed(2)}.`,
+            ? `Berdasarkan pelaburan ${amount} untuk ${months} bulan, anggaran pulangan anda adalah ${estimatedReturn.toFixed(2)}.`
+            : `Based on an investment of ${amount} for ${months} months, your estimated return is ${estimatedReturn.toFixed(2)}.`,
         actions: [
           {
             label: language === "my" ? "Lihat SAG Sesuai" : "View Suitable SAGs",

@@ -549,4 +549,101 @@ export class AttestcoinOracleRelayerService {
       };
     }
   }
+
+  /**
+   * Prove a pawnshop-to-borrower ETH payment on Sepolia via Attestcoin BlockProver.
+   * Returns the CC3 proof transaction hash (the proof is recorded on-chain via the
+   * SanadCreditOracle submitSingleProof, same as DeFi credit events).
+   */
+  public async provePawnshopPayment(
+    sourceTxHash: string,
+    chainKey: number = 1,
+    borrowerAddress?: string,
+  ): Promise<{
+    success: boolean;
+    cc3TxHash?: string;
+    explorerUrl?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Proving pawnshop payment on Sepolia: ${sourceTxHash}`);
+
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested...`);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} attested!`);
+        } catch (waitErr: any) {
+          throw new Error(`Block #${targetHeight} not yet attested. Please try again shortly.`);
+        }
+      }
+
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(proofResult.error || 'Proof not available');
+      }
+
+      const proofData = proofResult.data;
+      const contract = this.getContract();
+
+      // Record the pawnshop payment as a verified event on CC3
+      const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);
+      const volumeUSD = Number(ethers.formatEther(sourceEthWei)) * 2700; // approximate ETH→USD
+
+      const eventPayload = {
+        sourceTxHash: sourceTxHash,
+        protocol: 0, // Aave v3 placeholder
+        eventType: 0, // CleanRepayment (pawnshop payment is a positive event)
+        volumeUSD: ethers.parseUnits(Math.round(volumeUSD).toString(), 6),
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+
+      const borrower = borrowerAddress || ethers.ZeroAddress;
+
+      console.log(`[AttestcoinRelayer] Submitting pawnshop payment proof to SanadCreditOracle on CC3...`);
+      const tx = await contract.submitSingleProof(
+        proofData.chainKey,
+        proofData.headerNumber,
+        proofData.txBytes,
+        proofData.merkleProof,
+        proofData.continuityProof,
+        borrower,
+        eventPayload,
+        '0x' // no borrower signature needed for pawnshop payment
+      );
+
+      const receipt = await tx.wait();
+      console.log(`[AttestcoinRelayer] Pawnshop payment proof recorded on CC3: ${receipt.hash}`);
+
+      // Store in proven_events table
+      try {
+        await db.insert(ProvenEvents).values({
+          id: sourceTxHash,
+          borrowerAddress: borrower.toLowerCase(),
+          sourceTxHash,
+          cc3TxHash: receipt.hash,
+          blockHeight: targetHeight || 0,
+          protocol: 0,
+          eventType: 0,
+          volumeUsd: Math.round(volumeUSD).toString(),
+          timestamp: Math.floor(Date.now() / 1000),
+          chainKey,
+        }).onConflictDoNothing();
+      } catch (dbErr: any) {
+        console.warn('[AttestcoinRelayer] Failed to store pawnshop payment proof in DB:', dbErr.message);
+      }
+
+      return {
+        success: true,
+        cc3TxHash: receipt.hash,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+      };
+    } catch (err: any) {
+      console.error('[AttestcoinRelayer] Error proving pawnshop payment:', err);
+      return { success: false, error: err.message || 'Failed to prove pawnshop payment on CC3' };
+    }
+  }
 }

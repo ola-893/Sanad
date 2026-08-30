@@ -3,7 +3,7 @@ import { MainSchema } from '@/db/db.schema.js';
 
 /**
  * KYC Submission Model
- * Implements Malaysia BNM AML/CFT risk-based CDD/EDD state machine:
+ * Implements CBN AML/CFT risk-based CDD/EDD state machine:
  * 'not_started' -> 'submitted' -> 'screening' -> 'under_review' -> 'approved' | 'approved_with_edd' | 'rejected'
  */
 export const KycSubmission = MainSchema.table('kyc_submission', {

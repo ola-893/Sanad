@@ -180,7 +180,7 @@ async function seed() {
         city VARCHAR(100) DEFAULT '',
         state VARCHAR(100) DEFAULT '',
         postal_code VARCHAR(10) DEFAULT '',
-        country VARCHAR(50) DEFAULT 'Malaysia',
+        country VARCHAR(50) DEFAULT 'Nigeria',
         latitude VARCHAR(20) DEFAULT '',
         longitude VARCHAR(20) DEFAULT '',
         operating_hours JSONB DEFAULT '{}',
