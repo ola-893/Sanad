@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
 import { useAuth } from "@/hooks/use-auth"
-import { Menu, X, LayoutDashboard, Inbox, FileText, User, LogOut, Loader2 } from "lucide-react"
+import { Menu, X, LayoutDashboard, Inbox, FileText, User, LogOut, Loader2, CreditCard, TrendingUp } from "lucide-react"
 
 const pawnshopNav = [
   { href: "/pawnshop/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/pawnshop/requests", label: "Pledge Requests", icon: Inbox },
-  { href: "/pawnshop/nfts", label: "My NFTs", icon: FileText },
+  { href: "/pawnshop/requests", label: "Requests", icon: Inbox },
+  { href: "/pawnshop/payments", label: "Payments", icon: CreditCard },
+  { href: "/pawnshop/repayments", label: "Loans", icon: TrendingUp },
+  { href: "/pawnshop/nfts", label: "NFTs", icon: FileText },
   { href: "/pawnshop/profile", label: "Profile", icon: User },
 ]
 

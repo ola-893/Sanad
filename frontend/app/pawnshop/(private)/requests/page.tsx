@@ -797,16 +797,14 @@ export default function PawnshopRequestsPage() {
                               </Button>
                             )}
                             {req.status === "gold_verified" && (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setPayModal(req)
-                                  setPayAmount(String(req.verifiedAppraisedValueUsd || req.goldDetails.estimatedValue * 0.7))
-                                }}
-                                className="rounded-lg gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                              >
-                                <CreditCard className="h-3 w-3" /> Record Payment (Sepolia + CC3)
-                              </Button>
+                              <a href="/pawnshop/payments">
+                                <Button
+                                  size="sm"
+                                  className="rounded-lg gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                                >
+                                  <CreditCard className="h-3 w-3" /> Go to Payments
+                                </Button>
+                              </a>
                             )}
                             {req.status === "funded" && (
                               <Button

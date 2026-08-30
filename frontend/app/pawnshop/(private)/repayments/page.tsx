@@ -58,6 +58,7 @@ export default function PawnshopRepaymentsPage() {
   const [sagMinted, setSagMinted] = useState<PledgeRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"funded" | "sag_minted">("funded")
+  const [ethPrice, setEthPrice] = useState(0)
 
   const fetchRepayments = async () => {
     setLoading(true)
@@ -78,6 +79,9 @@ export default function PawnshopRepaymentsPage() {
 
   useEffect(() => {
     fetchRepayments()
+    apiInstance.get("/eth-price")
+      .then((res) => setEthPrice(res.data?.data?.usd || 0))
+      .catch(() => setEthPrice(4500))
   }, [])
 
   const activeLoans = sagMinted // SAG minted = active loan
@@ -138,6 +142,11 @@ export default function PawnshopRepaymentsPage() {
                     <p className="text-2xl font-bold text-[#171414]">
                       ${activeLoans.reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0).toLocaleString()}
                     </p>
+                    {ethPrice > 0 && (
+                      <p className="text-xs text-emerald-600 font-mono">
+                        ~{(activeLoans.reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0) / ethPrice).toFixed(4)} ETH
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">Total Funded</p>
                   </div>
                 </div>
@@ -242,6 +251,9 @@ export default function PawnshopRepaymentsPage() {
                           <div>
                             <p className="text-[10px] font-mono uppercase text-muted-foreground">Lent (70%)</p>
                             <p className="text-sm font-medium text-emerald-600">${req.paymentAmountUsd?.toLocaleString()}</p>
+                            {ethPrice > 0 && req.paymentAmountUsd && (
+                              <p className="text-xs font-mono text-emerald-600/70">~{(req.paymentAmountUsd / ethPrice).toFixed(4)} ETH</p>
+                            )}
                           </div>
                           <div>
                             <p className="text-[10px] font-mono uppercase text-muted-foreground">Duration</p>
