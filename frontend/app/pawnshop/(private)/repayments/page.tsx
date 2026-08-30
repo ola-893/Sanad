@@ -141,11 +141,11 @@ export default function PawnshopRepaymentsPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-[#171414]">
-                      ${activeLoans.reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0).toLocaleString()}
+                      ${[...funded, ...sagMinted].reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0).toLocaleString()}
                     </p>
                     {ethPrice > 0 && (
                       <p className="text-xs text-emerald-600 font-mono">
-                        ~{(activeLoans.reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0) / ethPrice).toFixed(4)} ETH
+                        ~{([ ...funded, ...sagMinted].reduce((sum, r) => sum + (r.paymentAmountUsd || 0), 0) / ethPrice).toFixed(4)} ETH
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">Total Funded</p>
@@ -258,7 +258,7 @@ export default function PawnshopRepaymentsPage() {
                           </div>
                           <div>
                             <p className="text-[10px] font-mono uppercase text-muted-foreground">Duration</p>
-                            <p className="text-sm font-medium">{req.loanDurationMonths} min</p>
+                            <p className="text-sm font-medium">{req.loanDurationMonths} months</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-mono uppercase text-muted-foreground">Due</p>
