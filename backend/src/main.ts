@@ -24,7 +24,17 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "http://localhost:5002", "http://localhost:3000", "https:"],
+      fontSrc: ["'self'", "https:"],
+      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+    },
+  },
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));

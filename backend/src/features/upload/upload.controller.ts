@@ -79,8 +79,9 @@ export const handleUpload = (req: MulterRequest, res: Response): void => {
     }
 
     // Process all uploaded files
+    const apiBase = process.env.UPLOAD_BASE_URL || `${req.protocol}://${req.get('host')}`;
     const uploadedFiles = files.map((file) => {
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+      const fileUrl = `${apiBase}/uploads/${file.filename}`;
       return {
         url: fileUrl,
         filename: file.filename,

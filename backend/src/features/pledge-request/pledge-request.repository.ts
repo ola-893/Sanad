@@ -127,6 +127,7 @@ export async function verifyGold(
     verifiedKarat?: number;
     verifiedPurity?: number;
     verifiedAppraisedValueUsd?: number;
+    loanDurationMonths?: number;
   }
 ): Promise<PledgeRequestModelType | null> {
   const updateData: Record<string, unknown> = {
@@ -139,6 +140,15 @@ export async function verifyGold(
   if (data.verifiedKarat !== undefined) updateData.verifiedKarat = data.verifiedKarat;
   if (data.verifiedPurity !== undefined) updateData.verifiedPurity = String(data.verifiedPurity);
   if (data.verifiedAppraisedValueUsd !== undefined) updateData.verifiedAppraisedValueUsd = String(data.verifiedAppraisedValueUsd);
+
+  // Loan duration: save duration and calculate maturity date
+  if (data.loanDurationMonths && data.verificationStatus === "verified") {
+    updateData.loanDurationMonths = data.loanDurationMonths;
+    // For testing: duration is in minutes. For production: convert to months.
+    const maturity = new Date();
+    maturity.setMinutes(maturity.getMinutes() + data.loanDurationMonths);
+    updateData.loanMaturityDate = maturity;
+  }
 
   const [result] = await db
     .update(PledgeRequestModel)
