@@ -97,6 +97,8 @@ interface PledgeRequest {
   pawnshopContactName?: string
   pawnshopContactPhone?: string
   pawnshopLocation?: string
+  loanDurationMonths?: number
+  loanMaturityDate?: string
 }
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -145,6 +147,7 @@ export default function PawnshopRequestsPage() {
   const [verifyKarat, setVerifyKarat] = useState("")
   const [verifyPurity, setVerifyPurity] = useState("")
   const [verifyValue, setVerifyValue] = useState("")
+  const [verifyDuration, setVerifyDuration] = useState("")
 
   // Payment modal
   const [payModal, setPayModal] = useState<PledgeRequest | null>(null)
@@ -155,6 +158,15 @@ export default function PawnshopRequestsPage() {
   // SAG mint modal
   const [sagModal, setSagModal] = useState<PledgeRequest | null>(null)
   const [sagTokenId, setSagTokenId] = useState("")
+
+  // Pawnshop profile for pre-filling accept modal
+  const [pawnshopProfile, setPawnshopProfile] = useState<any>(null)
+
+  useEffect(() => {
+    apiInstance.get("/pawnshop/profile")
+      .then((res) => setPawnshopProfile(res.data?.data || res.data))
+      .catch(() => {})
+  }, [])
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -172,6 +184,18 @@ export default function PawnshopRequestsPage() {
   useEffect(() => {
     fetchRequests()
   }, [filter])
+
+  // Open accept modal with prefilled profile data
+  const openAcceptModal = (requestId: string) => {
+    setAcceptModal(requestId)
+    if (pawnshopProfile) {
+      const p = pawnshopProfile
+      setContactName(p.businessName || "")
+      setContactPhone(p.businessPhone || "")
+      const addr = [p.addressLine1, p.city, p.state].filter(Boolean).join(", ")
+      setLocation(addr || "")
+    }
+  }
 
   // Accept request
   const handleAccept = async () => {
@@ -229,6 +253,7 @@ export default function PawnshopRequestsPage() {
         verifiedKarat: verifyKarat ? Number(verifyKarat) : undefined,
         verifiedPurity: verifyPurity ? Number(verifyPurity) : undefined,
         verifiedAppraisedValueUsd: verifyValue ? Number(verifyValue) : undefined,
+        loanDurationMonths: verifyDuration ? Number(verifyDuration) : undefined,
       })
       toast.success(
         verifyStatus === "verified"
@@ -236,6 +261,7 @@ export default function PawnshopRequestsPage() {
           : "Gold rejected. Borrower has been notified."
       )
       setVerifyModal(null)
+      setVerifyDuration("")
       fetchRequests()
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Verification failed")
@@ -412,75 +438,102 @@ export default function PawnshopRequestsPage() {
                 const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
 
                 return (
-                  <Card key={req.id} className={glass}>
-                    <CardContent className="p-6">
-                      {/* Header Row */}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E1BAC2]/20">
-                              <User className="h-4 w-4 text-[#171414]" />
+                  <Card key={req.id} className={`${glass} overflow-hidden`}>
+                    <CardContent className="p-0">
+                      {/* Top: Photo + Status Bar */}
+                      <div className="flex items-center justify-between px-6 pt-5 pb-3">
+                        <div className="flex items-center gap-3">
+                          {req.goldImages && req.goldImages.length > 0 ? (
+                            <div className="relative">
+                              {(() => {
+                                const filename = req.goldImages[0].split('/').pop() || req.goldImages[0].replace('/uploads/', '')
+                                return <img src={`/api/uploads/${filename}`} alt="Gold" className="h-14 w-14 rounded-xl object-cover border border-[#171414]/10" />
+                              })()}
+                              {req.goldImages.length > 1 && (
+                                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#171414] text-[9px] font-bold text-[#E1BAC2]">
+                                  +{req.goldImages.length - 1}
+                                </span>
+                              )}
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-[#171414]">
+                          ) : (
+                            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#E1BAC2]/15">
+                              <Gem className="h-6 w-6 text-[#E1BAC2]" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-display text-base font-bold text-[#171414]">
+                                {req.goldDetails.assetType} {req.goldDetails.karat}K Gold
+                              </p>
+                              <Badge variant="outline" className={`text-[10px] font-mono ${statusCfg.color}`}>
+                                {statusCfg.label}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <User className="h-3 w-3" />
                                 {req.borrowerWallet.slice(0, 6)}...{req.borrowerWallet.slice(-4)}
-                              </p>
-                              <p className="text-xs text-muted-foreground font-mono">
+                              </span>
+                              <span className="text-xs text-muted-foreground">
                                 {new Date(req.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            {req.borrowerCreditScore !== undefined && req.borrowerCreditScore > 0 && (
-                              <div className="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-[#171414]/5 border border-[#171414]/10">
-                                <Shield className="h-3 w-3 text-[#171414]" />
-                                <span className="text-[10px] font-mono font-bold text-[#171414]">{req.borrowerCreditScore}</span>
-                                <span className="text-[9px] text-muted-foreground">/ 1000</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Gold Summary */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="rounded-lg border border-[#171414]/10 bg-[#FAFAF8] p-3">
-                              <p className="text-[10px] font-mono uppercase text-muted-foreground">Asset</p>
-                              <p className="text-sm font-medium text-[#171414]">
-                                {req.goldDetails.assetType} {req.goldDetails.karat}K
-                              </p>
-                            </div>
-                            <div className="rounded-lg border border-[#171414]/10 bg-[#FAFAF8] p-3">
-                              <p className="text-[10px] font-mono uppercase text-muted-foreground">Weight</p>
-                              <p className="text-sm font-medium text-[#171414]">{req.goldDetails.weightG}g</p>
-                            </div>
-                            <div className="rounded-lg border border-[#171414]/10 bg-[#FAFAF8] p-3">
-                              <p className="text-[10px] font-mono uppercase text-muted-foreground">Purity</p>
-                              <p className="text-sm font-medium text-[#171414]">{req.goldDetails.purity}</p>
-                            </div>
-                            <div className="rounded-lg border border-[#171414]/10 bg-[#FAFAF8] p-3">
-                              <p className="text-[10px] font-mono uppercase text-muted-foreground">Est. Value</p>
-                              <p className="text-sm font-bold text-[#171414]">
-                                ${req.goldDetails.estimatedValue?.toLocaleString()}
-                              </p>
+                              </span>
                             </div>
                           </div>
                         </div>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                          className="flex items-center gap-1.5 rounded-xl border border-[#171414]/15 px-3 py-2 text-xs font-medium text-[#171414] hover:bg-[#171414]/5 transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          {isExpanded ? "Less" : "Review"}
+                        </button>
+                      </div>
 
-                        {/* Right: Status + Expand */}
-                        <div className="flex flex-col items-end gap-2 min-w-[140px]">
-                          <Badge variant="outline" className={`text-[10px] font-mono ${statusCfg.color}`}>
-                            {statusCfg.label}
-                          </Badge>
-                          <button
-                            onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-[#171414] transition-colors"
-                          >
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            {isExpanded ? "Collapse" : "Review Details"}
-                          </button>
+                      {/* Gold Details Row */}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-[#171414]/5 mx-6 rounded-xl overflow-hidden">
+                        {[
+                          { label: "Weight", value: `${req.goldDetails.weightG}g` },
+                          { label: "Purity", value: `${req.goldDetails.purity}` },
+                          { label: "Karat", value: `${req.goldDetails.karat}K` },
+                          { label: "Est. Value", value: `$${req.goldDetails.estimatedValue?.toLocaleString()}`, bold: true },
+                          { label: "Loan", value: req.requestedAmount ? `$${Number(req.requestedAmount).toLocaleString()}` : "—", bold: true },
+                        ].map((item, i) => (
+                          <div key={i} className="bg-white px-4 py-3">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                            <p className={`text-sm mt-0.5 ${item.bold ? "font-bold text-[#171414]" : "font-medium text-[#171414]"}`}>{item.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Credit Score + Actions Row */}
+                      <div className="flex items-center justify-between px-6 py-3">
+                        <div className="flex items-center gap-4">
+                          {req.borrowerCreditScore !== undefined && req.borrowerCreditScore > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Shield className="h-3.5 w-3.5 text-[#171414]/50" />
+                              <span className="text-xs font-mono font-bold text-[#171414]">{req.borrowerCreditScore}</span>
+                              <span className="text-[10px] text-muted-foreground">/ 1000</span>
+                              {req.borrowerCreditTier && (
+                                <span className="text-[10px] font-mono text-muted-foreground">({req.borrowerCreditTier})</span>
+                              )}
+                            </div>
+                          )}
+                          {req.borrowerEvents && req.borrowerEvents.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {req.borrowerEvents.length} verified event{req.borrowerEvents.length > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
+                        {req.goldDetails.description && (
+                          <p className="text-[10px] text-muted-foreground italic max-w-[200px] truncate">
+                            "{req.goldDetails.description}"
+                          </p>
+                        )}
                       </div>
 
                       {/* Expanded Details */}
                       {isExpanded && (
-                        <div className="mt-6 space-y-5 border-t border-[#171414]/10 pt-5">
+                        <div className="px-6 pb-6 mt-6 space-y-5 border-t border-[#171414]/10 pt-5">
                           {/* V2: Borrower Credit Profile */}
                           {req.borrowerCreditScore !== undefined && (
                             <div className="rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
@@ -562,14 +615,19 @@ export default function PawnshopRequestsPage() {
                                 Gold Photos ({req.goldImages.length})
                               </p>
                               <div className="flex gap-3 overflow-x-auto">
-                                {req.goldImages.map((url, i) => (
-                                  <img
-                                    key={i}
-                                    src={url}
-                                    alt={`Gold ${i + 1}`}
-                                    className="h-28 w-28 rounded-lg object-cover shrink-0 border border-[#171414]/10"
-                                  />
-                                ))}
+                                {req.goldImages.map((url, i) => {
+                                  // Extract filename from URL and proxy through Next.js
+                                  const filename = url.split('/').pop() || url.replace('/uploads/', '')
+                                  const imgSrc = `/api/uploads/${filename}`
+                                  return (
+                                    <img
+                                      key={i}
+                                      src={imgSrc}
+                                      alt={`Gold ${i + 1}`}
+                                      className="h-28 w-28 rounded-lg object-cover shrink-0 border border-[#171414]/10"
+                                    />
+                                  )
+                                })}
                               </div>
                             </div>
                           )}
@@ -616,6 +674,14 @@ export default function PawnshopRequestsPage() {
                               )}
                               {req.verificationNotes && (
                                 <p className="text-xs text-muted-foreground mt-2 italic">"{req.verificationNotes}"</p>
+                              )}
+                              {req.loanDurationMonths && (
+                                <div className="mt-2 flex items-center gap-2 text-xs">
+                                  <span className="font-medium">Loan Duration: {req.loanDurationMonths} min (test)</span>
+                                  {req.loanMaturityDate && (
+                                    <span className="text-muted-foreground">(Due: {new Date(req.loanMaturityDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })})</span>
+                                  )}
+                                </div>
                               )}
                             </div>
                           )}
@@ -708,7 +774,7 @@ export default function PawnshopRequestsPage() {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  onClick={() => setAcceptModal(req.id)}
+                                  onClick={() => openAcceptModal(req.id)}
                                   className="rounded-lg gap-1 bg-[#171414] text-[#E1BAC2] hover:bg-black"
                                 >
                                   <CheckCircle2 className="h-3 w-3" /> Accept & Share Contact
@@ -778,7 +844,7 @@ export default function PawnshopRequestsPage() {
                 <div className="space-y-2">
                   <Label>Contact Name</Label>
                   <Input
-                    placeholder="e.g., Ahmad (Branch Manager)"
+                    placeholder="e.g., Emeka (Branch Manager)"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     className="rounded-xl"
@@ -787,7 +853,7 @@ export default function PawnshopRequestsPage() {
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
                   <Input
-                    placeholder="e.g., +60 12-345 6789"
+                    placeholder="e.g., +234 801 234 5678"
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
                     className="rounded-xl"
@@ -797,7 +863,7 @@ export default function PawnshopRequestsPage() {
               <div className="space-y-2">
                 <Label>Location / Address</Label>
                 <Input
-                  placeholder="e.g., 123 Jalan Tun Razak, Kuala Lumpur"
+                  placeholder="e.g., 15 Marina Lagos, Nigeria"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="rounded-xl"
@@ -806,7 +872,7 @@ export default function PawnshopRequestsPage() {
               <div className="space-y-2">
                 <Label>Notes for Borrower (optional)</Label>
                 <Textarea
-                  placeholder="e.g., Open 9am-5pm, bring original ID. Ask for Ahmad at the counter."
+                  placeholder="e.g., Open 9am-5pm, bring original ID. Ask for Emeka at the counter."
                   value={acceptNotes}
                   onChange={(e) => setAcceptNotes(e.target.value)}
                   className="rounded-xl min-h-[60px]"
@@ -884,8 +950,26 @@ export default function PawnshopRequestsPage() {
                 >
                   <XCircle className="h-4 w-4 mr-1" /> Rejected
                 </Button>
-              </div>
-              {verifyStatus === "verified" && (
+              </div>                {verifyStatus === "verified" && (
+                <>
+                <div className="space-y-2">
+                  <Label>Loan Duration</Label>
+                  <select
+                    value={verifyDuration}
+                    onChange={(e) => setVerifyDuration(e.target.value)}
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Select duration...</option>
+                    <option value="5">5 minutes (test)</option>
+                    <option value="10">10 minutes (test)</option>
+                    <option value="15">15 minutes (test)</option>
+                  </select>
+                  {verifyDuration && (
+                    <p className="text-xs text-muted-foreground">
+                      Repayment due: {new Date(Date.now() + Number(verifyDuration) * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (in {verifyDuration} minutes)
+                    </p>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Verified Weight (g)</Label>
@@ -904,6 +988,7 @@ export default function PawnshopRequestsPage() {
                     <Input type="number" value={verifyValue} onChange={(e) => setVerifyValue(e.target.value)} className="rounded-xl" placeholder="e.g., 5000" />
                   </div>
                 </div>
+                </>
               )}
               <div className="space-y-2">
                 <Label>Verification Notes</Label>
@@ -915,7 +1000,7 @@ export default function PawnshopRequestsPage() {
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setVerifyModal(null)} disabled={processing} className="rounded-xl">
+                <Button variant="outline" onClick={() => { setVerifyModal(null); setVerifyDuration("") }} disabled={processing} className="rounded-xl">
                   Cancel
                 </Button>
                 <Button
@@ -953,8 +1038,21 @@ export default function PawnshopRequestsPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Payment Amount (USD)</Label>
-                <Input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="rounded-xl" placeholder="e.g., 5000" />
+                <Label>Payment Amount (70% LTV)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    value={payAmount}
+                    readOnly
+                    className="rounded-xl pl-7 bg-muted"
+                  />
+                </div>
+                {payModal && (
+                  <p className="text-[11px] text-muted-foreground">
+                    70% of appraised value: ${payModal.verifiedAppraisedValueUsd?.toLocaleString() || payModal.goldDetails?.estimatedValue?.toLocaleString()}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Sepolia Transaction Hash *</Label>
@@ -1003,6 +1101,17 @@ export default function PawnshopRequestsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {sagModal?.loanDurationMonths && (
+                <div className="rounded-xl bg-purple-50 border border-purple-200 p-3">
+                  <p className="text-[10px] font-mono uppercase text-muted-foreground mb-1">Loan Terms</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium">Duration: {sagModal.loanDurationMonths} min (test)</span>
+                    {sagModal.loanMaturityDate && (
+                      <span className="text-muted-foreground">| Due: {new Date(sagModal.loanMaturityDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>SAG Token ID (from on-chain mint)</Label>
                 <Input

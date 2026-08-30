@@ -338,11 +338,12 @@ export class PledgeRequestController {
           notes: parsed.data.verificationNotes || "",
           verifiedWeightG: parsed.data.verifiedWeightG,
           verifiedKarat: parsed.data.verifiedKarat,
+          loanDurationMonths: parsed.data.loanDurationMonths,
         });
       }
 
       const verifiedMsg = parsed.data.verificationStatus === "verified"
-        ? `Gold verified!${parsed.data.verifiedWeightG ? ` Weight: ${parsed.data.verifiedWeightG}g.` : ""} You can now meet the pawnshop to complete the process.`
+        ? `Gold verified!${parsed.data.verifiedWeightG ? ` Weight: ${parsed.data.verifiedWeightG}g.` : ""}${parsed.data.loanDurationMonths ? ` Loan duration: ${parsed.data.loanDurationMonths} months.` : ""} You can now meet the pawnshop to complete the process.`
         : `Gold rejected by pawnshop.${parsed.data.verificationNotes ? ` Reason: ${parsed.data.verificationNotes}` : ""}`;
 
       await createNotification({

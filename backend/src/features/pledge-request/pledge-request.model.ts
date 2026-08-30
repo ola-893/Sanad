@@ -48,6 +48,10 @@ export const PledgeRequestModel = MainSchema.table("pledge_request", {
   pawnshopContactPhone: varchar("pawnshop_contact_phone", { length: 30 }),
   pawnshopLocation: text("pawnshop_location"),
 
+  // V2: Loan duration (set during physical meeting)
+  loanDurationMonths: integer("loan_duration_months"),
+  loanMaturityDate: timestamp("loan_maturity_date"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -77,6 +81,7 @@ export const VerifyGoldSchema = z.object({
   verifiedKarat: z.number().min(1).max(24).optional(),
   verifiedPurity: z.number().min(0).max(999).optional(),
   verifiedAppraisedValueUsd: z.number().positive().optional(),
+  loanDurationMonths: z.number().int().min(1).max(36).optional(),
 });
 
 export const RecordPaymentSchema = z.object({

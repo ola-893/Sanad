@@ -49,15 +49,16 @@ export default function BorrowerDashboardPage() {
   const { walletAddress, balance: walletBalance } = useWalletAuth()
   const ethBalance = walletBalance || "0.0000"
   const [loans, setLoans] = useState<any[]>([])
+  const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadNotifs, setUnreadNotifs] = useState(0)
 
   useEffect(() => {
-    // Fetch borrower's SAG loans
-    apiInstance.get("/sag")
-      .then((res) => setLoans(res.data.data || []))
-      .catch(() => setLoans([]))
-      .finally(() => setLoading(false))
+    // Fetch both SAG loans and pledge requests
+    Promise.allSettled([
+      apiInstance.get("/sag").then((res) => setLoans(res.data.data || [])),
+      apiInstance.get("/pledge-requests/mine").then((res) => setApplications(res.data.data || [])),
+    ]).finally(() => setLoading(false))
   }, [])
 
   // Fetch unread notification count
@@ -118,7 +119,7 @@ export default function BorrowerDashboardPage() {
   }, [walletAddress])
 
   const activeLoans = loans.filter(l => l.status === 'active' || l.approvalStatus === 'approved')
-  const pendingLoans = loans.filter(l => l.status === 'pending' || l.approvalStatus === 'pending')
+  const pendingApplications = applications.filter(a => a.status === 'pending' || a.status === 'accepted')
   const completedLoans = loans.filter(l => l.status === 'completed' || l.approvalStatus === 'closed')
 
   return (
@@ -189,9 +190,9 @@ export default function BorrowerDashboardPage() {
               icon={CreditCard}
             />
             <StatCard
-              label="Pending Applications"
-              value={loading ? "—" : String(pendingLoans.length)}
-              sub="Awaiting approval"
+              label="Applications"
+              value={loading ? "—" : String(applications.length)}
+              sub={`${pendingApplications.length} pending`}
               icon={Clock}
             />
             <StatCard
@@ -225,6 +226,12 @@ export default function BorrowerDashboardPage() {
                     Apply for New Loan
                   </Button>
                 </Link>
+                <Link href="/dashboard/borrower/applications" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-3 rounded-xl border-[#171414]/20 hover:bg-[#171414]/5 text-[#171414]">
+                    <Clock className="h-4 w-4" />
+                    View My Applications
+                  </Button>
+                </Link>
                 <Link href="/dashboard/borrower/repay" className="block">
                   <Button variant="outline" className="w-full justify-start gap-3 rounded-xl border-[#171414]/20 hover:bg-[#171414]/5 text-[#171414]">
                     <CreditCard className="h-4 w-4 text-cyan-600" />
@@ -244,52 +251,59 @@ export default function BorrowerDashboardPage() {
             </Card>
           </div>
 
-          {/* Active Loans */}
+          {/* Applications */}
           <Card className={glass}>
-            <CardHeader>
-              <p className="kicker-gold">Loans</p>
-              <CardTitle className="font-display">Your Gold Financing</CardTitle>
-              <CardDescription>Active and recent SAG loan applications</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <p className="kicker-gold">Applications</p>
+                <CardTitle className="font-display">Your Pledge Requests</CardTitle>
+                <CardDescription>Track your gold pledge applications</CardDescription>
+              </div>
+              <Link href="/dashboard/borrower/applications">
+                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+              </Link>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">Loading loans...</div>
-              ) : loans.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
+              ) : applications.length === 0 ? (
                 <div className="text-center py-8">
                   <Gem className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">No loans yet</p>
+                  <p className="text-sm text-muted-foreground">No applications yet</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">Apply for your first gold-backed loan to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {loans.slice(0, 5).map((loan) => (
-                    <div key={loan.sagId} className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
+                  {applications.slice(0, 5).map((app) => (
+                    <div key={app.id} className="flex items-center justify-between rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                          loan.approvalStatus === 'approved' ? "bg-emerald-100" :
-                          loan.approvalStatus === 'pending' ? "bg-amber-100" : "bg-slate-100"
+                          app.status === 'accepted' || app.status === 'gold_verified' || app.status === 'funded' || app.status === 'sag_minted' ? "bg-emerald-100" :
+                          app.status === 'pending' ? "bg-amber-100" : "bg-slate-100"
                         }`}>
-                          {loan.approvalStatus === 'approved' ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> :
-                           loan.approvalStatus === 'pending' ? <Clock className="h-5 w-5 text-amber-600" /> :
+                          {app.status === 'accepted' || app.status === 'gold_verified' || app.status === 'funded' || app.status === 'sag_minted' ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> :
+                           app.status === 'pending' ? <Clock className="h-5 w-5 text-amber-600" /> :
                            <AlertCircle className="h-5 w-5 text-slate-500" />}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#171414]">{loan.sagName || 'Gold Collateral'}</p>
+                          <p className="text-sm font-medium text-[#171414]">
+                            {app.goldDetails?.assetType} {app.goldDetails?.karat}K
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            {loan.sagProperties?.weightG || 0}g • {loan.sagProperties?.purity || 999} purity
+                            {app.goldDetails?.weightG}g • {app.goldDetails?.purity} purity
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-[#171414]">
-                          ${(loan.sagProperties?.loan || 0).toLocaleString()}
+                          ${(app.goldDetails?.estimatedValue || 0).toLocaleString()}
                         </p>
                         <Badge variant="outline" className={`text-[9px] font-mono ${
-                          loan.approvalStatus === 'approved' ? "border-emerald-200 bg-emerald-50 text-emerald-700" :
-                          loan.approvalStatus === 'pending' ? "border-amber-200 bg-amber-50 text-amber-700" :
+                          app.status === 'accepted' || app.status === 'gold_verified' || app.status === 'funded' || app.status === 'sag_minted' ? "border-emerald-200 bg-emerald-50 text-emerald-700" :
+                          app.status === 'pending' ? "border-amber-200 bg-amber-50 text-amber-700" :
                           "border-slate-200 bg-slate-50 text-slate-600"
                         }`}>
-                          {loan.approvalStatus || 'pending'}
+                          {app.status?.replace(/_/g, ' ')}
                         </Badge>
                       </div>
                     </div>

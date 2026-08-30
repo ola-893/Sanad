@@ -111,8 +111,9 @@ export default function BorrowerApplyPage() {
   const [description, setDescription] = useState("")
   const [requestedAmount, setRequestedAmount] = useState("")
 
-  // Gold images
+  // Gold images - store both preview URLs (blob) and server URLs
   const [goldImages, setGoldImages] = useState<string[]>([])
+  const [goldImagePreviews, setGoldImagePreviews] = useState<string[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
 
   // Borrower credit profile (auto-fetched)
@@ -157,6 +158,14 @@ export default function BorrowerApplyPage() {
 
     setUploadingImage(true)
     try {
+      // Create preview URLs immediately from file objects
+      const previews: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        previews.push(URL.createObjectURL(files[i]))
+      }
+      setGoldImagePreviews((prev) => [...prev, ...previews])
+
+      // Upload to server in background
       const formData = new FormData()
       for (let i = 0; i < files.length; i++) {
         formData.append("images", files[i])
@@ -175,6 +184,11 @@ export default function BorrowerApplyPage() {
   }
 
   const removeImage = (index: number) => {
+    // Revoke the blob URL to free memory
+    if (goldImagePreviews[index]) {
+      URL.revokeObjectURL(goldImagePreviews[index])
+    }
+    setGoldImagePreviews((prev) => prev.filter((_, i) => i !== index))
     setGoldImages((prev) => prev.filter((_, i) => i !== index))
   }
 
@@ -558,11 +572,11 @@ export default function BorrowerApplyPage() {
                 </div>
 
                 {/* Uploaded images preview */}
-                {goldImages.length > 0 && (
+                {goldImagePreviews.length > 0 && (
                   <div className="grid grid-cols-3 gap-3">
-                    {goldImages.map((url, i) => (
+                    {goldImagePreviews.map((preview, i) => (
                       <div key={i} className="relative group rounded-xl overflow-hidden border border-[#171414]/10">
-                        <img src={url} alt={`Gold ${i + 1}`} className="w-full h-32 object-cover" />
+                        <img src={preview} alt={`Gold ${i + 1}`} className="w-full h-32 object-cover" />
                         <button
                           onClick={() => removeImage(i)}
                           className="absolute top-1 right-1 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -658,14 +672,14 @@ export default function BorrowerApplyPage() {
                 </div>
 
                 {/* Gold Photos */}
-                {goldImages.length > 0 && (
+                {goldImagePreviews.length > 0 && (
                   <div className="rounded-xl border border-[#171414]/10 bg-[#FAFAF8] p-4">
                     <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">
-                      Gold Photos ({goldImages.length})
+                      Gold Photos ({goldImagePreviews.length})
                     </p>
                     <div className="flex gap-2 overflow-x-auto">
-                      {goldImages.map((url, i) => (
-                        <img key={i} src={url} alt={`Gold ${i + 1}`} className="h-20 w-20 rounded-lg object-cover shrink-0" />
+                      {goldImagePreviews.map((preview, i) => (
+                        <img key={i} src={preview} alt={`Gold ${i + 1}`} className="h-20 w-20 rounded-lg object-cover shrink-0" />
                       ))}
                     </div>
                   </div>
