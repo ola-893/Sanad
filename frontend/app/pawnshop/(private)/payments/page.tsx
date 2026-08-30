@@ -93,38 +93,19 @@ export default function PawnshopPaymentsPage() {
     if (!payModal || !payTxHash || !payAmount) return
     setProcessing(true)
     try {
-      let cc3Hash = payCc3Hash
-
-      // Auto-prove on CC3 if no CC3 hash provided
-      if (!cc3Hash) {
-        toast.info("Proving payment on CC3 via Attestcoin...")
-        try {
-          const proofRes = await apiInstance.post("/credit-oracle/prove-pawnshop-payment", {
-            sourceTxHash: payTxHash,
-            chainKey: 1,
-            borrowerAddress: payModal.borrowerWallet,
-          })
-          cc3Hash = proofRes.data?.data?.cc3TxHash || ""
-          if (cc3Hash) {
-            toast.success("CC3 attestation proof generated!")
-          }
-        } catch (proofErr: any) {
-          console.warn("CC3 auto-proof failed:", proofErr?.message)
-          toast.warning("CC3 proof could not be generated. Payment recorded without proof.")
-        }
-      }
-
+      // Step 1: Record payment immediately
       await apiInstance.patch(`/pledge-requests/${payModal.id}/record-payment`, {
         paymentTxHash: payTxHash,
-        paymentCc3TxHash: cc3Hash || undefined,
         paymentAmountUsd: Number(payAmount),
       })
       toast.success("Payment recorded! Borrower has been notified.")
       setPayModal(null)
       setPayTxHash("")
-      setPayCc3Hash("")
       setPayAmount("")
       fetchVerifiedRequests()
+
+      // Note: CC3 proof applies to DeFi protocol transactions, not simple ETH transfers.
+      // The Sepolia tx hash serves as proof of payment for pawnshop-to-borrower transfers.
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Payment recording failed")
     } finally {
@@ -363,17 +344,9 @@ export default function PawnshopPaymentsPage() {
                   className="rounded-xl font-mono"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>CC3 Attestation Tx Hash (auto-generated if empty)</Label>
-                <Input
-                  placeholder="Leave empty for auto-proof"
-                  value={payCc3Hash}
-                  onChange={(e) => setPayCc3Hash(e.target.value)}
-                  className="rounded-xl font-mono"
-                />
-              </div>
+
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setPayModal(null); setPayTxHash(""); setPayCc3Hash("") }} disabled={processing} className="rounded-xl">
+                <Button variant="outline"    onClick={() => { setPayModal(null); setPayTxHash("") }} disabled={processing} className="rounded-xl">
                   Cancel
                 </Button>
                 <Button

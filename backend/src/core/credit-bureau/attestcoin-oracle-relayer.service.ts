@@ -551,6 +551,97 @@ export class AttestcoinOracleRelayerService {
   }
 
   /**
+   * Prepare unsigned CC3 transaction data for pawnshop payment proof.
+   * Returns the data needed for MetaMask to sign and submit on CC3.
+   */
+  public async preparePawnshopProof(
+    sourceTxHash: string,
+    chainKey: number = 1,
+    borrowerAddress?: string,
+  ): Promise<{
+    success: boolean;
+    unsignedTx?: {
+      to: string;
+      data: string;
+      value: string;
+    };
+    proofData?: any;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Preparing unsigned CC3 proof for: ${sourceTxHash}`);
+
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+
+      // Get block height and try to get proof with retries
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 5000, 180000, 3000);
+        } catch {
+          console.warn(`[AttestcoinRelayer] Block attestation wait failed, attempting proof anyway`);
+        }
+      }
+
+      // Retry proof generation
+      let proofResult: any = null;
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        proofResult = await proofBuilder.getProof(sourceTxHash);
+        if (proofResult.success && proofResult.data) break;
+        if (attempt < 5) await new Promise(r => setTimeout(r, attempt * 10000));
+      }
+
+      if (!proofResult?.success || !proofResult?.data) {
+        throw new Error('Proof not available yet. Please try again in a few minutes.');
+      }
+
+      const proofData = proofResult.data;
+      const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);
+      const volumeUSD = Number(ethers.formatEther(sourceEthWei)) * 2700;
+
+      const borrower = borrowerAddress || ethers.ZeroAddress;
+
+      // Encode the submitSingleProof call
+      const iface = new ethers.Interface(SANAD_CREDIT_ORACLE_ABI);
+      const txData = iface.encodeFunctionData('submitSingleProof', [
+        proofData.chainKey,
+        proofData.headerNumber,
+        proofData.txBytes,
+        proofData.merkleProof,
+        proofData.continuityProof,
+        borrower,
+        {
+          sourceTxHash: sourceTxHash,
+          protocol: 0,
+          eventType: 0,
+          volumeUSD: ethers.parseUnits(Math.round(volumeUSD).toString(), 6),
+          timestamp: Math.floor(Date.now() / 1000),
+        },
+        '0x',
+      ]);
+
+      return {
+        success: true,
+        unsignedTx: {
+          to: this.oracleContractAddress,
+          data: txData,
+          value: '0x0',
+        },
+        proofData: {
+          sourceTxHash,
+          borrower,
+          volumeUSD: Math.round(volumeUSD),
+          chainKey: proofData.chainKey,
+          headerNumber: proofData.headerNumber,
+        },
+      };
+    } catch (err: any) {
+      console.error('[AttestcoinRelayer] Error preparing pawnshop proof:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
    * Prove a pawnshop-to-borrower ETH payment on Sepolia via Attestcoin BlockProver.
    * Returns the CC3 proof transaction hash (the proof is recorded on-chain via the
    * SanadCreditOracle submitSingleProof, same as DeFi credit events).
@@ -574,16 +665,32 @@ export class AttestcoinOracleRelayerService {
       if (targetHeight) {
         try {
           console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested...`);
-          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 5000, 180000, 3000);
           console.log(`[AttestcoinRelayer] Block #${targetHeight} attested!`);
         } catch (waitErr: any) {
-          throw new Error(`Block #${targetHeight} not yet attested. Please try again shortly.`);
+          console.warn(`[AttestcoinRelayer] Block attestation wait failed, retrying proof generation:`, waitErr.message);
         }
       }
 
-      const proofResult = await proofBuilder.getProof(sourceTxHash);
-      if (!proofResult.success || !proofResult.data) {
-        throw new Error(proofResult.error || 'Proof not available');
+      // Retry proof generation with exponential backoff (up to 5 attempts)
+      let proofResult: any = null;
+      const maxAttempts = 5;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`[AttestcoinRelayer] Proof attempt ${attempt}/${maxAttempts} for tx ${sourceTxHash}`);
+        proofResult = await proofBuilder.getProof(sourceTxHash);
+        if (proofResult.success && proofResult.data) {
+          console.log(`[AttestcoinRelayer] Proof generated successfully on attempt ${attempt}`);
+          break;
+        }
+        if (attempt < maxAttempts) {
+          const delayMs = attempt * 10000; // 10s, 20s, 30s, 40s
+          console.log(`[AttestcoinRelayer] Proof not ready, waiting ${delayMs / 1000}s before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+
+      if (!proofResult?.success || !proofResult?.data) {
+        throw new Error(`Proof generation failed after ${maxAttempts} attempts for tx ${sourceTxHash}. Please try again later.`);
       }
 
       const proofData = proofResult.data;

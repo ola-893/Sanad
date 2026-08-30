@@ -164,6 +164,43 @@ export class PledgeRequestController {
   }
 
   /**
+   * PATCH /pledge-requests/:id/refresh-credit -- Refresh borrower credit score from CC3
+   */
+  async refreshCreditScore(req: Request, res: Response): Promise<void> {
+    try {
+      const request = await getPledgeRequestById(req.params.id as string);
+      if (!request) {
+        res.status(404).json({ success: false, error: "Pledge request not found" });
+        return;
+      }
+
+      const updatedProfile = await getBorrowerProfileForPledge(request.borrowerId);
+      if (!updatedProfile) {
+        res.status(404).json({ success: false, error: "Could not fetch credit profile" });
+        return;
+      }
+
+      // Update the stored credit score
+      const { pool } = await import("@/db/index.js");
+      await pool.query(
+        `UPDATE main.pledge_request SET borrower_credit_score = $1, borrower_credit_tier = $2, borrower_events = $3 WHERE id = $4`,
+        [updatedProfile.creditScore, updatedProfile.creditTier, JSON.stringify(updatedProfile.events), request.id]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: {
+          borrowerCreditScore: updatedProfile.creditScore,
+          borrowerCreditTier: updatedProfile.creditTier,
+        },
+      });
+    } catch (error) {
+      console.error("Error refreshing credit score:", error);
+      res.status(500).json({ success: false, error: "Failed to refresh credit score" });
+    }
+  }
+
+  /**
    * PATCH /pledge-requests/:id/accept -- Pawnshop accepts the pledge request
    * V2: Shares pawnshop contact details with borrower for physical meeting
    */
