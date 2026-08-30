@@ -226,14 +226,25 @@ export default function InvestorSagPage() {
                         </div>
 
                         {/* Action */}
-                        <div className="flex justify-end">
-                          <Button
-                            onClick={() => openInvestModal(token)}
-                            disabled={remaining <= 0}
-                            className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
-                          >
-                            {remaining <= 0 ? "Fully Funded" : "Invest Now"}
-                          </Button>
+                        <div className="flex items-center justify-between">
+                          {remaining <= 0 && (
+                            <p className="text-xs text-emerald-600 font-medium">
+                              Target investment reached
+                            </p>
+                          )}
+                          <div className="ml-auto">
+                            <Button
+                              onClick={() => openInvestModal(token)}
+                              disabled={remaining <= 0}
+                              className={`rounded-xl gap-2 ${
+                                remaining <= 0
+                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  : "bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                              }`}
+                            >
+                              {remaining <= 0 ? "Fully Funded" : "Invest Now"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

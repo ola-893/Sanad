@@ -949,65 +949,39 @@ function PawnshopNFTs() {
                 </div>
               </CardHeader>
               <CardContent className={sag.status === 'closed' ? 'opacity-75' : ''}>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Asset Type:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.assetType}</span>
+                {/* Key Stats Grid */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="rounded-lg bg-muted/50 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">Valuation</p>
+                    <p className="text-sm font-bold">${sag.sagProperties.valuation?.toLocaleString() || '0'}</p>
                   </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Valuation:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">
-                      {sag.sagProperties.currency} {sag.sagProperties.valuation.toLocaleString()}
-                    </span>
+                  <div className="rounded-lg bg-muted/50 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">Loan</p>
+                    <p className="text-sm font-bold text-emerald-600">${sag.sagProperties.loan?.toLocaleString() || '0'}</p>
                   </div>
-
-                  {sag.sagProperties.loan ? (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground dark:text-muted-foreground">Loan Amount:</span>
-                      <span className="text-sm font-medium text-foreground dark:text-gray-100">
-                        {sag.sagProperties.currency} {sag.sagProperties.loan.toLocaleString()}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Weight:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.weightG}g</span>
+                  <div className="rounded-lg bg-muted/50 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">ROI/mo</p>
+                    <p className="text-sm font-bold text-emerald-600">{sag.sagProperties.investorRoiPercentage || 0}%</p>
                   </div>
+                </div>
 
+                {/* Compact Details */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Karat:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.karat}K</span>
+                    <span className="text-muted-foreground">Weight:</span>
+                    <span className="font-medium">{sag.sagProperties.weightG}g</span>
                   </div>
-
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Mint Shares:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()}</span>
+                    <span className="text-muted-foreground">Karat:</span>
+                    <span className="font-medium">{sag.sagProperties.karat}K</span>
                   </div>
-
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">ROI:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.sagProperties.investorRoiPercentage}%</span>
+                    <span className="text-muted-foreground">Duration:</span>
+                    <span className="font-medium">{sag.sagProperties.tenorM ? Math.round(sag.sagProperties.tenorM / 30) : 3} months</span>
                   </div>
-
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Cert No:</span>
-                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{sag.certNo}</span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">Token ID:</span>
-                    <span className="text-xs font-medium">
-                      {sag.tokenId ? (
-                        <a className={`text-primary dark:text-blue-400 flex gap-1 hover:text-primary dark:hover:text-blue-300`} href={`${process.env.NEXT_PUBLIC_ENV_URL}/${sag.tokenId}`} target='_blank'>
-                          {sag.tokenId}
-                          <ExternalLinkIcon size={14} />
-                        </a>
-                      ) : (
-                        <span className="text-foreground dark:text-gray-100">-</span>
-                      )}
-                    </span>
+                    <span className="text-muted-foreground">Token ID:</span>
+                    <span className="font-medium font-mono text-[11px]">{sag.tokenId || '-'}</span>
                   </div>
 
                   <div className="flex justify-between items-center pt-2">

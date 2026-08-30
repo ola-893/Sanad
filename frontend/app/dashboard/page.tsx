@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,10 +18,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { useInvestorNfts } from "@/hooks/use-investor-nfts"
 import { EVENT_TYPES, amountOf, useAuditLogs } from "@/hooks/use-audit-logs"
-import apiInstance from "@/lib/axios-v1"
 
-
-import { LiquidityPoolManager } from "@/components/investor/liquidity-pool-manager"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -49,20 +46,6 @@ export default function DashboardPage() {
 
   const { data: nfts = [], isLoading: nftsLoading, isError: nftsError } = useInvestorNfts()
   const { data: logs = [], isLoading: logsLoading, isError: logsError } = useAuditLogs()
-
-  const [poolData, setPoolData] = useState<{ totalLiquidity: string; userLpBalance: string } | null>(null)
-
-  useEffect(() => {
-    apiInstance.get("/investor/pool/data")
-      .then((res) => {
-        const d = res.data.data
-        setPoolData({
-          totalLiquidity: d.totalPoolLiquidityCTC || d.totalLiquidity || "0.0000",
-          userLpBalance: d.userLpBalanceCTC || d.userLpBalance || "0.0000",
-        })
-      })
-      .catch(() => setPoolData({ totalLiquidity: "0.0000", userLpBalance: "0.0000" }))
-  }, [])
 
   const stats = useMemo(() => {
     const ownTokens = new Set(nfts.map((n) => String(n.tokenId)))
@@ -100,12 +83,6 @@ export default function DashboardPage() {
               icon={Wallet}
             />
             <StatCard
-              label="Pool Stake"
-              value={`${poolData?.userLpBalance || "0.0000"} tCTC`}
-              sub="Creditcoin CC3 Pool"
-              icon={TrendingUp}
-            />
-            <StatCard
               label="NFT Holdings"
               value={loading ? "\u2014" : dataUnavailable ? "0" : String(stats.nfts)}
               sub="Secured on Creditcoin"
@@ -140,9 +117,6 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Native CTC Liquidity Pool Manager */}
-          <LiquidityPoolManager />
 
           {/* Cash Flow + Activity */}
           <div className="grid gap-4 lg:grid-cols-2">
