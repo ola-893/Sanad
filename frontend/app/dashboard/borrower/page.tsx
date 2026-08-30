@@ -13,6 +13,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Bell,
   Plus,
   Loader2,
   type LucideIcon,
@@ -49,6 +50,7 @@ export default function BorrowerDashboardPage() {
   const ethBalance = walletBalance || "0.0000"
   const [loans, setLoans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
 
   useEffect(() => {
     // Fetch borrower's SAG loans
@@ -56,6 +58,13 @@ export default function BorrowerDashboardPage() {
       .then((res) => setLoans(res.data.data || []))
       .catch(() => setLoans([]))
       .finally(() => setLoading(false))
+  }, [])
+
+  // Fetch unread notification count
+  useEffect(() => {
+    apiInstance.get("/notifications/unread-count")
+      .then((res) => setUnreadNotifs(res.data?.data?.count || 0))
+      .catch(() => {})
   }, [])
 
   const [newEventsCount, setNewEventsCount] = useState(0)
@@ -116,7 +125,20 @@ export default function BorrowerDashboardPage() {
     <ProtectedRoute requiredRole="borrower">
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          <DashboardHeader portal="Borrower Portal" subtitle="Your gold financing overview" />
+          <div className="flex items-center justify-between">
+            <DashboardHeader portal="Borrower Portal" subtitle="Your gold financing overview" />
+            <Link href="/dashboard/borrower/notifications" className="relative">
+              <Button variant="outline" size="sm" className="rounded-xl gap-2">
+                <Bell className="h-4 w-4" />
+                Updates
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#E1BAC2] text-[10px] font-bold text-[#171414]">
+                    {unreadNotifs > 9 ? "9+" : unreadNotifs}
+                  </span>
+                )}
+              </Button>
+            </Link>
+          </div>
 
           {/* Scanning indicator */}
           {scanningEvents && newEventsCount === 0 && (

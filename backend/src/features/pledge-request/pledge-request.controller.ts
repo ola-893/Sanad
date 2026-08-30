@@ -19,6 +19,7 @@ import {
   getBorrowerProfileForPledge,
 } from "./pledge-request.repository.js";
 import { getSocketService } from "../../services/socket.service.js";
+import { createNotification } from "../notification/notification.repository.js";
 
 function getToken(req: Request): string {
   return req.headers.authorization?.startsWith("Bearer ")
@@ -86,6 +87,15 @@ export class PledgeRequestController {
           status: "pending",
         });
       }
+
+      // Save notification for pawnshop
+      await createNotification({
+        userId: pawnshopId,
+        type: "pledge_request_new",
+        title: "New Pledge Request",
+        message: `${user.userFirstName} ${user.userLastName} wants to pledge ${goldDetails.weightG}g ${goldDetails.assetType} ${goldDetails.karat}K gold.`,
+        data: { requestId: request.id, borrowerWallet: user.accountId, goldType: goldDetails.assetType, weight: goldDetails.weightG },
+      });
 
       res.status(201).json({
         success: true,
@@ -208,6 +218,15 @@ export class PledgeRequestController {
         });
       }
 
+      // Save notification for borrower
+      await createNotification({
+        userId: request.borrowerId,
+        type: "pledge_accepted",
+        title: "Pledge Request Accepted",
+        message: `${user.userFirstName} ${user.userLastName} accepted your pledge request. Contact: ${contactName || "N/A"}, ${contactPhone || "N/A"}. Location: ${location || "N/A"}.`,
+        data: { requestId: request.id, contactName, contactPhone, location },
+      });
+
       res.status(200).json({
         success: true,
         message: "Pledge request accepted. Borrower has been notified to schedule a physical meeting.",
@@ -254,6 +273,14 @@ export class PledgeRequestController {
           notes,
         });
       }
+
+      await createNotification({
+        userId: request.borrowerId,
+        type: "pledge_rejected",
+        title: "Pledge Request Rejected",
+        message: `${user.userFirstName} ${user.userLastName} declined your pledge request.${notes ? ` Reason: ${notes}` : ""}`,
+        data: { requestId: request.id },
+      });
 
       res.status(200).json({
         success: true,
@@ -313,6 +340,18 @@ export class PledgeRequestController {
           verifiedKarat: parsed.data.verifiedKarat,
         });
       }
+
+      const verifiedMsg = parsed.data.verificationStatus === "verified"
+        ? `Gold verified!${parsed.data.verifiedWeightG ? ` Weight: ${parsed.data.verifiedWeightG}g.` : ""} You can now meet the pawnshop to complete the process.`
+        : `Gold rejected by pawnshop.${parsed.data.verificationNotes ? ` Reason: ${parsed.data.verificationNotes}` : ""}`;
+
+      await createNotification({
+        userId: request.borrowerId,
+        type: parsed.data.verificationStatus === "verified" ? "gold_verified" : "gold_rejected",
+        title: parsed.data.verificationStatus === "verified" ? "Gold Verified" : "Gold Rejected",
+        message: verifiedMsg,
+        data: { requestId: request.id, verificationStatus: parsed.data.verificationStatus },
+      });
 
       const msg = parsed.data.verificationStatus === "verified"
         ? "Gold verified. Borrower has been notified."
@@ -375,6 +414,14 @@ export class PledgeRequestController {
           paymentCc3TxHash: parsed.data.paymentCc3TxHash || "",
         });
       }
+
+      await createNotification({
+        userId: request.borrowerId,
+        type: "payment_received",
+        title: "Payment Received",
+        message: `Pawnshop has paid $${parsed.data.paymentAmountUsd.toLocaleString()} USD to your wallet. Sepolia tx: ${parsed.data.paymentTxHash.slice(0, 10)}...`,
+        data: { requestId: request.id, paymentTxHash: parsed.data.paymentTxHash, paymentCc3TxHash: parsed.data.paymentCc3TxHash, paymentAmountUsd: parsed.data.paymentAmountUsd },
+      });
 
       res.status(200).json({
         success: true,

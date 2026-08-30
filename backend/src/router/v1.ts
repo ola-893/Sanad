@@ -16,6 +16,7 @@ import rbacRoutes from '@/features/rbac/rbac.routes.js';
 import schedulerRoutes from '@/features/scheduler/scheduler.routes.js';
 import { creditOracleRoutes, CreditOracleController } from '@/core/credit-bureau/index.js';
 import { pledgeRequestRoutes } from '@/features/pledge-request/index.js';
+import { notificationRoutes } from '@/features/notification/notification.routes.js';
 
 const v1Router = express.Router();
 
@@ -38,6 +39,9 @@ v1Router.use('/gold-price', goldPriceRoutes);
 
 // Borrower-to-Pawnshop Pledge Requests
 v1Router.use('/pledge-requests', pledgeRequestRoutes);
+
+// Notifications
+v1Router.use('/notifications', notificationRoutes);
 
 // RBAC & Admin routes
 v1Router.use('/rbac', rbacRoutes);
