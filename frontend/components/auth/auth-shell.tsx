@@ -28,8 +28,8 @@ export function AuthShell({ kicker, title, subtitle, auditNote, children, footer
         {children}
 
         <div className="mt-6 text-center">
-          <p className="flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            <LockIcon className="h-3 w-3" />
+          <p className="flex items-center justify-center gap-1.5 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <LockIcon className="h-3 w-3 shrink-0" />
             {auditNote}
           </p>
           <div className="mt-2 space-x-2">

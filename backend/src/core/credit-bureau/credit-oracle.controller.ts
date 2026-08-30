@@ -141,6 +141,36 @@ export class CreditOracleController {
   }
 
   /**
+   * POST /api/credit-oracle/prove-pawnshop-payment
+   * Proves a pawnshop-to-borrower ETH payment on CC3 via Attestcoin BlockProver
+   */
+  public async provePawnshopPayment(req: Request, res: Response): Promise<void> {
+    try {
+      const { sourceTxHash, chainKey, borrowerAddress } = req.body;
+      if (!sourceTxHash || typeof sourceTxHash !== 'string' || !sourceTxHash.startsWith('0x')) {
+        res.status(400).json({ success: false, message: 'Valid sourceTxHash required (0x...)' });
+        return;
+      }
+
+      const result = await this.relayerService.provePawnshopPayment(
+        sourceTxHash,
+        chainKey ? Number(chainKey) : 1,
+        borrowerAddress,
+      );
+
+      if (!result.success) {
+        res.status(500).json({ success: false, message: result.error });
+        return;
+      }
+
+      res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      console.error('[CreditOracleController] provePawnshopPayment error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Failed to prove pawnshop payment' });
+    }
+  }
+
+  /**
    * POST /api/v1/credit-oracle/prove-repayment OR /api/v1/loan/repay/prove
    * Cryptographically verifies an Ethereum Sepolia repayment tx and settles the loan on CC3
    */

@@ -18,8 +18,6 @@ export interface GoldPriceJobResult {
   message: string;
   goldPriceData?: {
     pricePerGramUsd: number;
-    pricePerGramMyr: number;
-    exchangeRate: number;
     source: string;
   };
   error?: string;
@@ -49,8 +47,6 @@ export async function processGoldPriceJob(job: Job<GoldPriceJobData>): Promise<G
     const goldPriceEntry = {
       date: today,
       pricePerGramUsd: goldPriceData.pricePerGramUsd.toString(),
-      pricePerGramMyr: goldPriceData.pricePerGramMyr.toString(),
-      exchangeRate: goldPriceData.exchangeRate.toString(),
       source: goldPriceData.source
     };
     
@@ -60,9 +56,7 @@ export async function processGoldPriceJob(job: Job<GoldPriceJobData>): Promise<G
     console.log(`Gold price data stored successfully:`, {
       id: result[0]?.id,
       date: goldPriceEntry.date,
-      pricePerGramUsd: goldPriceEntry.pricePerGramUsd,
-      pricePerGramMyr: goldPriceEntry.pricePerGramMyr,
-      exchangeRate: goldPriceEntry.exchangeRate
+      pricePerGramUsd: goldPriceEntry.pricePerGramUsd
     });
     
     return {

@@ -8,6 +8,7 @@ router.post('/discover', controller.discoverWallet.bind(controller));
 router.post('/fetch-proof', controller.fetchProof.bind(controller));
 router.post('/prove-event', controller.proveAndScoreEvent.bind(controller));
 router.post('/prove-repayment', controller.proveRepayment.bind(controller));
+router.post('/prove-pawnshop-payment', controller.provePawnshopPayment.bind(controller));
 router.get('/profile/:address', controller.getProfile.bind(controller));
 router.get('/info', controller.getOracleInfo.bind(controller));
 

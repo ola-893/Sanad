@@ -76,7 +76,7 @@ export function TopUpDialog() {
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="amount">Amount (RM)</Label>
+            <Label htmlFor="amount">Amount (USD)</Label>
             <Input
               id="amount"
               type="number"

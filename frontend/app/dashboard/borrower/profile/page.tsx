@@ -32,9 +32,19 @@ interface UserProfile {
   icNo: string
 }
 
+interface CreditProfile {
+  score: number
+  tier: string
+  totalRepaidUSD: string
+  cleanRepaymentCount: number
+  provenEventsCount: number
+  liquidationCount: number
+}
+
 export default function BorrowerProfilePage() {
   const { walletAddress, isConnected, chainId, truncateAddress } = useWalletAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [creditProfile, setCreditProfile] = useState<CreditProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,7 +62,20 @@ export default function BorrowerProfilePage() {
     setError(null)
     try {
       const res = await apiInstance.get("/auth/user/profile")
-      setProfile(res.data.data?.userInfo || res.data.data)
+      const userData = res.data.data?.userInfo || res.data.data
+      setProfile(userData)
+
+      // Fetch live credit profile from credit oracle (includes proven-event scores)
+      if (walletAddress) {
+        try {
+          const creditRes = await apiInstance.get(`/credit-oracle/profile/${walletAddress}`)
+          if (creditRes.data?.success) {
+            setCreditProfile(creditRes.data.data)
+          }
+        } catch {
+          // No credit profile yet -- leave as null
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to load profile")
     } finally {
@@ -61,6 +84,16 @@ export default function BorrowerProfilePage() {
   }
 
   useEffect(() => { fetchProfile() }, [])
+
+  // Fetch credit profile separately when walletAddress becomes available (async MetaMask detection)
+  useEffect(() => {
+    if (!walletAddress) return
+    apiInstance.get(`/credit-oracle/profile/${walletAddress}`)
+      .then((res) => {
+        if (res.data?.success) setCreditProfile(res.data.data)
+      })
+      .catch(() => {}) // No credit profile yet
+  }, [walletAddress])
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "\u2014"
@@ -129,7 +162,14 @@ export default function BorrowerProfilePage() {
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wider">Credit Score</span>
                 </div>
-                <p className="text-2xl font-extrabold text-[#171414]">--</p>
+                <p className="text-2xl font-extrabold text-[#171414]">
+                  {creditProfile?.score ?? "--"}
+                </p>
+                {creditProfile?.tier && (
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A] mt-0.5">
+                    {creditProfile.tier}
+                  </p>
+                )}
               </div>
               <div className="glass-panel rounded-2xl border border-[#171414]/10 p-4 shadow-soft-editorial">
                 <div className="flex items-center gap-2 text-[#4A4A4A] mb-1">

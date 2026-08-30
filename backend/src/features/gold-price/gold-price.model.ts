@@ -7,8 +7,6 @@ export const GoldPrice = MainSchema.table('gold_price', {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
     date: timestamp('date', { withTimezone: true }).notNull(),
     pricePerGramUsd: decimal('price_per_gram_usd', { precision: 10, scale: 2 }).notNull(),
-    pricePerGramMyr: decimal('price_per_gram_myr', { precision: 10, scale: 2 }).notNull(),
-    exchangeRate: decimal('exchange_rate', { precision: 10, scale: 4 }).notNull(),
     source: varchar('source', { length: 50 }).default('manual').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
@@ -18,15 +16,11 @@ export const GoldPrice = MainSchema.table('gold_price', {
 export const GoldPriceSchema = z.object({
     date: z.string().min(1, 'Date is required'),
     pricePerGramUsd: z.number().positive('USD price per gram must be positive'),
-    pricePerGramMyr: z.number().positive('MYR price per gram must be positive'),
-    exchangeRate: z.number().positive('Exchange rate must be positive'),
     source: z.string().min(1, 'Source is required').default('manual')
 });
 
 export const GoldPriceUpdateSchema = z.object({
     pricePerGramUsd: z.number().positive('USD price per gram must be positive').optional(),
-    pricePerGramMyr: z.number().positive('MYR price per gram must be positive').optional(),
-    exchangeRate: z.number().positive('Exchange rate must be positive').optional(),
     source: z.string().min(1, 'Source is required').optional()
 });
 

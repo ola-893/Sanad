@@ -68,7 +68,7 @@ export async function processAsyncCreditcoinSag(job: Job<AsyncCreditcoinSagJobDa
     // Stage 2: AI Gold Valuation (35%)
     await updateProgress(job, socketService, userId, 'ai_evaluation', 35, 'AI agent appraising gold purity and computing dynamic LTV...');
     const goldEvaluateJson = {
-      principal_myr: validatedData.sagProperties.loan,
+      principal_usd: validatedData.sagProperties.loan,
       gold_weight_g: validatedData.sagProperties.weightG,
       purity: validatedData.sagProperties.purity,
       tenure_days: validatedData.sagProperties.tenorM * 30,
@@ -77,7 +77,7 @@ export async function processAsyncCreditcoinSag(job: Job<AsyncCreditcoinSagJobDa
       credit_score: borrowerCreditScore,
     };
 
-    console.log(`[AI Evaluator] Async job evaluating loan for borrower (User: '${userId}', Wallet: '${borrowerAddress}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_myr} MYR`);
+    console.log(`[AI Evaluator] Async job evaluating loan for borrower (User: '${userId}', Wallet: '${borrowerAddress}'): Tier=${borrowerCreditTier}, Score=${borrowerCreditScore}, Loan=${goldEvaluateJson.principal_usd} USD`);
 
     let goldEvalResult = null;
     try {

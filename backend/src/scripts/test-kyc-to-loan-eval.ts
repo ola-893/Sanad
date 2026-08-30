@@ -70,7 +70,7 @@ async function testKycToLoanEvaluation() {
     }
 
     const goldEvaluateJson = {
-      principal_myr: loanPrincipal,
+      principal_usd: loanPrincipal,
       gold_weight_g: goldGrams,
       purity: purity,
       tenure_days: tenorMonths * 30,
@@ -85,27 +85,27 @@ async function testKycToLoanEvaluation() {
 
     const evalResult = await callGoldEvaluator(goldEvaluateJson);
     console.log(`\nEVALUATOR OUTPUT for '${userId}' (Tier: ${evalResult.metrics.credit_tier}, Score: ${evalResult.metrics.credit_score}):`);
-    console.log(`  • Appraised Collateral Value: ${evalResult.metrics.collateral_value_myr.toFixed(2)} MYR`);
-    console.log(`  • Requested Loan Principal: ${evalResult.metrics.principal_myr.toFixed(2)} MYR (${(evalResult.metrics.ltv * 100).toFixed(2)}% LTV)`);
+    console.log(`  • Appraised Collateral Value: ${evalResult.metrics.collateral_value_usd.toFixed(2)} USD`);
+    console.log(`  • Requested Loan Principal: ${evalResult.metrics.principal_usd.toFixed(2)} USD (${(evalResult.metrics.ltv * 100).toFixed(2)}% LTV)`);
     console.log(`  • Base Safe LTV: ${(evalResult.metrics.base_max_safe_ltv * 100).toFixed(1)}%`);
     console.log(`  • Credit Tier LTV Delta: ${(evalResult.metrics.credit_tier_ltv_delta >= 0 ? '+' : '')}${(evalResult.metrics.credit_tier_ltv_delta * 100).toFixed(1)}%`);
     console.log(`  • Max Allowable Safe LTV: ${(evalResult.metrics.max_safe_ltv * 100).toFixed(1)}%`);
-    console.log(`  • Max Safe Loan Capacity: ${evalResult.metrics.max_recommended_loan_myr.toFixed(2)} MYR`);
+    console.log(`  • Max Safe Loan Capacity: ${evalResult.metrics.max_recommended_loan_usd.toFixed(2)} USD`);
     console.log(`  • Recommendation Action: ${evalResult.recommendation.action.toUpperCase()}`);
     console.log(`  • Rationale: ${evalResult.recommendation.rationale}`);
     return { payload: goldEvaluateJson, result: evalResult };
   }
 
-  // Identical collateral for both: 25g 22K (916 purity) gold, requested loan 5,500 MYR, 3 months
+  // Identical collateral for both: 25g 22K (916 purity) gold, requested loan 5,500 USD, 3 months
   const goldRun = await simulateSagLoanAppraisal(goldUserId, goldWallet, 5500, 25, 916, 3);
   const unscoredRun = await simulateSagLoanAppraisal(unscoredUserId, unscoredWallet, 5500, 25, 916, 3);
 
   console.log('\n========================================================================');
   console.log('COMPARISON SUMMARY:');
   console.log('========================================================================');
-  console.log(`Gold Tier Safe LTV:     ${(goldRun.result.metrics.max_safe_ltv * 100).toFixed(1)}% -> Max Loan: ${goldRun.result.metrics.max_recommended_loan_myr.toFixed(2)} MYR`);
-  console.log(`Unscored Base Safe LTV: ${(unscoredRun.result.metrics.max_safe_ltv * 100).toFixed(1)}% -> Max Loan: ${unscoredRun.result.metrics.max_recommended_loan_myr.toFixed(2)} MYR`);
-  console.log(`Net Borrowing Power Delta: +${(goldRun.result.metrics.max_recommended_loan_myr - unscoredRun.result.metrics.max_recommended_loan_myr).toFixed(2)} MYR (+10.0% LTV boost for verified on-chain credit)`);
+  console.log(`Gold Tier Safe LTV:     ${(goldRun.result.metrics.max_safe_ltv * 100).toFixed(1)}% -> Max Loan: ${goldRun.result.metrics.max_recommended_loan_usd.toFixed(2)} USD`);
+  console.log(`Unscored Base Safe LTV: ${(unscoredRun.result.metrics.max_safe_ltv * 100).toFixed(1)}% -> Max Loan: ${unscoredRun.result.metrics.max_recommended_loan_usd.toFixed(2)} USD`);
+  console.log(`Net Borrowing Power Delta: +${(goldRun.result.metrics.max_recommended_loan_usd - unscoredRun.result.metrics.max_recommended_loan_usd).toFixed(2)} USD (+10.0% LTV boost for verified on-chain credit)`);
   process.exit(0);
 }
 

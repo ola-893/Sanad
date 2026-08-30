@@ -48,7 +48,7 @@ export async function createPawnshopProfile(data: {
       city: data.city,
       state: data.state,
       postalCode: data.postalCode || '',
-      country: data.country || 'Malaysia',
+      country: data.country || 'Nigeria',
       latitude: data.latitude || '',
       longitude: data.longitude || '',
       operatingHours: data.operatingHours || {},

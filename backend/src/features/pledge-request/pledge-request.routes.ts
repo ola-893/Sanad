@@ -13,4 +13,9 @@ router.get('/:id', pledgeRequestController.getById.bind(pledgeRequestController)
 router.patch('/:id/accept', pledgeRequestController.accept.bind(pledgeRequestController));
 router.patch('/:id/reject', pledgeRequestController.reject.bind(pledgeRequestController));
 
+// V2: Physical verification, payment, and SAG minting
+router.patch('/:id/verify-gold', pledgeRequestController.verifyGold.bind(pledgeRequestController));
+router.patch('/:id/record-payment', pledgeRequestController.recordPayment.bind(pledgeRequestController));
+router.patch('/:id/mint-sag', pledgeRequestController.mintSag.bind(pledgeRequestController));
+
 export { router as pledgeRequestRoutes };

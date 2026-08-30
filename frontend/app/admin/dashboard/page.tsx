@@ -200,11 +200,11 @@ export default function AdminDashboardPage() {
           </div>
           <p className={LABEL}>Gold Price</p>
           <p className={`mt-1 ${VALUE}`}>
-            {goldPrice?.data?.pricePerGramMyr
-              ? `$${parseFloat(goldPrice.data.pricePerGramMyr).toFixed(2)}`
+            {goldPrice?.data?.pricePerGramUsd
+              ? `$${parseFloat(goldPrice.data.pricePerGramUsd).toFixed(2)}`
               : "—"}
           </p>
-          <p className="mt-1 text-xs text-[#4A4A4A]">per gram (CTC)</p>
+          <p className="mt-1 text-xs text-[#4A4A4A]">per gram (USD)</p>
         </div>
 
         {/* Network Status */}
@@ -389,10 +389,10 @@ export default function AdminDashboardPage() {
                 <span className="font-mono text-sm font-bold text-[#171414]">{totalKyc}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-[#4A4A4A]">Gold Price (CTC/g)</span>
+                <span className="text-sm text-[#4A4A4A]">Gold Price (USD/g)</span>
                 <span className="font-mono text-sm font-bold text-[#171414]">
-                  {goldPrice?.data?.pricePerGramMyr
-                    ? `$${parseFloat(goldPrice.data.pricePerGramMyr).toFixed(2)}`
+                  {goldPrice?.data?.pricePerGramUsd
+                    ? `$${parseFloat(goldPrice.data.pricePerGramUsd).toFixed(2)}`
                     : "—"}
                 </span>
               </div>

@@ -29,7 +29,7 @@ export const PawnshopProfileModel = MainSchema.table('pawnshop_profile', {
   city: varchar('city', { length: 100 }).default(''),
   state: varchar('state', { length: 100 }).default(''),
   postalCode: varchar('postal_code', { length: 10 }).default(''),
-  country: varchar('country', { length: 50 }).default('Malaysia'),
+  country: varchar('country', { length: 50 }).default('Nigeria'),
 
   // Location (GPS)
   latitude: varchar('latitude', { length: 20 }).default(''),
