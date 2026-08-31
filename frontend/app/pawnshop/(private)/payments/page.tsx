@@ -75,10 +75,14 @@ export default function PawnshopPaymentsPage() {
 
   useEffect(() => {
     fetchVerifiedRequests()
-    // Fetch ETH price
-    apiInstance.get("/eth-price")
-      .then((res) => setEthPrice(res.data?.data?.usd || 0))
-      .catch(() => setEthPrice(4500))
+    const fetchEthPrice = () => {
+      apiInstance.get("/eth-price")
+        .then((res) => setEthPrice(res.data?.data?.usd || 0))
+        .catch(() => setEthPrice(0))
+    }
+    fetchEthPrice()
+    const interval = setInterval(fetchEthPrice, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   const openPayModal = (req: PledgeRequest) => {

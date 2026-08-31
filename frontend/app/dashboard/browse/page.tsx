@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { ethers } from 'ethers'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,8 +20,21 @@ import {
   Search,
   Filter,
   X,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react'
 import apiInstance from '@/lib/axios-v1'
+import {
+  SEPOLIA_INVESTOR_VAULT_ADDRESS,
+  INVESTOR_VAULT_ABI,
+  SEPOLIA_EXPLORER_URL,
+  switchOrAddSepoliaNetwork,
+  SEPOLIA_CHAIN_ID,
+} from '@/lib/contracts/sepolia-gateways'
 
 const glass = 'glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial'
 
@@ -59,12 +73,13 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
   const karat = props?.karat || (props?.purity >= 990 ? 24 : props?.purity >= 916 ? 22 : 18)
   const loan = props?.loan || 0
   const investmentTarget = props?.investmentTargetUsd || loan
+  const minInvestment = Math.round(investmentTarget * 0.1)
   const investmentFilled = props?.investmentFilledUsd || 0
   const remaining = investmentTarget - investmentFilled
   const progress = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
   const roi = props?.investorRoiPercentage || 12
   const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
-  const ethAmount = ethPrice > 0 ? (investmentTarget / ethPrice).toFixed(4) : '---'
+  const ethAmount = ethPrice > 0 ? (minInvestment / ethPrice).toFixed(4) : '---'
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
   const isFunded = remaining <= 0
 
@@ -93,8 +108,8 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
         <div className="px-5 py-4">
           <div className="flex items-end justify-between mb-3">
             <div>
-              <p className="text-[10px] font-mono uppercase text-muted-foreground">Investment Target</p>
-              <p className="text-2xl font-bold text-[#171414]">${investmentTarget.toLocaleString()}</p>
+              <p className="text-[10px] font-mono uppercase text-muted-foreground">Minimum Investment</p>
+              <p className="text-2xl font-bold text-[#171414]">${minInvestment.toLocaleString()}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-emerald-600 font-mono">~{ethAmount} ETH</p>
@@ -165,6 +180,12 @@ export default function BrowsePage() {
   const [investModal, setInvestModal] = useState<SagToken | null>(null)
   const [investAmount, setInvestAmount] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [depositStep, setDepositStep] = useState<'idle' | 'depositing' | 'proving' | 'done'>('idle')
+  const [depositTxHash, setDepositTxHash] = useState('')
+  const [cc3TxHash, setCc3TxHash] = useState('')
+  const [depositError, setDepositError] = useState('')
+  const [proofTimer, setProofTimer] = useState(0)
+  const proofTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     apiInstance
@@ -180,9 +201,14 @@ export default function BrowsePage() {
       })
       .finally(() => setLoading(false))
 
-    apiInstance.get('/eth-price')
-      .then((res) => setEthPrice(res.data?.data?.usd || 0))
-      .catch(() => setEthPrice(4500))
+    const fetchEthPrice = () => {
+      apiInstance.get('/eth-price')
+        .then((res) => setEthPrice(res.data?.data?.usd || 0))
+        .catch(() => setEthPrice(0))
+    }
+    fetchEthPrice()
+    const interval = setInterval(fetchEthPrice, 60_000) // refresh every 60s
+    return () => clearInterval(interval)
   }, [])
 
   const filtered = sags.filter((sag) => {
@@ -199,10 +225,11 @@ export default function BrowsePage() {
 
   const openInvestModal = (sag: SagToken) => {
     setInvestModal(sag)
-    const target = sag.sagProperties?.investmentTargetUsd || sag.sagProperties?.loan || 0
-    const filled = sag.sagProperties?.investmentFilledUsd || 0
-    const remaining = target - filled
-    setInvestAmount(String(Math.min(remaining, 1000)))
+    setInvestAmount('')
+    setDepositStep('idle')
+    setDepositTxHash('')
+    setCc3TxHash('')
+    setDepositError('')
   }
 
   return (
@@ -305,11 +332,11 @@ export default function BrowsePage() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg font-bold">Invest in {investModal.sagName}</h3>
-                <button onClick={() => { setInvestModal(null); setInvestAmount('') }}>
+                <button onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositStep('idle'); setDepositTxHash(''); setCc3TxHash(''); setDepositError(''); }}>
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
-              
+
               <div className="rounded-xl bg-muted p-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>Target: <span className="font-medium">${(investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0).toLocaleString()}</span></div>
@@ -319,55 +346,269 @@ export default function BrowsePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Investment Amount (USD)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    value={investAmount}
-                    onChange={(e) => setInvestAmount(e.target.value)}
-                    className="rounded-xl pl-7"
-                    min={investModal.sagProperties?.minInvestmentUsd || 100}
-                  />
+              {/* Amount Input (only in idle state) */}
+              {depositStep === 'idle' && (
+                <div className="space-y-2">
+                  <Label>Investment Amount (USD)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={investAmount}
+                      onChange={(e) => setInvestAmount(e.target.value)}
+                      className="rounded-xl pl-7"
+                      min={Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}
+                    />
+                  </div>
+                  {ethPrice > 0 && investAmount && (
+                    <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(6)} ETH @ ${ethPrice.toLocaleString()}/ETH</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">Min: ${Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}</p>
                 </div>
-                {ethPrice > 0 && investAmount && (
-                  <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(4)} ETH</p>
-                )}
-                <p className="text-[10px] text-muted-foreground">Min: ${investModal.sagProperties?.minInvestmentUsd || 100}</p>
-              </div>
+              )}
 
+              {/* Step Progress */}
+              {depositStep !== 'idle' && (
+                <div className="rounded-xl border border-black/10 bg-[#FAFAF8] p-4 space-y-3">
+                  {/* Step 1: Sepolia Deposit */}
+                  <div className="flex items-center gap-3">
+                    {depositStep === 'done' || depositTxHash ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                    ) : depositStep === 'depositing' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-xs font-medium">Deposit ETH to InvestorVault (Sepolia)</p>
+                      {depositTxHash && (
+                        <a href={`${SEPOLIA_EXPLORER_URL}/tx/${depositTxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+                          {depositTxHash.slice(0, 10)}...{depositTxHash.slice(-6)} <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  {/* Step 2: CC3 Proof */}
+                  <div className="flex items-center gap-3">
+                    {depositStep === 'done' && cc3TxHash ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                    ) : depositStep === 'proving' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-purple-600 shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-xs font-medium">Attestcoin Proof on CC3</p>
+                      {depositStep === 'proving' && !cc3TxHash && (
+                        <p className="text-[10px] text-muted-foreground">Waiting for Attestcoin Prover to index block... ({Math.floor(proofTimer / 60)}m {proofTimer % 60}s)</p>
+                      )}
+                      {cc3TxHash && (
+                        <p className="text-[10px] text-purple-600 font-mono">{cc3TxHash.slice(0, 10)}...{cc3TxHash.slice(-6)}</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Step 3: Record Investment */}
+                  <div className="flex items-center gap-3">
+                    {depositStep === 'done' ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                    )}
+                    <p className="text-xs font-medium">Record Investment</p>
+                  </div>
+                  {depositStep === 'done' && (
+                    <Progress value={100} className="h-2" />
+                  )}
+                </div>
+              )}
+
+              {/* Error */}
+              {depositError && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-50 p-3 text-xs text-rose-950">
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] break-all">{depositError}</p>
+                  </div>
+                  {/* Retry CC3 proof if Sepolia deposit succeeded but proof failed */}
+                  {depositTxHash && !cc3TxHash && (
+                    <Button
+                      onClick={async () => {
+                        setDepositError('')
+                        setDepositStep('proving')
+                        setProcessing(true)
+                        try {
+                          toast.info('Retrying CC3 proof...')
+                          const proveRes = await apiInstance.post('/investor/deposit/prove', {
+                            sourceTxHash: depositTxHash,
+                            chainKey: 1,
+                          })
+                          if (!proveRes.data?.success) {
+                            throw new Error(proveRes.data?.error || 'CC3 proof failed')
+                          }
+                          setCc3TxHash(proveRes.data.data?.cc3TxHash || proveRes.data.data?.transactionHash || '')
+                          if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
+                          toast.success('CC3 proof verified!')
+
+                          // Step 3: Record investment
+                          await apiInstance.post('/investor/invest', {
+                            sagTokenId: investModal.tokenId,
+                            amountUsd: Number(investAmount),
+                          })
+                          setDepositStep('done')
+                          toast.success('Investment complete!')
+                          const res = await apiInstance.get('/sag/')
+                          if (res.data.success) setSags(res.data.data ?? [])
+                        } catch (retryErr: any) {
+                          const backendErr = retryErr?.response?.data?.error || retryErr?.response?.data?.message || ''
+                          setDepositError(backendErr || retryErr.message || 'CC3 proof retry failed')
+                          toast.error(backendErr || 'CC3 proof retry failed')
+                        } finally {
+                          setProcessing(false)
+                        }
+                      }}
+                      disabled={processing}
+                      className="w-full rounded-xl gap-2 bg-purple-600 text-white hover:bg-purple-700"
+                    >
+                      {processing ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Retrying...</>
+                      ) : (
+                        <><RefreshCw className="h-4 w-4" /> Retry CC3 Proof</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setInvestModal(null); setInvestAmount('') }} disabled={processing}>
-                  Cancel
-                </Button>
                 <Button
-                  onClick={async () => {
-                    if (!investModal || !investAmount) return
-                    setProcessing(true)
-                    try {
-                      await apiInstance.post('/investor/invest', {
-                        sagTokenId: investModal.tokenId,
-                        amountUsd: Number(investAmount),
-                      })
-                      toast.success('Investment recorded!')
-                      setInvestModal(null)
-                      setInvestAmount('')
-                      // Refresh
-                      const res = await apiInstance.get('/sag/')
-                      if (res.data.success) setSags(res.data.data ?? [])
-                    } catch (err: any) {
-                      toast.error(err.response?.data?.error || 'Investment failed')
-                    } finally {
-                      setProcessing(false)
-                    }
-                  }}
-                  disabled={processing || !investAmount}
-                  className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                  variant="outline"
+                  onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositStep('idle'); setDepositTxHash(''); setCc3TxHash(''); setDepositError(''); setProofTimer(0); }}
+                  disabled={depositStep === 'depositing' || depositStep === 'proving'}
                 >
-                  {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Record Investment
+                  {depositStep === 'done' ? 'Close' : 'Cancel'}
                 </Button>
+                {depositStep === 'idle' && (
+                  <Button
+                    onClick={async () => {
+                      if (!investModal || !investAmount || ethPrice <= 0) return
+                      setProcessing(true)
+                      setDepositError('')
+                      try {
+                        const usdAmount = Number(investAmount)
+                        const ethAmount = usdAmount / ethPrice
+                        const weiAmount = ethers.parseEther(ethAmount.toFixed(18))
+
+                        // Step 1: MetaMask deposit to InvestorVault on Sepolia
+                        setDepositStep('depositing')
+                        toast.info(`Depositing ${ethAmount.toFixed(6)} ETH to InvestorVault...`)
+
+                        if (typeof window === 'undefined' || !(window as any).ethereum) {
+                          throw new Error('No EVM wallet detected. Please install MetaMask.')
+                        }
+
+                        const provider = new ethers.BrowserProvider((window as any).ethereum)
+                        const network = await provider.getNetwork()
+                        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+                          toast.info('Switching wallet to Ethereum Sepolia...')
+                          await switchOrAddSepoliaNetwork()
+                        }
+
+                        const signer = await provider.getSigner()
+                        const vaultContract = new ethers.Contract(
+                          SEPOLIA_INVESTOR_VAULT_ADDRESS,
+                          INVESTOR_VAULT_ABI,
+                          signer
+                        )
+
+                        const tx = await vaultContract.deposit(weiAmount, { value: weiAmount })
+                        setDepositTxHash(tx.hash)
+                        toast.info('Waiting for Sepolia confirmation...')
+                        const receipt = await tx.wait(1)
+
+                        // Verify the deposit actually succeeded (check tx status)
+                        if (receipt.status !== 1) {
+                          throw new Error('Transaction reverted on-chain. The deposit did not go through.')
+                        }
+                        // Verify ETH was sent (either directly or via delegation)
+                        const txValue = BigInt(receipt.value?.toString?.() || '0')
+                        if (txValue === weiAmount) {
+                          // Direct value transfer
+                        } else {
+                          // Delegation pattern — ETH forwarded via internal tx
+                          // Verify the investor address is in the calldata (vault received it)
+                          const inputLower = receipt.data?.toLowerCase() || ''
+                          if (!inputLower.includes(SEPOLIA_INVESTOR_VAULT_ADDRESS.toLowerCase().slice(2))) {
+                            throw new Error('Could not verify deposit reached the InvestorVault.')
+                          }
+                        }
+                        toast.success('Sepolia deposit confirmed!')
+
+                        // Step 2: Attestcoin proof on CC3
+                        setDepositStep('proving')
+                        setProofTimer(0)
+                        proofTimerRef.current = setInterval(() => setProofTimer((t) => t + 1), 1000)
+                        toast.info('Generating Attestcoin proof on CC3 — this can take a few minutes...')
+
+                        const proveRes = await apiInstance.post('/investor/deposit/prove', {
+                          sourceTxHash: tx.hash,
+                          chainKey: 1,
+                        })
+
+                        if (!proveRes.data?.success) {
+                          throw new Error(proveRes.data?.error || 'CC3 proof failed')
+                        }
+                        setCc3TxHash(proveRes.data.data?.cc3TxHash || proveRes.data.data?.transactionHash || '')
+                        if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
+                        toast.success('CC3 proof verified!')
+
+                        // Step 3: Record investment in backend
+                        await apiInstance.post('/investor/invest', {
+                          sagTokenId: investModal.tokenId,
+                          amountUsd: usdAmount,
+                        })
+
+                        setDepositStep('done')
+                        toast.success('Investment complete!')
+
+                        // Refresh SAG list
+                        const res = await apiInstance.get('/sag/')
+                        if (res.data.success) setSags(res.data.data ?? [])
+                      } catch (err: any) {
+                        // Extract actual backend error from Axios response
+                        const backendError = err?.response?.data?.error || err?.response?.data?.message || ''
+                        const msg = err?.message || ''
+                        let friendly = 'Deposit failed'
+                        if (msg.includes('user-rejected') || msg.includes('User denied') || msg.includes('ACTION_REJECTED') || err?.code === 4001) {
+                          friendly = 'Transaction cancelled. You rejected the request in MetaMask.'
+                        } else if (msg.includes('insufficient funds')) {
+                          friendly = 'Insufficient ETH balance in your wallet.'
+                        } else if (msg.includes('network') || msg.includes('chain')) {
+                          friendly = 'Network error. Please make sure you are on Sepolia.'
+                        } else if (backendError) {
+                          friendly = backendError
+                        } else {
+                          friendly = msg
+                        }
+                        if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
+                        setProofTimer(0)
+                        setDepositError(friendly)
+                        toast.error(friendly)
+                      } finally {
+                        setProcessing(false)
+                      }
+                    }}
+                    disabled={processing || !investAmount || ethPrice <= 0}
+                    className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                  >
+                    {processing ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+                    ) : (
+                      <><Send className="h-4 w-4" /> Invest</>
+                    )}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

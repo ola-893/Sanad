@@ -1,9 +1,9 @@
 "use client"
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import apiInstance from '@/lib/axios-v1'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, ExternalLinkIcon, Plus, ArrowLeftRight, Loader2, Eye, Calendar, DollarSign, TrendingUp, Info, Search, Grid, List, CheckCircle, XCircle, Clock } from 'lucide-react'
@@ -631,7 +631,19 @@ function PawnshopNFTs() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
+  const [ethPrice, setEthPrice] = useState(0)
 
+
+  useEffect(() => {
+    const fetchEthPrice = () => {
+      apiInstance.get("/eth-price")
+        .then((res) => setEthPrice(res.data?.data?.usd || 0))
+        .catch(() => setEthPrice(0))
+    }
+    fetchEthPrice()
+    const interval = setInterval(fetchEthPrice, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['sags', currentPage, pageSize],
@@ -919,45 +931,42 @@ function PawnshopNFTs() {
                   : 'border-l-4 border-l-green-500 bg-success/10/30 dark:bg-green-900/10 hover:bg-success/10/50 dark:hover:bg-green-900/20 dark:border-border'
                 }`}
             >
-              <CardHeader className={sag.status === 'closed' ? 'opacity-75' : ''}>
+              <CardHeader className={`pb-2 ${sag.status === 'closed' ? 'opacity-75' : ''}`}>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className={`text-lg ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-foreground dark:text-gray-100'}`}>
-                      {sag.sagName}
-                      {sag.status === 'closed' ? (
-                        <span className="ml-2 text-xs text-destructive dark:text-red-400 font-normal">[CLOSED]</span>
-                      ): null}
-                    </CardTitle>
-                    <CardDescription className={`mt-1 ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-muted-foreground dark:text-muted-foreground'}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className={`text-base truncate ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-foreground dark:text-gray-100'}`}>
+                        {sag.sagName}
+                      </CardTitle>
+                      <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${sag.status === 'closed'
+                          ? 'bg-destructive/10 dark:bg-red-900/30 text-destructive dark:text-red-300 border border-destructive/30 dark:border-red-700'
+                          : 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300 border border-success/30 dark:border-green-700'
+                        }`}>
+                        {sag.status === 'closed' ? 'CLOSED' : 'ACTIVE'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                       {sag.sagDescription}
-                    </CardDescription>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className={`text-xs px-2 py-1 rounded-full ${sag.status === 'closed'
-                        ? 'bg-muted dark:bg-gray-700 text-muted-foreground dark:text-muted-foreground'
-                        : 'bg-muted dark:bg-blue-900/30 text-primary dark:text-blue-300'
-                      }`}>
-                      {sag.sagType}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${sag.status === 'closed'
-                        ? 'bg-destructive/10 dark:bg-red-900/30 text-destructive dark:text-red-300 border border-destructive/30 dark:border-red-700'
-                        : 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300 border border-success/30 dark:border-green-700'
-                      }`}>
-                      {sag.status === 'closed' ? 'CLOSED' : 'ACTIVE'}
-                    </span>
+                    </p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className={sag.status === 'closed' ? 'opacity-75' : ''}>
-                {/* Key Stats Grid */}
+              <CardContent className={`pt-0 ${sag.status === 'closed' ? 'opacity-75' : ''}`}>
+                {/* Key Stats Row with ETH equivalents */}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <div className="rounded-lg bg-muted/50 p-2 text-center">
                     <p className="text-[10px] text-muted-foreground">Valuation</p>
                     <p className="text-sm font-bold">${sag.sagProperties.valuation?.toLocaleString() || '0'}</p>
+                    {ethPrice > 0 && sag.sagProperties.valuation > 0 && (
+                      <p className="text-[10px] font-mono text-muted-foreground/70">~{(sag.sagProperties.valuation / ethPrice).toFixed(4)} ETH</p>
+                    )}
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2 text-center">
                     <p className="text-[10px] text-muted-foreground">Loan</p>
                     <p className="text-sm font-bold text-emerald-600">${sag.sagProperties.loan?.toLocaleString() || '0'}</p>
+                    {ethPrice > 0 && sag.sagProperties.loan && sag.sagProperties.loan > 0 && (
+                      <p className="text-[10px] font-mono text-muted-foreground/70">~{(sag.sagProperties.loan / ethPrice).toFixed(4)} ETH</p>
+                    )}
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2 text-center">
                     <p className="text-[10px] text-muted-foreground">ROI/mo</p>
@@ -966,7 +975,7 @@ function PawnshopNFTs() {
                 </div>
 
                 {/* Compact Details */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Weight:</span>
                     <span className="font-medium">{sag.sagProperties.weightG}g</span>
@@ -980,21 +989,12 @@ function PawnshopNFTs() {
                     <span className="font-medium">{sag.sagProperties.tenorM ? Math.round(sag.sagProperties.tenorM / 30) : 3} months</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Token ID:</span>
-                    <span className="font-medium font-mono text-[11px]">{sag.tokenId || '-'}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${sag.sagProperties.enableMinting
-                      ? 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300'
-                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-muted-foreground'
-                      }`}>
-                      {sag.sagProperties.enableMinting ? 'Minting Enabled' : 'Minting Disabled'}
-                    </span>
+                    <span className="text-muted-foreground">Shares:</span>
+                    <span className="font-medium">{sag.sagProperties.mintShare.toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-2 mt-3">
                   {
                     sag.status !== 'closed' ? (
                       <ViewDetailsDialog sag={sag} />
