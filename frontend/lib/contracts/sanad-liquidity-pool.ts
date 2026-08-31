@@ -1,11 +1,12 @@
+// Fallback values synced from: backend/src/config/deployed-addresses.ts (single source of truth)
 export const SANAD_LIQUIDITY_POOL_ADDRESS =
   process.env.NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS ||
   process.env.NEXT_PUBLIC_LIQUIDITY_POOL_ADDRESS ||
-  '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA';
+  '0x039F125De2d66DEA87e56a5Fdf0CC884Ed6f93C2';
 
 export const SAG_TOKEN_ADDRESS =
   process.env.NEXT_PUBLIC_SAG_TOKEN_ADDRESS ||
-  '0x42d3cEB022f4f05467742D8826eceEA6c18bEf42';
+  '0x80b9Ae7D0BEfB042a3eb8fDd1af0DCF6E53bEdE9';
 
 export const SANAD_LIQUIDITY_POOL_ABI = [
   "constructor(address _sagToken)",

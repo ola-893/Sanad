@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { compileContracts } from './compile-contracts.js';
+import { DEPLOYED_ADDRESSES } from '../config/deployed-addresses.js';
 
 dotenv.config();
 
@@ -105,14 +106,14 @@ export async function deployToTestnet() {
   console.log(`  ✅ Granted MINTER_ROLE to Deployer (Tx: ${tx2.hash})`);
 
   // Set Sepolia RepaymentGateway and InvestorVault addresses if configured
-  const sepoliaGateway = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0x42F25F256762f17FAD2de8b2c6d650f87c8fe699';
+  const sepoliaGateway = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || DEPLOYED_ADDRESSES.sepolia.repaymentGateway;
   if (sepoliaGateway) {
     const gwTx = await (poolContract as any).setRepaymentGatewayAddress(sepoliaGateway);
     await gwTx.wait();
     console.log(`  ✅ Configured Sepolia RepaymentGateway (${sepoliaGateway}) on SanadLiquidityPool (Tx: ${gwTx.hash})`);
   }
 
-  const sepoliaVault = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || '0x218565BeC68691178FC61B28FCaEb78592088FDF';
+  const sepoliaVault = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || DEPLOYED_ADDRESSES.sepolia.investorVault;
   if (sepoliaVault) {
     const vaultTx = await (poolContract as any).setInvestorVaultAddress(sepoliaVault);
     await vaultTx.wait();

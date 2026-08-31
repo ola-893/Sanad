@@ -5,13 +5,15 @@ export const SEPOLIA_HEX_CHAIN_ID = '0xaa36a7';
 export const SEPOLIA_RPC_URL = 'https://ethereum-sepolia-rpc.publicnode.com';
 export const SEPOLIA_EXPLORER_URL = 'https://sepolia.etherscan.io';
 
+// Fallback values synced from: backend/src/config/deployed-addresses.ts (single source of truth)
 export const SEPOLIA_INVESTOR_VAULT_ADDRESS =
   process.env.NEXT_PUBLIC_SEPOLIA_INVESTOR_VAULT_ADDRESS ||
-  '0x218565BeC68691178FC61B28FCaEb78592088FDF';
+  '0x0e243c2F556eFaDA6352f567AA658b6052F04eD4'; // Updated by deploy-all.ts
 
+// Fallback values synced from: backend/src/config/deployed-addresses.ts (single source of truth)
 export const SEPOLIA_REPAYMENT_GATEWAY_ADDRESS =
   process.env.NEXT_PUBLIC_SEPOLIA_REPAYMENT_GATEWAY_ADDRESS ||
-  '0x42F25F256762f17FAD2de8b2c6d650f87c8fe699';
+  '0x662e21FfB91F35A1f16983e38a9cDAe90f537A80'; // Updated by deploy-all.ts
 
 export const INVESTOR_VAULT_ABI = [
   'function deposit(uint256 amount) external payable',

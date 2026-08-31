@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { SANAD_LIQUIDITY_POOL_ABI } from '../features/creditcoin/contracts/SanadLiquidityPool.abi.js';
 import { SAG_TOKEN_ABI } from '../features/creditcoin/contracts/SAGToken.abi.js';
+import { DEPLOYED_ADDRESSES } from '../config/deployed-addresses.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,9 +20,9 @@ const CC3_RPC = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.credi
 const SEPOLIA_RPC = process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
 
-const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA';
-const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || '0x42d3cEB022f4f05467742D8826eceEA6c18bEf42';
-const SEPOLIA_GATEWAY_ADDRESS = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || '0x42F25F256762f17FAD2de8b2c6d650f87c8fe699';
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || DEPLOYED_ADDRESSES.cc3.liquidityPool;
+const SAG_ADDRESS = process.env.SAG_TOKEN_ADDRESS || DEPLOYED_ADDRESSES.cc3.sagToken;
+const SEPOLIA_GATEWAY_ADDRESS = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || DEPLOYED_ADDRESSES.sepolia.repaymentGateway;
 
 const REPAYMENT_GATEWAY_ABI = [
   'function repay(uint256 tokenId, uint256 amount) external payable',

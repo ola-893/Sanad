@@ -5,6 +5,7 @@ import path from "path";
 // @ts-ignore
 import solc from "solc";
 import { proofProvider } from "@gluwa/usc-sdk";
+import { DEPLOYED_ADDRESSES } from "../config/deployed-addresses.js";
 
 dotenv.config();
 
@@ -13,6 +14,48 @@ const SEPOLIA_CHAIN_ID = 11155111;
 const CC3_RPC = process.env.CREDITCOIN_RPC_URL || "https://rpc.cc3-testnet.creditcoin.network";
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || "https://prover.cc3-testnet.creditcoin.network";
+
+const FRESH_DEPLOY = process.argv.includes("--fresh-deploy");
+
+// ABIs shared between fresh-deploy and deployed modes
+const INVESTOR_VAULT_ABI = [
+  "function deposit(uint256 amount) external payable",
+  "function fundLoan(uint256 tokenId, address pawnshop, uint256 appraisedValueUSD) external payable",
+  "function disburseLoan(uint256 tokenId, address borrower, uint256 amount) external payable",
+  "function loanFunders(uint256 tokenId) external view returns (address)",
+  "function loanPawnshops(uint256 tokenId) external view returns (address)",
+  "function loanAppraisedValue(uint256 tokenId) external view returns (uint256)",
+  "function loanDisbursed(uint256 tokenId) external view returns (bool)",
+  "event DepositMade(address indexed investor, uint256 amount, uint256 timestamp)",
+  "event LoanFunded(uint256 indexed tokenId, address indexed investor, address indexed pawnshop, uint256 amount, uint256 appraisedValueUSD, uint256 timestamp)",
+  "event LoanDisbursed(uint256 indexed tokenId, address indexed pawnshop, address indexed borrower, uint256 amount, uint256 appraisedValueUSD, uint256 timestamp)",
+];
+
+const REPAYMENT_GATEWAY_ABI = [
+  "function repay(uint256 tokenId, uint256 amount) external payable",
+  "function settleInvestor(uint256 tokenId, uint256 amount) external payable",
+  "function totalRepaidForToken(uint256 tokenId) external view returns (uint256)",
+  "function investorVaultAddress() external view returns (address)",
+  "event RepaymentMade(address indexed borrower, uint256 indexed tokenId, uint256 amount, uint256 timestamp)",
+  "event InvestorSettled(uint256 indexed tokenId, address indexed pawnshop, address indexed investor, uint256 amount, uint256 timestamp)",
+];
+
+const SAG_TOKEN_ABI = [
+  "function mintCollateral(tuple(address pawnshop, address borrower, uint256 weightGrams, uint8 karat, uint256 appraisedValueUSD, uint256 loanAmount, uint256 tenureDays, uint256 monthlyUjrahUSD, string ipfsUri) params) external returns (uint256)",
+  "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function grantRole(bytes32 role, address account) external",
+];
+
+const LIQUIDITY_POOL_ABI = [
+  "function depositLiquidity() external payable",
+  "function setInvestorVaultAddress(address _investorVault) external",
+  "function setRepaymentGatewayAddress(address _repaymentGateway) external",
+  "function totalPoolLiquidity() external view returns (uint256)",
+  "function tokenLoanBalance(uint256 tokenId) external view returns (uint256)",
+  "function loanInvestors(uint256 tokenId) external view returns (address)",
+  "function investorTotalProvenCapital(address investor) external view returns (uint256)",
+  "function verifyAndFundLoanCrossChain(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash) external returns (bool)",
+];
 
 function findImports(importPath: string) {
   let fullPath: string;
@@ -89,10 +132,78 @@ function compileAll() {
   };
 }
 
+/**
+ * Deploy fresh contracts (only when --fresh-deploy flag is passed).
+ */
+async function freshDeploy(adminCC3: ethers.Wallet, adminSepolia: ethers.Wallet, cc3Provider: ethers.JsonRpcProvider) {
+  const compiled = compileAll();
+
+  console.log("\n[2/7] Deploying Fresh Protocol Contracts on Creditcoin CC3 & Sepolia...");
+  const oracleFactory = new ethers.ContractFactory(compiled.SanadCreditOracle.abi, compiled.SanadCreditOracle.evm.bytecode.object, adminCC3);
+  const oracleContract = await oracleFactory.deploy();
+  await oracleContract.waitForDeployment();
+  const oracleAddr = await oracleContract.getAddress();
+  console.log("  ✅ SanadCreditOracle deployed at: " + oracleAddr);
+
+  const sagFactory = new ethers.ContractFactory(compiled.SAGToken.abi, compiled.SAGToken.evm.bytecode.object, adminCC3);
+  const sagContract = await sagFactory.deploy();
+  await sagContract.waitForDeployment();
+  const sagAddr = await sagContract.getAddress();
+  console.log("  ✅ SAGToken deployed at:           " + sagAddr);
+
+  const poolFactory = new ethers.ContractFactory(compiled.SanadLiquidityPool.abi, compiled.SanadLiquidityPool.evm.bytecode.object, adminCC3);
+  const poolContract = await poolFactory.deploy(sagAddr);
+  await poolContract.waitForDeployment();
+  const poolAddr = await poolContract.getAddress();
+  console.log("  ✅ SanadLiquidityPool deployed at: " + poolAddr);
+
+  // Grant roles on SAGToken
+  const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
+  const SETTLEMENT_ROLE = ethers.keccak256(ethers.toUtf8Bytes("SETTLEMENT_ROLE"));
+  const COMPLIANCE_ROLE = ethers.keccak256(ethers.toUtf8Bytes("COMPLIANCE_ROLE"));
+
+  await (await (sagContract as any).grantRole(MINTER_ROLE, adminCC3.address)).wait();
+  await (await (sagContract as any).grantRole(MINTER_ROLE, poolAddr)).wait();
+  await (await (sagContract as any).grantRole(SETTLEMENT_ROLE, poolAddr)).wait();
+  await (await (sagContract as any).grantRole(COMPLIANCE_ROLE, adminCC3.address)).wait();
+  console.log("  ✅ Granted SAGToken roles to Pool and Admin");
+
+  // Deploy Sepolia Gateways
+  const treasuryAddress = adminSepolia.address;
+  const vaultFactory = new ethers.ContractFactory(compiled.InvestorVault.abi, compiled.InvestorVault.evm.bytecode.object, adminSepolia);
+  const vaultContract = await vaultFactory.deploy(treasuryAddress);
+  await vaultContract.waitForDeployment();
+  const vaultAddr = await vaultContract.getAddress();
+  console.log("  ✅ InvestorVault deployed at:     " + vaultAddr);
+
+  const repayFactory = new ethers.ContractFactory(compiled.RepaymentGateway.abi, compiled.RepaymentGateway.evm.bytecode.object, adminSepolia);
+  const repayContract = await repayFactory.deploy(treasuryAddress, vaultAddr);
+  await repayContract.waitForDeployment();
+  const repayAddr = await repayContract.getAddress();
+  console.log("  ✅ RepaymentGateway deployed at:   " + repayAddr);
+
+  // Connect Sepolia addresses into CC3 Pool
+  await (await (poolContract as any).setInvestorVaultAddress(vaultAddr)).wait();
+  await (await (poolContract as any).setRepaymentGatewayAddress(repayAddr)).wait();
+  console.log("  ✅ Configured Sepolia gateways on SanadLiquidityPool");
+
+  // Baseline CC3 deposit
+  const baselineDeposit = ethers.parseEther("5.0");
+  await (await (poolContract as any).depositLiquidity({ value: baselineDeposit })).wait();
+  console.log("  ✅ Deposited 5.0 tCTC native liquidity into CC3 pool for baseline accounting");
+
+  return { sagAddr, poolAddr, oracleAddr, vaultAddr, repayAddr, sagContract, poolContract, vaultContract, repayContract, compiled };
+}
+
 async function main() {
   console.log("========================================================================");
   console.log("🚀 PEER-TO-PEER CROSS-CHAIN 3-PARTY 4-HOP LOAN LIFECYCLE E2E TEST");
   console.log("   (Investor -> Pawnshop -> Borrower -> Pawnshop -> Investor)");
+  if (FRESH_DEPLOY) {
+    console.log("   ⚠️  MODE: --fresh-deploy (deploying new contracts)");
+  } else {
+    console.log("   MODE: Using deployed contracts from deployed-addresses.ts");
+  }
   console.log("========================================================================");
 
   const pkAdmin = process.env.CREDITCOIN_PRIVATE_KEY || process.env.PRIVATE_KEY!;
@@ -136,63 +247,38 @@ async function main() {
   await fundBorrowerTx.wait();
   console.log("  ✅ Borrower funded with 0.005 ETH (Tx: " + fundBorrowerTx.hash + ")");
 
-  // 1. Compile contracts
-  const compiled = compileAll();
+  // Resolve contract addresses — either fresh deploy or from source-of-truth
+  let sagAddr: string, poolAddr: string, vaultAddr: string, repayAddr: string;
+  let sagContract: ethers.Contract, poolContract: ethers.Contract;
 
-  // 2. Deploy CC3 Contracts
-  console.log("\n[2/7] Deploying Fresh Protocol Contracts on Creditcoin CC3 & Sepolia...");
-  const oracleFactory = new ethers.ContractFactory(compiled.SanadCreditOracle.abi, compiled.SanadCreditOracle.evm.bytecode.object, adminCC3);
-  const oracleContract = await oracleFactory.deploy();
-  await oracleContract.waitForDeployment();
-  const oracleAddr = await oracleContract.getAddress();
-  console.log("  ✅ SanadCreditOracle deployed at: " + oracleAddr);
+  if (FRESH_DEPLOY) {
+    const result = await freshDeploy(adminCC3, adminSepolia, cc3Provider);
+    sagAddr = result.sagAddr;
+    poolAddr = result.poolAddr;
+    vaultAddr = result.vaultAddr;
+    repayAddr = result.repayAddr;
+    sagContract = new ethers.Contract(sagAddr, SAG_TOKEN_ABI, adminCC3);
+    poolContract = new ethers.Contract(poolAddr, LIQUIDITY_POOL_ABI, adminCC3);
+  } else {
+    // Read from deployed-addresses.ts (source of truth)
+    sagAddr = process.env.SAG_TOKEN_ADDRESS || DEPLOYED_ADDRESSES.cc3.sagToken;
+    poolAddr = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || DEPLOYED_ADDRESSES.cc3.liquidityPool;
+    vaultAddr = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || DEPLOYED_ADDRESSES.sepolia.investorVault;
+    repayAddr = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || DEPLOYED_ADDRESSES.sepolia.repaymentGateway;
 
-  const sagFactory = new ethers.ContractFactory(compiled.SAGToken.abi, compiled.SAGToken.evm.bytecode.object, adminCC3);
-  const sagContract = await sagFactory.deploy();
-  await sagContract.waitForDeployment();
-  const sagAddr = await sagContract.getAddress();
-  console.log("  ✅ SAGToken deployed at:           " + sagAddr);
+    if (sagAddr === '0x0000000000000000000000000000000000000000') {
+      throw new Error("deployed-addresses.ts has placeholder addresses. Run deploy-all.ts first, or pass --fresh-deploy.");
+    }
 
-  const poolFactory = new ethers.ContractFactory(compiled.SanadLiquidityPool.abi, compiled.SanadLiquidityPool.evm.bytecode.object, adminCC3);
-  const poolContract = await poolFactory.deploy(sagAddr);
-  await poolContract.waitForDeployment();
-  const poolAddr = await poolContract.getAddress();
-  console.log("  ✅ SanadLiquidityPool deployed at: " + poolAddr);
+    console.log("\n[1/7] Using Deployed Contracts (source of truth):");
+    console.log("  • CC3 SAGToken:           " + sagAddr);
+    console.log("  • CC3 LiquidityPool:      " + poolAddr);
+    console.log("  • Sepolia InvestorVault:   " + vaultAddr);
+    console.log("  • Sepolia RepaymentGateway:" + repayAddr);
 
-  // Grant roles on SAGToken
-  const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
-  const SETTLEMENT_ROLE = ethers.keccak256(ethers.toUtf8Bytes("SETTLEMENT_ROLE"));
-  const COMPLIANCE_ROLE = ethers.keccak256(ethers.toUtf8Bytes("COMPLIANCE_ROLE"));
-
-  await (await (sagContract as any).grantRole(MINTER_ROLE, adminCC3.address)).wait();
-  await (await (sagContract as any).grantRole(MINTER_ROLE, poolAddr)).wait();
-  await (await (sagContract as any).grantRole(SETTLEMENT_ROLE, poolAddr)).wait();
-  await (await (sagContract as any).grantRole(COMPLIANCE_ROLE, adminCC3.address)).wait();
-  console.log("  ✅ Granted SAGToken roles to Pool and Admin");
-
-  // 3. Deploy Sepolia Gateways
-  const treasuryAddress = adminSepolia.address;
-  const vaultFactory = new ethers.ContractFactory(compiled.InvestorVault.abi, compiled.InvestorVault.evm.bytecode.object, adminSepolia);
-  const vaultContract = await vaultFactory.deploy(treasuryAddress);
-  await vaultContract.waitForDeployment();
-  const vaultAddr = await vaultContract.getAddress();
-  console.log("  ✅ InvestorVault deployed at:     " + vaultAddr);
-
-  const repayFactory = new ethers.ContractFactory(compiled.RepaymentGateway.abi, compiled.RepaymentGateway.evm.bytecode.object, adminSepolia);
-  const repayContract = await repayFactory.deploy(treasuryAddress, vaultAddr);
-  await repayContract.waitForDeployment();
-  const repayAddr = await repayContract.getAddress();
-  console.log("  ✅ RepaymentGateway deployed at:   " + repayAddr);
-
-  // Connect Sepolia addresses into CC3 Pool
-  await (await (poolContract as any).setInvestorVaultAddress(vaultAddr)).wait();
-  await (await (poolContract as any).setRepaymentGatewayAddress(repayAddr)).wait();
-  console.log("  ✅ Configured Sepolia gateways on SanadLiquidityPool");
-
-  // Baseline CC3 deposit
-  const baselineDeposit = ethers.parseEther("5.0");
-  await (await (poolContract as any).depositLiquidity({ value: baselineDeposit })).wait();
-  console.log("  ✅ Deposited 5.0 tCTC native liquidity into CC3 pool for baseline accounting");
+    sagContract = new ethers.Contract(sagAddr, SAG_TOKEN_ABI, adminCC3);
+    poolContract = new ethers.Contract(poolAddr, LIQUIDITY_POOL_ABI, adminCC3);
+  }
 
   // 4. STEP 1: Mint SAG Collateral in ActivePledged (Awaiting Funding)
   console.log("\n[3/7] STEP 1: Minting SAG Gold Collateral Note on CC3 (Awaiting Funding)...");
@@ -212,8 +298,17 @@ async function main() {
   };
 
   const mintTx = await (sagContract as any).mintCollateral(mintParams);
-  await mintTx.wait();
-  const tokenId = 1n;
+  const mintReceipt = await mintTx.wait();
+
+  // Determine tokenId from Transfer event log (instead of assuming 1)
+  const transferTopic = ethers.id("Transfer(address,address,uint256)");
+  let tokenId = 1n;
+  for (const log of mintReceipt.logs) {
+    if (log.topics[0] === transferTopic && log.topics.length >= 4) {
+      tokenId = BigInt(log.topics[3]);
+      break;
+    }
+  }
   console.log("  ✅ Minted SAG Collateral Token ID: #" + tokenId);
   console.log("     Pawnshop: " + pawnshopWallet.address + " | Borrower: " + borrowerWallet.address);
   console.log("     Appraised Value USD (6 decimals): " + appraisedValueUSD + " ($3,500.00 USD) | Loan Principal: " + loanPrincipalUSD);
@@ -222,12 +317,13 @@ async function main() {
   console.log("\n[4/7] STEP 2: HOP 1 - Investor Directly Funds Pawnshop on Sepolia...");
   const fundingAmountWei = ethers.parseEther("0.001"); // 0.001 ETH
   const pawnshopBalBeforeHop1 = await sepoliaProvider.getBalance(pawnshopWallet.address);
+  const treasuryAddress = adminSepolia.address;
   const treasuryBalBeforeHop1 = await sepoliaProvider.getBalance(treasuryAddress);
 
   console.log("  • Pawnshop Sepolia Balance Before Hop 1: " + ethers.formatEther(pawnshopBalBeforeHop1) + " ETH");
   console.log("  • Calling InvestorVault.fundLoan(tokenId: " + tokenId + ", pawnshop: " + pawnshopWallet.address + ", appraisedUSD: " + appraisedValueUSD + ")...");
 
-  const vaultWithInvestor = new ethers.Contract(vaultAddr, compiled.InvestorVault.abi, investorWallet);
+  const vaultWithInvestor = new ethers.Contract(vaultAddr, INVESTOR_VAULT_ABI, investorWallet);
   const fundTx = await (vaultWithInvestor as any).fundLoan(tokenId, pawnshopWallet.address, appraisedValueUSD, {
     value: fundingAmountWei,
   });
@@ -251,9 +347,10 @@ async function main() {
     throw new Error("Hop 1 Failure: Treasury balance changed during peer-to-peer pawnshop funding!");
   }
 
-  const recordedFunder = await (vaultContract as any).loanFunders(tokenId);
-  const recordedPawnshop = await (vaultContract as any).loanPawnshops(tokenId);
-  const recordedAppraisal = await (vaultContract as any).loanAppraisedValue(tokenId);
+  const vaultRead = new ethers.Contract(vaultAddr, INVESTOR_VAULT_ABI, sepoliaProvider);
+  const recordedFunder = await (vaultRead as any).loanFunders(tokenId);
+  const recordedPawnshop = await (vaultRead as any).loanPawnshops(tokenId);
+  const recordedAppraisal = await (vaultRead as any).loanAppraisedValue(tokenId);
 
   console.log("  • InvestorVault.loanFunders(" + tokenId + "):       " + recordedFunder);
   console.log("  • InvestorVault.loanPawnshops(" + tokenId + "):     " + recordedPawnshop);
@@ -325,7 +422,7 @@ async function main() {
   const borrowerBalBeforeHop2 = await sepoliaProvider.getBalance(borrowerWallet.address);
   console.log("  • Borrower Sepolia Balance Before Hop 2: " + ethers.formatEther(borrowerBalBeforeHop2) + " ETH");
 
-  const vaultWithPawnshop = new ethers.Contract(vaultAddr, compiled.InvestorVault.abi, pawnshopWallet);
+  const vaultWithPawnshop = new ethers.Contract(vaultAddr, INVESTOR_VAULT_ABI, pawnshopWallet);
   const disburseTx = await (vaultWithPawnshop as any).disburseLoan(tokenId, borrowerWallet.address, fundingAmountWei, {
     value: fundingAmountWei,
   });
@@ -340,7 +437,7 @@ async function main() {
   if (hop2BorrowerDelta !== fundingAmountWei) {
     throw new Error("Hop 2 Failure: Borrower did not receive exact disbursement amount!");
   }
-  const isDisbursed = await (vaultContract as any).loanDisbursed(tokenId);
+  const isDisbursed = await (vaultRead as any).loanDisbursed(tokenId);
   if (!isDisbursed) {
     throw new Error("Hop 2 Failure: loanDisbursed is false on InvestorVault!");
   }
@@ -354,7 +451,7 @@ async function main() {
   const pawnshopBalBeforeHop3 = await sepoliaProvider.getBalance(pawnshopWallet.address);
   const treasuryBalBeforeHop3 = await sepoliaProvider.getBalance(treasuryAddress);
 
-  const repayWithBorrower = new ethers.Contract(repayAddr, compiled.RepaymentGateway.abi, borrowerWallet);
+  const repayWithBorrower = new ethers.Contract(repayAddr, REPAYMENT_GATEWAY_ABI, borrowerWallet);
   const repayTx = await (repayWithBorrower as any).repay(tokenId, fundingAmountWei, {
     value: fundingAmountWei,
   });
@@ -384,7 +481,7 @@ async function main() {
   const investorBalBeforeHop4 = await sepoliaProvider.getBalance(investorWallet.address);
   const treasuryBalBeforeHop4 = await sepoliaProvider.getBalance(treasuryAddress);
 
-  const repayWithPawnshop = new ethers.Contract(repayAddr, compiled.RepaymentGateway.abi, pawnshopWallet);
+  const repayWithPawnshop = new ethers.Contract(repayAddr, REPAYMENT_GATEWAY_ABI, pawnshopWallet);
   const settleTx = await (repayWithPawnshop as any).settleInvestor(tokenId, fundingAmountWei, {
     value: fundingAmountWei,
   });

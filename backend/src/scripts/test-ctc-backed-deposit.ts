@@ -1,14 +1,16 @@
 import { ethers } from "ethers";
 import dotenv from "dotenv";
+import { DEPLOYED_ADDRESSES } from "../config/deployed-addresses.js";
 dotenv.config();
 
-const INVESTOR_VAULT_ADDRESS = "0x218565BeC68691178FC61B28FCaEb78592088FDF";
+// Source of truth: backend/src/config/deployed-addresses.ts
+const INVESTOR_VAULT_ADDRESS = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || DEPLOYED_ADDRESSES.sepolia.investorVault;
 const INVESTOR_VAULT_ABI = [
   "function deposit(uint256 amount) external payable",
   "event DepositMade(address indexed investor, uint256 amount, uint256 timestamp)",
 ];
 
-const POOL_ADDRESS = "0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70";
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || DEPLOYED_ADDRESSES.cc3.liquidityPool;
 const DEMO_ETH_TO_CTC_RATE = 2500n;
 
 async function main() {

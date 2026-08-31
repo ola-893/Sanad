@@ -1,5 +1,6 @@
 // Single-chain, Creditcoin only. Do not reintroduce Sepolia, USC, or Attestcoin without explicit sign-off.
 import dotenv from 'dotenv';
+import { DEPLOYED_ADDRESSES } from '@/config/deployed-addresses.js';
 dotenv.config();
 
 /**
@@ -50,9 +51,9 @@ export const CREDITCOIN_CONFIG: CreditcoinNetworkConfig = {
 
   // Deployed Contract Addresses on Creditcoin 3 Testnet
   contracts: {
-    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || '0x42d3cEB022f4f05467742D8826eceEA6c18bEf42',
-    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA',
-    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || '0xE45e8F367C02B9d5f5A165827824351457Dd8353',
+    sagTokenAddress: process.env.SAG_TOKEN_ADDRESS || process.env.SAG_TOKEN_CONTRACT_ADDRESS || DEPLOYED_ADDRESSES.cc3.sagToken,
+    liquidityPoolAddress: process.env.SANAD_LIQUIDITY_POOL_ADDRESS || process.env.LIQUIDITY_POOL_CONTRACT_ADDRESS || DEPLOYED_ADDRESSES.cc3.liquidityPool,
+    creditOracleAddress: process.env.SANAD_CREDIT_ORACLE_ADDRESS || DEPLOYED_ADDRESSES.cc3.creditOracle,
   },
 };
 

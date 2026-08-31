@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 import dotenv from 'dotenv';
 import { CREDITCOIN_CONFIG, DEMO_ETH_TO_CTC_RATE } from '@/features/creditcoin/creditcoin.config.js';
+import { DEPLOYED_ADDRESSES } from '@/config/deployed-addresses.js';
 import { SANAD_LIQUIDITY_POOL_ABI } from '@/features/creditcoin/contracts/SanadLiquidityPool.abi.js';
 import { DiscoveredDeFiEvent, Protocol, EventType } from './defi-discovery.service.js';
 import { db } from '@/db/index.js';
@@ -65,7 +66,7 @@ export class AttestcoinOracleRelayerService {
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
-    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || '0xE45e8F367C02B9d5f5A165827824351457Dd8353';
+    this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || DEPLOYED_ADDRESSES.cc3.creditOracle;
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
     this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
   }
@@ -158,7 +159,7 @@ export class AttestcoinOracleRelayerService {
     }
     // Delegation pattern: tx.value is 0, ETH forwarded via internal transactions
     // Look for the InvestorVault DepositMade event to extract the actual amount
-    const vaultAddress = (process.env.NEXT_PUBLIC_SEPOLIA_INVESTOR_VAULT_ADDRESS || '0x218565BeC68691178FC61B28FCaEb78592088FDF').toLowerCase();
+    const vaultAddress = (process.env.NEXT_PUBLIC_SEPOLIA_INVESTOR_VAULT_ADDRESS || DEPLOYED_ADDRESSES.sepolia.investorVault).toLowerCase();
     const receipt = await provider.getTransactionReceipt(sourceTxHash);
     if (receipt) {
       // DepositMade(address indexed investor, uint256 amount, uint256 timestamp)
