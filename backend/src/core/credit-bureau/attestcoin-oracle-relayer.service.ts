@@ -152,10 +152,43 @@ export class AttestcoinOracleRelayerService {
     if (!tx) {
       throw new Error(`Source transaction ${sourceTxHash} not found on chain ${chainKey}`);
     }
-    if (tx.value === 0n) {
-      throw new Error(`Source transaction ${sourceTxHash} has zero msg.value — nothing to back`);
+    // Direct value transfer
+    if (tx.value > 0n) {
+      return tx.value;
     }
-    return tx.value;
+    // Delegation pattern: tx.value is 0, ETH forwarded via internal transactions
+    // Look for the InvestorVault DepositMade event to extract the actual amount
+    const vaultAddress = (process.env.NEXT_PUBLIC_SEPOLIA_INVESTOR_VAULT_ADDRESS || '0x218565BeC68691178FC61B28FCaEb78592088FDF').toLowerCase();
+    const receipt = await provider.getTransactionReceipt(sourceTxHash);
+    if (receipt) {
+      // DepositMade(address indexed investor, uint256 amount, uint256 timestamp)
+      const depositMadeTopic = '0x0b05f0d1cd0819f155b8a61f60baf7767c1ee49d04aeaab701df236140eb93f9';
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() === vaultAddress && log.topics[0] === depositMadeTopic) {
+          const amountHex = log.data.slice(2, 66);
+          const value = BigInt('0x' + amountHex);
+          if (value > 0n) {
+            console.log(`[AttestcoinRelayer] Found delegated ETH value: ${ethers.formatEther(value)} ETH via DepositMade event`);
+            return value;
+          }
+        }
+      }
+      // Fallback: standard Transfer event to vault
+      const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+      for (const log of receipt.logs) {
+        if (log.topics[0] === transferTopic && log.topics[2]) {
+          const toAddr = '0x' + log.topics[2].slice(26);
+          if (toAddr.toLowerCase() === vaultAddress) {
+            const value = BigInt(log.data);
+            if (value > 0n) {
+              console.log(`[AttestcoinRelayer] Found delegated ETH value: ${ethers.formatEther(value)} ETH via Transfer event`);
+              return value;
+            }
+          }
+        }
+      }
+    }
+    throw new Error(`Source transaction ${sourceTxHash} has zero msg.value and no delegated ETH transfer found — nothing to back`);
   }
 
   /**

@@ -84,9 +84,14 @@ export default function PawnshopRepaymentsPage() {
 
   useEffect(() => {
     fetchRepayments()
-    apiInstance.get("/eth-price")
-      .then((res) => setEthPrice(res.data?.data?.usd || 0))
-      .catch(() => setEthPrice(4500))
+    const fetchEthPrice = () => {
+      apiInstance.get("/eth-price")
+        .then((res) => setEthPrice(res.data?.data?.usd || 0))
+        .catch(() => setEthPrice(0))
+    }
+    fetchEthPrice()
+    const interval = setInterval(fetchEthPrice, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   const activeLoans = sagMinted // SAG minted = active loan
@@ -372,18 +377,11 @@ export default function PawnshopRepaymentsPage() {
                 </div>
               </div>
 
-              {/* Minimum Investment */}
-              <div className="space-y-2">
-                <Label>Minimum Investment per Investor (USD)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    id="repayMinInvestment"
-                    defaultValue={100}
-                    min={10}
-                    className="rounded-xl pl-7"
-                  />
+              {/* Minimum Investment - auto-computed */}
+              <div className="rounded-xl bg-muted p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Minimum Investment per Investor:</span>
+                  <span className="font-medium">10% of target</span>
                 </div>
               </div>
 
@@ -397,14 +395,11 @@ export default function PawnshopRepaymentsPage() {
                     setProcessing(true)
                     try {
                       const targetEl = document.getElementById('repayInvestmentTarget') as HTMLInputElement
-                      const minEl = document.getElementById('repayMinInvestment') as HTMLInputElement
                       const investmentTarget = targetEl ? Number(targetEl.value) : 0
-                      const minInvestment = minEl ? Number(minEl.value) : 100
 
                       toast.info("Minting SAG token on CC3...")
                       const res = await apiInstance.patch(`/pledge-requests/${sagModal.id}/mint-sag`, {
                         investmentTargetUsd: investmentTarget,
-                        minInvestmentUsd: minInvestment,
                       })
                       if (res.data?.data?.sagTxHash) {
                         toast.success("SAG token minted on CC3!")

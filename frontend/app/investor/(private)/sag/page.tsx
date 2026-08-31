@@ -64,15 +64,22 @@ export default function InvestorSagPage() {
 
   useEffect(() => {
     fetchSagTokens()
-    apiInstance.get("/eth-price")
-      .then((res) => setEthPrice(res.data?.data?.usd || 0))
-      .catch(() => setEthPrice(4500))
+    const fetchEthPrice = () => {
+      apiInstance.get("/eth-price")
+        .then((res) => setEthPrice(res.data?.data?.usd || 0))
+        .catch(() => setEthPrice(0))
+    }
+    fetchEthPrice()
+    const interval = setInterval(fetchEthPrice, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   const openInvestModal = (token: SagToken) => {
     setInvestModal(token)
-    const remaining = (token.investmentTargetUsd || token.paymentAmountUsd || 0) - (token.investmentFilledUsd || 0)
-    setInvestAmount(String(Math.min(remaining, 1000)))
+    const target = token.investmentTargetUsd || token.paymentAmountUsd || 0
+    const remaining = target - (token.investmentFilledUsd || 0)
+    const minInvest = Math.round(target * 0.1)
+    setInvestAmount(String(Math.min(remaining, Math.max(minInvest, 100))))
   }
 
   return (
@@ -300,7 +307,7 @@ export default function InvestorSagPage() {
                     type="number"
                     value={investAmount}
                     onChange={(e) => setInvestAmount(e.target.value)}
-                    min={investModal.minInvestmentUsd || 100}
+                    min={Math.round((investModal.investmentTargetUsd || investModal.paymentAmountUsd || 0) * 0.1) || 100}
                     max={(investModal.investmentTargetUsd || investModal.paymentAmountUsd || 0) - (investModal.investmentFilledUsd || 0)}
                     className="rounded-xl pl-7"
                   />
@@ -311,7 +318,7 @@ export default function InvestorSagPage() {
                   </p>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  Minimum: ${investModal.minInvestmentUsd || 100}
+                  Minimum: ${Math.round((investModal.investmentTargetUsd || investModal.paymentAmountUsd || 0) * 0.1) || 100}
                 </p>
               </div>
 
@@ -340,7 +347,7 @@ export default function InvestorSagPage() {
                       setProcessing(false)
                     }
                   }}
-                  disabled={processing || !investAmount || Number(investAmount) < (investModal.minInvestmentUsd || 100)}
+                  disabled={processing || !investAmount || Number(investAmount) < (Math.round((investModal.investmentTargetUsd || investModal.paymentAmountUsd || 0) * 0.1) || 100)}
                   className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
                 >
                   {processing && <Loader2 className="h-4 w-4 animate-spin" />}

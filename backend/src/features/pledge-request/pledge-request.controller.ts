@@ -529,7 +529,7 @@ export class PledgeRequestController {
       }
 
       const investmentTarget = req.body?.investmentTargetUsd || request.paymentAmountUsd || Number(appraisedValue) * 0.7;
-      const minInvestment = req.body?.minInvestmentUsd || 100;
+      const minInvestment = Math.round(Number(investmentTarget) * 0.1);
       const updated = await recordSagMint(request.id, mintResult.tokenId!, Number(investmentTarget), Number(minInvestment));
 
       // Create SAG record in sag table for pawnshop dashboard

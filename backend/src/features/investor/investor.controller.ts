@@ -181,7 +181,7 @@ export class InvestorController {
       const request = result.rows[0];
       const target = Number(request.investment_target_usd) || 0;
       const filled = Number(request.investment_filled_usd) || 0;
-      const minInvestment = Number(request.min_investment_usd) || 100;
+      const minInvestment = Math.round(target * 0.1);
       const remaining = target - filled;
 
       // Validation: check if target is reached
