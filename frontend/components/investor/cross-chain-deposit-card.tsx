@@ -28,6 +28,7 @@ import {
   SEPOLIA_EXPLORER_URL,
   switchOrAddSepoliaNetwork,
   SEPOLIA_CHAIN_ID,
+  checkEip7702Delegation,
 } from "@/lib/contracts/sepolia-gateways"
 import { SANAD_LIQUIDITY_POOL_ADDRESS, SANAD_LIQUIDITY_POOL_ABI } from "@/lib/contracts/sanad-liquidity-pool"
 
@@ -63,7 +64,7 @@ export function CrossChainDepositCard({ onSuccess }: CrossChainDepositCardProps)
   }
 
   const handleExecuteDeposit = async () => {
-    if (!amountWei || BigInt(amountWei || "0") <= 0n) {
+    if (!amountWei || BigInt(amountWei || "0") <= BigInt(0)) {
       toast.error("Please enter a valid deposit amount in wei")
       return
     }
@@ -88,6 +89,21 @@ export function CrossChainDepositCard({ onSuccess }: CrossChainDepositCardProps)
         }
 
         const signer = await provider.getSigner()
+        const userAddress = await signer.getAddress()
+
+        // Pre-flight check: EIP-7702 delegation detection
+        const delegation = await checkEip7702Delegation(provider, userAddress)
+        if (delegation.isDelegated) {
+          const errMsg = `EIP-7702 Account Delegation Detected: Wallet ${userAddress.slice(0, 8)}... has active delegation to ${delegation.delegatedAddress?.slice(0, 8)}... Transactions are routed through DelegationManager with 0 wei value, causing Attestcoin proofs to fail on Creditcoin CC3. Please revoke EIP-7702 delegation or use a standard EOA wallet.`
+          setErrorMessage(errMsg)
+          setStatus("error")
+          toast.error("EIP-7702 Delegation Detected", {
+            description: "Your wallet routes calls through a delegation proxy, which prevents CC3 proof verification. Please revoke delegation or use a standard EOA.",
+            duration: 12000,
+          })
+          return
+        }
+
         const vaultContract = new ethers.Contract(
           SEPOLIA_INVESTOR_VAULT_ADDRESS,
           INVESTOR_VAULT_ABI,

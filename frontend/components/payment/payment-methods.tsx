@@ -14,6 +14,8 @@ import apiInstance from "@/lib/axios-v1"
 import { useCtcPrice, ctcToUsd, formatUsd } from "@/hooks/use-ctc-price"
 import { useLiquidityPool } from "@/hooks/use-liquidity-pool"
 import { useCreditcoinWallet } from "@/hooks/use-creditcoin-wallet"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CrossChainRepayCard } from "./cross-chain-repay-card"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 

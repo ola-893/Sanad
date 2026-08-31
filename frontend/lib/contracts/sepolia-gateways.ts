@@ -1,3 +1,5 @@
+import { ethers } from 'ethers';
+
 export const SEPOLIA_CHAIN_ID = 11155111;
 export const SEPOLIA_HEX_CHAIN_ID = '0xaa36a7';
 export const SEPOLIA_RPC_URL = 'https://ethereum-sepolia-rpc.publicnode.com';
@@ -77,5 +79,30 @@ export async function switchOrAddSepoliaNetwork(): Promise<boolean> {
     }
     console.error('Failed to switch to Ethereum Sepolia network:', switchError);
     return false;
+  }
+}
+
+/**
+ * Detects whether an address has active EIP-7702 delegation designation code.
+ * EIP-7702 sets account code starting with `0xef0100` (magic bytes `0xef0100` + 20-byte implementation).
+ */
+export async function checkEip7702Delegation(
+  provider: ethers.Provider,
+  address: string
+): Promise<{ isDelegated: boolean; delegatedAddress?: string; rawCode?: string }> {
+  try {
+    const code = await provider.getCode(address);
+    if (code && code.toLowerCase().startsWith('0xef0100')) {
+      const delegatedAddress = '0x' + code.slice(8, 48);
+      return {
+        isDelegated: true,
+        delegatedAddress,
+        rawCode: code,
+      };
+    }
+    return { isDelegated: false };
+  } catch (err) {
+    console.warn('Failed to check EIP-7702 delegation status:', err);
+    return { isDelegated: false };
   }
 }

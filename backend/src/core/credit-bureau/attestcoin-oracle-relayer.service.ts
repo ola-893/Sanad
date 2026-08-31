@@ -188,6 +188,15 @@ export class AttestcoinOracleRelayerService {
         }
       }
     }
+    const code = await provider.getCode(tx.from);
+    if (code && code.toLowerCase().startsWith('0xef0100')) {
+      const delegationAddress = '0x' + code.slice(8, 48);
+      throw new Error(
+        `EIP-7702 Delegation Error: Sender wallet ${tx.from} has active delegation (${delegationAddress}). ` +
+        `The transaction was routed through an intermediary DelegationManager with 0 outer msg.value and selector ${tx.data?.slice(0, 10)}, ` +
+        `which cannot be verified by Attestcoin on Creditcoin CC3. Please revoke EIP-7702 delegation or use a standard EOA wallet.`
+      );
+    }
     throw new Error(`Source transaction ${sourceTxHash} has zero msg.value and no delegated ETH transfer found — nothing to back`);
   }
 
