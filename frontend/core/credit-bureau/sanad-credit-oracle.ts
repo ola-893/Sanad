@@ -1,7 +1,8 @@
 import { Protocol, ProtocolMeta } from './types';
 
+// Fallback value synced from: backend/src/config/deployed-addresses.ts (single source of truth)
 export const SANAD_CREDIT_ORACLE_ADDRESS =
-  process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS || '0xE45e8F367C02B9d5f5A165827824351457Dd8353';
+  process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS || '0x9B926B432bbEFA5405eC9EBB0F7515496c2095a5'; // Updated by deploy-all.ts
 
 export const CREDITCOIN_CHAIN_ID = 102031;
 export const CREDITCOIN_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';

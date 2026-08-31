@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 import { proofProvider } from '@gluwa/usc-sdk';
+import { DEPLOYED_ADDRESSES } from '../config/deployed-addresses.js';
 
 dotenv.config();
 
@@ -9,8 +10,8 @@ const CC3_RPC = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.credi
 const PROOF_BUILDER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network';
 const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY;
 
-const SEPOLIA_VAULT_ADDRESS = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || '0x218565BeC68691178FC61B28FCaEb78592088FDF';
-const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || '0x7d73e8A84c73dc06CfFf05a5942EeC1a9d7235bA';
+const SEPOLIA_VAULT_ADDRESS = process.env.SEPOLIA_INVESTOR_VAULT_ADDRESS || DEPLOYED_ADDRESSES.sepolia.investorVault;
+const POOL_ADDRESS = process.env.SANAD_LIQUIDITY_POOL_ADDRESS || DEPLOYED_ADDRESSES.cc3.liquidityPool;
 
 const INVESTOR_VAULT_ABI = [
   'function deposit(uint256 amount) external payable',

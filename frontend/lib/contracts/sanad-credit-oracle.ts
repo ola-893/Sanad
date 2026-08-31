@@ -1,6 +1,7 @@
+// Fallback values synced from: backend/src/config/deployed-addresses.ts (single source of truth)
 export const SANAD_CREDIT_ORACLE_ADDRESS =
   process.env.NEXT_PUBLIC_SANAD_CREDIT_ORACLE_ADDRESS ||
-  '0x74357E5FED91D6dDdd39847304b8651634693A00';
+  '0x9B926B432bbEFA5405eC9EBB0F7515496c2095a5';
 
 export const CREDITCOIN_CHAIN_ID = 102031;
 export const CREDITCOIN_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';
