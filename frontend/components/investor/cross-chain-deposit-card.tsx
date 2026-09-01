@@ -140,7 +140,7 @@ export function CrossChainDepositCard({ onSuccess }: CrossChainDepositCardProps)
       const response = await apiInstance.post("/investor/deposit/prove", {
         sourceTxHash: txHash,
         chainKey: 1, // 1 = Sepolia
-      })
+      }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
 
       if (!response.data?.success) {
         throw new Error(response.data?.error || response.data?.message || "Attestcoin proof verification failed")
