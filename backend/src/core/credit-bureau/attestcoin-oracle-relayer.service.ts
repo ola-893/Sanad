@@ -444,22 +444,34 @@ export class AttestcoinOracleRelayerService {
       console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Repay Tx: ${sourceTxHash}`);
       const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
       
+      // Short wait for block attestation — don't block for 10 minutes
       const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
       if (targetHeight) {
         try {
-          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
-          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 5000, 60000, 3000);
           console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
-        } catch (waitErr: any) {
-          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
-          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        } catch {
+          console.warn(`[AttestcoinRelayer] Block attestation wait timed out for #${targetHeight}, attempting proof with retries...`);
         }
       }
 
-      const proofResult = await proofBuilder.getProof(sourceTxHash);
+      // Retry proof generation (prover may still be indexing the block)
+      let proofResult: any = null;
+      for (let attempt = 1; attempt <= 10; attempt++) {
+        proofResult = await proofBuilder.getProof(sourceTxHash);
+        if (proofResult.success && proofResult.data) {
+          console.log(`[AttestcoinRelayer] Repay proof generated on attempt ${attempt}`);
+          break;
+        }
+        if (attempt < 10) {
+          const delay = Math.min(attempt * 5000, 30000);
+          console.log(`[AttestcoinRelayer] Repay proof not ready yet, retrying in ${delay/1000}s (attempt ${attempt}/10)...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
 
-      if (!proofResult.success || !proofResult.data) {
-        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      if (!proofResult?.success || !proofResult?.data) {
+        throw new Error(`Repay proof not available after 10 attempts. The Attestcoin Prover may not have indexed this block yet. Please try again in a few minutes.`);
       }
 
       const proofData = proofResult.data;
@@ -535,22 +547,34 @@ export class AttestcoinOracleRelayerService {
       console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Deposit Tx: ${sourceTxHash}`);
       const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
       
+      // Short wait for block attestation — don't block for 10 minutes
       const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
       if (targetHeight) {
         try {
-          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
-          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 5000, 60000, 3000);
           console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
-        } catch (waitErr: any) {
-          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
-          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        } catch {
+          console.warn(`[AttestcoinRelayer] Block attestation wait timed out for #${targetHeight}, attempting proof with retries...`);
         }
       }
 
-      const proofResult = await proofBuilder.getProof(sourceTxHash);
+      // Retry proof generation (prover may still be indexing the block)
+      let proofResult: any = null;
+      for (let attempt = 1; attempt <= 10; attempt++) {
+        proofResult = await proofBuilder.getProof(sourceTxHash);
+        if (proofResult.success && proofResult.data) {
+          console.log(`[AttestcoinRelayer] Deposit proof generated on attempt ${attempt}`);
+          break;
+        }
+        if (attempt < 10) {
+          const delay = Math.min(attempt * 5000, 30000); // 5s, 10s, 15s... max 30s
+          console.log(`[AttestcoinRelayer] Deposit proof not ready yet, retrying in ${delay/1000}s (attempt ${attempt}/10)...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
 
-      if (!proofResult.success || !proofResult.data) {
-        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      if (!proofResult?.success || !proofResult?.data) {
+        throw new Error(`Deposit proof not available after 10 attempts. The Attestcoin Prover may not have indexed this block yet. Please try again in a few minutes.`);
       }
 
       const proofData = proofResult.data;

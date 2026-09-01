@@ -139,7 +139,7 @@ export function CrossChainRepayCard() {
         tokenId: Number(tokenId),
         sourceTxHash: txHash,
         chainKey: 1, // 1 = Sepolia
-      })
+      }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
 
       if (!response.data?.success) {
         throw new Error(response.data?.error || response.data?.message || "Attestcoin proof generation failed")
