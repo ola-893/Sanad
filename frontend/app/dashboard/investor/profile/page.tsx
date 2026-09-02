@@ -14,6 +14,7 @@ import {
   FileText,
   TrendingUp,
   DollarSign,
+  Gem,
 } from "lucide-react"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import apiInstance from "@/lib/axios-v1"
@@ -32,11 +33,22 @@ interface UserProfile {
   icNo: string
 }
 
+interface Investment {
+  id: number
+  sag_token_id: string
+  amount_usd: number
+  eth_amount: number | null
+  status: string
+  created_at: string
+}
+
 export default function InvestorProfilePage() {
   const { walletAddress, isConnected, chainId, truncateAddress } = useWalletAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [investments, setInvestments] = useState<Investment[]>([])
+  const [investmentsLoading, setInvestmentsLoading] = useState(true)
 
   const networkName =
     chainId === 102031
@@ -60,7 +72,13 @@ export default function InvestorProfilePage() {
     }
   }
 
-  useEffect(() => { fetchProfile() }, [])
+  useEffect(() => {
+    fetchProfile()
+    apiInstance.get("/investor/investments")
+      .then((res) => { if (res.data.success) setInvestments(res.data.data ?? []) })
+      .catch(() => {})
+      .finally(() => setInvestmentsLoading(false))
+  }, [])
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "\u2014"
@@ -123,20 +141,33 @@ export default function InvestorProfilePage() {
             </div>
 
             {/* Investor Quick Stats */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="glass-panel rounded-2xl border border-[#171414]/10 p-4 shadow-soft-editorial">
                 <div className="flex items-center gap-2 text-[#4A4A4A] mb-1">
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wider">Total Invested</span>
                 </div>
-                <p className="text-2xl font-extrabold text-[#171414]">$0</p>
+                <p className="text-2xl font-extrabold text-[#171414]">
+                  {investmentsLoading ? "\u2014" : `$${investments.reduce((s, i) => s + Number(i.amount_usd), 0).toLocaleString()}`}
+                </p>
               </div>
               <div className="glass-panel rounded-2xl border border-[#171414]/10 p-4 shadow-soft-editorial">
                 <div className="flex items-center gap-2 text-[#4A4A4A] mb-1">
                   <TrendingUp className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Active Investments</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Investments</span>
                 </div>
-                <p className="text-2xl font-extrabold text-[#171414]">0</p>
+                <p className="text-2xl font-extrabold text-[#171414]">
+                  {investmentsLoading ? "\u2014" : String(investments.length)}
+                </p>
+              </div>
+              <div className="glass-panel rounded-2xl border border-[#171414]/10 p-4 shadow-soft-editorial">
+                <div className="flex items-center gap-2 text-[#4A4A4A] mb-1">
+                  <Gem className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">SAGs Funded</span>
+                </div>
+                <p className="text-2xl font-extrabold text-[#171414]">
+                  {investmentsLoading ? "\u2014" : String(new Set(investments.map(i => i.sag_token_id)).size)}
+                </p>
               </div>
             </div>
 
@@ -170,7 +201,7 @@ export default function InvestorProfilePage() {
                   {[
                     { icon: <WalletIcon className="h-4 w-4" />, label: "Connected Wallet", value: truncateAddress(walletAddress) },
                     { icon: <Shield className="h-4 w-4" />, label: "Network", value: networkName },
-                    { icon: <Shield className="h-4 w-4" />, label: "Role", value: "INVESTOR" },
+                    { icon: <Shield className="h-4 w-4" />, label: "Role", value: profile.roleId?.toUpperCase() || "INVESTOR" },
                   ].map((row) => (
                     <div key={row.label} className="flex items-center justify-between px-5 py-3.5 hover:bg-[#F5F5F3]/40 transition-colors">
                       <div className="flex items-center gap-3 text-[#4A4A4A]">{row.icon}<span className="text-sm">{row.label}</span></div>
@@ -191,7 +222,7 @@ export default function InvestorProfilePage() {
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-[#4A4A4A]">Role</span>
-                  <span className="text-sm font-bold text-[#171414]">INVESTOR</span>
+                  <span className="text-sm font-bold text-[#171414]">{profile.roleId?.toUpperCase() || "INVESTOR"}</span>
                 </div>
               </div>
             </div>
