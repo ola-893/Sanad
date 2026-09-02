@@ -28,6 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  Calendar,
 } from 'lucide-react'
 import apiInstance from '@/lib/axios-v1'
 import {
@@ -74,6 +75,8 @@ interface SagToken {
     imageUrl?: string[]
     borrowerWallet?: string
     pawnshopWallet?: string
+    originationDate?: string
+    maturityDate?: string
   }
   createdAt: string
   updatedAt: string
@@ -230,10 +233,34 @@ export default function SagDetailPage() {
   const investmentFilled = props?.investmentFilledUsd || 0
   const remaining = investmentTarget - investmentFilled
   const progressPct = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
-  const roi = props?.investorRoiPercentage || 12
+  const roi = props?.investorRoiPercentage || 2
   const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
   const isFunded = remaining <= 0
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
+
+  // Timeline calculations
+  const originationDate = props?.originationDate ? new Date(props.originationDate) : new Date(sag.createdAt)
+  const maturityDate = props?.maturityDate ? new Date(props.maturityDate) : new Date(originationDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const totalDays = Math.max(1, (maturityDate.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24))
+  const elapsedDays = Math.max(0, Math.min(totalDays, (now.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24)))
+  const remainingDays = Math.max(0, totalDays - elapsedDays)
+  const remainingMonths = remainingDays / 30
+  const isExpired = now > maturityDate
+  const isStarted = now >= originationDate
+  const elapsedPct = Math.min(100, (elapsedDays / totalDays) * 100)
+
+  // Prorated return: someone investing TODAY gets returns proportional to remaining months
+  const fullRoiTotal = roi * duration  // total % return over full loan (e.g. 12% * 3 = 36%)
+  const proratedRoiTotal = roi * remainingMonths  // prorated % return from now
+  const formatTimeLeft = () => {
+    if (isExpired) return 'Expired'
+    const days = Math.floor(remainingDays)
+    const months = Math.floor(remainingDays / 30)
+    const d = Math.floor(remainingDays % 30)
+    if (months > 0) return `${months}mo ${d}d left`
+    return `${days}d left`
+  }
 
   const myTotalInvested = myInvestments
     .filter(inv => String(inv.sag_token_id) === String(tokenId) && inv.status === 'completed')
@@ -454,10 +481,72 @@ export default function SagDetailPage() {
                 </div>
                 <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
                   <Clock className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-lg font-bold text-[#171414]">{duration}mo</p>
-                  <p className="text-[10px] text-muted-foreground">Loan Duration</p>
+                  <p className="text-lg font-bold text-[#171414]">{formatTimeLeft()}</p>
+                  <p className="text-[10px] text-muted-foreground">{duration}mo duration</p>
                 </div>
               </div>
+
+              {/* Loan Timeline */}
+              <Card className="border border-[#171414]/10 bg-white/60">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-[10px] font-mono uppercase text-muted-foreground">Loan Timeline</p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="text-center">
+                      <p className="font-medium text-[#171414]">{originationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-muted-foreground">Minted</p>
+                    </div>
+                    <div className="flex-1 mx-3">
+                      <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${elapsedPct}%` }} />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                        <span>{Math.round(elapsedPct)}% elapsed</span>
+                        <span>{isExpired ? 'Ended' : formatTimeLeft()}</span>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-medium text-[#171414]">{maturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-muted-foreground">Expires</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Prorated Expected Returns */}
+              {!isExpired && (
+                <Card className="border border-emerald-200 bg-emerald-50/40">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-mono uppercase text-emerald-700">Expected Returns (per $1 invested today)</p>
+                      <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[9px]">
+                        {roi}%/mo · {remainingMonths.toFixed(1)}mo remaining
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-white/80 p-3 text-center">
+                        <p className="text-xl font-bold text-emerald-600">{proratedRoiTotal.toFixed(1)}%</p>
+                        <p className="text-[10px] text-muted-foreground">Total return if invest now</p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 p-3 text-center">
+                        <p className="text-xl font-bold text-[#171414]">${(1 + proratedRoiTotal / 100).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">You get back per $1</p>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-white/60 p-2 text-center">
+                      <p className="text-[10px] text-muted-foreground">Example: invest ${minInvestment} → get back <span className="font-bold text-emerald-600">${(minInvestment * (1 + proratedRoiTotal / 100)).toFixed(2)}</span> ({proratedRoiTotal.toFixed(1)}% return)</p>
+                    </div>
+                    <p className="text-[10px] text-emerald-600">
+                      {isStarted
+                        ? `${elapsedDays.toFixed(0)} days elapsed. Returns scale with your investment amount. Invest early for the full ${roi * duration}% return.`
+                        : `Loan hasn't started yet. Investing now locks in the full ${roi * duration}% return.`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Wallets */}
               <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 space-y-2">
@@ -589,10 +678,15 @@ export default function SagDetailPage() {
               <div className="rounded-xl bg-muted p-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>Min Investment: <span className="font-medium">${minInvestment}</span></div>
-                  <div>ROI: <span className="font-medium text-emerald-600">{roi}%/mo</span></div>
                   <div>Weight: <span className="font-medium">{weight}g</span></div>
-                  <div>Duration: <span className="font-medium">{duration} months</span></div>
+                  <div>Full ROI: <span className="font-medium text-emerald-600">{roi * duration}%</span></div>
+                  <div>Your Return: <span className="font-medium text-emerald-600">{proratedRoiTotal.toFixed(1)}%</span></div>
                 </div>
+                {!isExpired && (
+                  <div className="mt-2 pt-2 border-t border-muted-foreground/10 text-[10px] text-muted-foreground">
+                    {remainingMonths.toFixed(1)} months remaining · Invest today for {proratedRoiTotal.toFixed(1)}% total return
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -611,6 +705,19 @@ export default function SagDetailPage() {
                 </div>
                 {ethPrice > 0 && investAmount && (
                   <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(6)} ETH @ ${ethPrice.toLocaleString()}/ETH</p>
+                )}
+                {investAmount && Number(investAmount) >= minInvestment && !isExpired && (
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2 text-[11px] space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-emerald-700">Expected return:</span>
+                      <span className="font-bold text-emerald-700">${(Number(investAmount) * proratedRoiTotal / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-emerald-600">Total payout:</span>
+                      <span className="font-medium text-emerald-600">${(Number(investAmount) * (1 + proratedRoiTotal / 100)).toFixed(2)}</span>
+                    </div>
+                    <p className="text-[9px] text-emerald-600">Based on {proratedRoiTotal.toFixed(1)}% return ({remainingMonths.toFixed(1)} months remaining)</p>
+                  </div>
                 )}
                 <p className="text-[10px] text-muted-foreground">Min: ${minInvestment}</p>
               </div>
