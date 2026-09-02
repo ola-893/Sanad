@@ -14,6 +14,9 @@ export interface SAGProperties {
   investorFinancingType: string;
   investorRoiPercentage: number;
   investorRoiFixedAmount: number;
+  // Loan lifecycle dates
+  originationDate?: string;
+  maturityDate?: string;
   // AI Risk Analysis Fields
   ltv?: number;
   risk_level?: string;
@@ -21,6 +24,14 @@ export interface SAGProperties {
   purity?: number;
   action?: string;
   eval_id?: string;
+  // Investment tracking fields
+  investmentTargetUsd?: number;
+  minInvestmentUsd?: number;
+  investmentFilledUsd?: number;
+  loanDurationMonths?: number;
+  borrowerWallet?: string;
+  pawnshopWallet?: string;
+  imageUrl?: string[];
 }
 
 export interface SAG {
