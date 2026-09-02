@@ -26,7 +26,8 @@ const marketingNavItems = [
 
 const portalNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/browse", label: "NFT Listings", icon: Search },
+  { href: "/dashboard/browse", label: "Browse SAGs", icon: Search },
+  { href: "/dashboard/investments", label: "Investments", icon: Wallet },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
   { href: "/dashboard/investor/profile", label: "Profile", icon: User },
 ]

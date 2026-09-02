@@ -238,7 +238,7 @@ export class InvestorController {
         return;
       }
 
-      const { sagTokenId, amountUsd } = req.body;
+      const { sagTokenId, amountUsd, sourceTxHash, cc3TxHash, ethAmount } = req.body;
       if (!sagTokenId || !amountUsd) {
         res.status(400).json({ success: false, error: 'sagTokenId and amountUsd are required' });
         return;
@@ -288,6 +288,19 @@ export class InvestorController {
         [String(newFilled), request.id]
       );
 
+      // Record individual investment with tx hashes
+      await pool.query(
+        `INSERT INTO main.investment (user_id, sag_token_id, pledge_request_id, amount_usd, eth_amount, source_tx_hash, cc3_tx_hash, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'completed')`,
+        [investorInfo.userId || investorInfo.accountId, sagTokenId, String(request.id), amountUsd, ethAmount || null, sourceTxHash || null, cc3TxHash || null]
+      );
+
+      // Sync investmentFilledUsd into sag.sag_properties so /sag/ endpoint returns updated data
+      await pool.query(
+        `UPDATE main.sag SET sag_properties = jsonb_set(sag_properties, '{investmentFilledUsd}', to_jsonb($1::numeric)) WHERE token_id = $2`,
+        [newFilled, sagTokenId]
+      );
+
       res.status(200).json({
         success: true,
         message: 'Investment recorded successfully',
@@ -302,6 +315,38 @@ export class InvestorController {
     } catch (error: any) {
       console.error('Error recording investment:', error);
       res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+    }
+  }
+
+  /**
+   * GET /investor/investments -- List all investments for the authenticated investor
+   */
+  async getInvestments(req: Request, res: Response): Promise<void> {
+    try {
+      const investorInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '');
+      if (!investorInfo) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
+      const userId = investorInfo.userId || investorInfo.accountId;
+      const { pool } = await import('@/db/index.js');
+      const result = await pool.query(
+        `SELECT i.*, pr.sag_token_id as pr_sag_token_id, pr.investment_target_usd, pr.investment_filled_usd
+         FROM main.investment i
+         LEFT JOIN main.pledge_request pr ON i.pledge_request_id = pr.id
+         WHERE i.user_id = $1
+         ORDER BY i.created_at DESC`,
+        [userId]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows,
+      });
+    } catch (error: any) {
+      console.error('Error fetching investments:', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to fetch investments' });
     }
   }
 }

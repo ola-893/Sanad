@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ethers } from 'ethers'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -23,9 +25,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Send,
-  ShieldCheck,
-  Sparkles,
-  RefreshCw,
+  Weight,
 } from 'lucide-react'
 import apiInstance from '@/lib/axios-v1'
 import {
@@ -38,6 +38,19 @@ import {
 } from '@/lib/contracts/sepolia-gateways'
 
 const glass = 'glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial'
+
+/**
+ * Convert a full image URL (e.g. http://localhost:5002/uploads/xxx.jpg)
+ * to the Next.js proxy path (/api/uploads/xxx.jpg)
+ */
+function getImageUrl(url: string): string {
+  if (!url) return ''
+  // Already a proxy path
+  if (url.startsWith('/api/uploads/')) return url
+  // Extract filename from full URL or path
+  const filename = url.split('/').pop() || url
+  return `/api/uploads/${filename}`
+}
 
 interface SagToken {
   sagId: string
@@ -66,9 +79,31 @@ interface SagToken {
   updatedAt: string
 }
 
-const explorerBase = process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || 'https://creditcoin-testnet.blockscout.com'
+interface ActiveJob {
+  jobId: string
+  sagName: string
+  sagTokenId: string
+  depositTxHash: string
+  amountUsd: number
+  ethAmount: number
+  progress: number
+  message: string
+  status: 'queued' | 'proving' | 'completed' | 'failed'
+  cc3TxHash?: string
+  error?: string
+  startedAt: number
+}
 
-function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number; onInvest: (sag: SagToken) => void }) {
+const getProofStageMessage = (progress: number) => {
+  if (progress >= 100) return 'Proof verified on CC3!'
+  if (progress >= 75) return 'Submitting proof to CC3 LiquidityPool...'
+  if (progress >= 45) return 'Generating Attestcoin cryptographic proof...'
+  if (progress >= 15) return 'Resolving block height on Sepolia...'
+  return 'Queuing proof verification...'
+}
+
+function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number; onInvest: (e: React.MouseEvent, sag: SagToken) => void }) {
+  const router = useRouter()
   const props = sag.sagProperties
   const weight = props?.weightG || 0
   const karat = props?.karat || (props?.purity >= 990 ? 24 : props?.purity >= 916 ? 22 : 18)
@@ -77,40 +112,78 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
   const minInvestment = Math.round(investmentTarget * 0.1)
   const investmentFilled = props?.investmentFilledUsd || 0
   const remaining = investmentTarget - investmentFilled
-  const progress = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
+  const progressPct = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
   const roi = props?.investorRoiPercentage || 12
   const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
   const ethAmount = ethPrice > 0 ? (minInvestment / ethPrice).toFixed(4) : '---'
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
   const isFunded = remaining <= 0
+  const hasImage = props?.imageUrl && props.imageUrl.length > 0
 
   return (
-    <Card className={`${glass} overflow-hidden transition-all duration-300 hover:shadow-lg`}>
+    <Card
+      className={`${glass} overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer group`}
+      onClick={(e) => {
+        // Don't navigate if clicking the invest button
+        if ((e.target as HTMLElement).closest('[data-invest-btn]')) return
+        router.push(`/dashboard/browse/${sag.tokenId}`)
+      }}
+    >
       <CardContent className="p-0">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#171414]/5">
-          <div className="flex items-center gap-3">
-            <div className="gradient-gold flex h-10 w-10 items-center justify-center rounded-xl">
-              <Gem className="h-5 w-5 text-[#171414]" />
+        {/* Gold image thumbnail */}
+        {hasImage && (
+          <div className="relative h-36 overflow-hidden">
+            <img
+              src={getImageUrl(props!.imageUrl![0])}
+              alt={sag.sagName}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute top-3 right-3 flex gap-1.5">
+              <Badge variant="outline" className={isFunded ? 'bg-emerald-500/90 text-white border-emerald-400' : 'bg-amber-500/90 text-white border-amber-400'}>
+                {isFunded ? 'Funded' : 'Open'}
+              </Badge>
             </div>
-            <div>
-              <h3 className="font-display text-sm font-bold text-[#171414]">
-                {sag.sagName || `SAG #${sag.tokenId}`}
-              </h3>
-              <p className="text-[10px] text-muted-foreground">Token #{sag.tokenId}</p>
+            <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+              <div>
+                <h3 className="font-display text-sm font-bold text-white drop-shadow-sm">
+                  {sag.sagName || `SAG #${sag.tokenId}`}
+                </h3>
+                <p className="text-[10px] text-white/80">Token #{sag.tokenId}</p>
+              </div>
+              <p className="text-lg font-bold text-white drop-shadow-sm">${minInvestment.toLocaleString()}</p>
             </div>
           </div>
-          <Badge variant="outline" className={isFunded ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
-            {isFunded ? 'Funded' : 'Open'}
-          </Badge>
-        </div>
+        )}
 
-        {/* Investment Target */}
-        <div className="px-5 py-4">
-          <div className="flex items-end justify-between mb-3">
+        <div className="p-4 space-y-3">
+          {/* Header (only if no image) */}
+          {!hasImage && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="gradient-gold flex h-10 w-10 items-center justify-center rounded-xl">
+                  <Gem className="h-5 w-5 text-[#171414]" />
+                </div>
+                <div>
+                  <h3 className="font-display text-sm font-bold text-[#171414]">
+                    {sag.sagName || `SAG #${sag.tokenId}`}
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground">Token #{sag.tokenId}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={isFunded ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
+                  {isFunded ? 'Funded' : 'Open'}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Minimum Investment + ETH */}
+          <div className="flex items-end justify-between">
             <div>
               <p className="text-[10px] font-mono uppercase text-muted-foreground">Minimum Investment</p>
-              <p className="text-2xl font-bold text-[#171414]">${minInvestment.toLocaleString()}</p>
+              {!hasImage && <p className="text-2xl font-bold text-[#171414]">${minInvestment.toLocaleString()}</p>}
             </div>
             <div className="text-right">
               <p className="text-xs text-emerald-600 font-mono">~{ethAmount} ETH</p>
@@ -119,53 +192,127 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
           </div>
 
           {/* Progress */}
-          <div className="mb-3">
+          <div>
             <div className="flex items-center justify-between text-[10px] mb-1">
               <span className="text-muted-foreground">${investmentFilled.toLocaleString()} funded</span>
               <span className="text-muted-foreground">${remaining.toLocaleString()} left</span>
             </div>
-            <Progress value={progress} className="h-1.5" />
+            <Progress value={progressPct} className="h-1.5" />
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-1.5 text-center">
             <div className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[9px] text-muted-foreground">Weight</p>
+              <Weight className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" />
               <p className="text-xs font-bold">{weight}g</p>
+              <p className="text-[9px] text-muted-foreground">Weight</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[9px] text-muted-foreground">Karat</p>
+              <Gem className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" />
               <p className="text-xs font-bold">{karat}K</p>
+              <p className="text-[9px] text-muted-foreground">Karat</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[9px] text-muted-foreground">ROI/mo</p>
+              <TrendingUp className="h-3 w-3 mx-auto text-emerald-500 mb-0.5" />
               <p className="text-xs font-bold text-emerald-600">{roi}%</p>
+              <p className="text-[9px] text-muted-foreground">ROI/mo</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[9px] text-muted-foreground">Duration</p>
+              <Clock className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" />
               <p className="text-xs font-bold">{duration}mo</p>
+              <p className="text-[9px] text-muted-foreground">Duration</p>
             </div>
           </div>
 
           {/* Action */}
-          <div className="mt-4">
-            {isFunded ? (
-              <div className="text-center">
-                <p className="text-xs text-emerald-600 font-medium">Target investment reached</p>
-                <Button disabled className="w-full mt-2 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed">
-                  Fully Funded
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={() => onInvest(sag)}
-                className="w-full rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
-              >
-                <Wallet className="h-4 w-4" /> Invest Now
+          {isFunded ? (
+            <div className="text-center pt-1">
+              <p className="text-xs text-emerald-600 font-medium mb-2">Target investment reached</p>
+              <Button disabled className="w-full rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed">
+                Fully Funded
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <Button
+              data-invest-btn
+              onClick={(e) => onInvest(e, sag)}
+              className="w-full rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+            >
+              <Wallet className="h-4 w-4" /> Invest Now
+            </Button>
+          )}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActiveJobCard({ job, onDismiss }: { job: ActiveJob; onDismiss: () => void }) {
+  const elapsed = Math.floor((Date.now() - job.startedAt) / 1000)
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+
+  return (
+    <Card className="border border-purple-200 bg-purple-50/50">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            {job.status === 'completed' ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+            ) : job.status === 'failed' ? (
+              <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+            ) : (
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600 shrink-0" />
+            )}
+            <div>
+              <p className="text-sm font-medium text-[#171414]">
+                {job.status === 'completed' ? 'Investment Complete' : job.status === 'failed' ? 'Proof Failed' : 'Processing Investment'}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {job.sagName} · ${job.amountUsd} · ~{job.ethAmount.toFixed(6)} ETH
+              </p>
+            </div>
+          </div>
+          {(job.status === 'completed' || job.status === 'failed') && (
+            <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <a
+          href={`${SEPOLIA_EXPLORER_URL}/tx/${job.depositTxHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mb-2"
+        >
+          Sepolia: {job.depositTxHash.slice(0, 10)}...{job.depositTxHash.slice(-6)} <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+
+        {job.status !== 'failed' && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground">{job.message || getProofStageMessage(job.progress)}</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{mins}m {secs.toString().padStart(2, '0')}s</p>
+            </div>
+            <Progress value={job.progress} className="h-1.5" />
+          </div>
+        )}
+
+        {job.cc3TxHash && (
+          <a
+            href={`https://creditcoin-testnet.blockscout.com/tx/${job.cc3TxHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-purple-600 hover:underline flex items-center gap-1 mt-2"
+          >
+            CC3: {job.cc3TxHash.slice(0, 10)}...{job.cc3TxHash.slice(-6)} <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        )}
+
+        {job.error && (
+          <p className="text-[10px] text-rose-600 mt-1">{job.error}</p>
+        )}
       </CardContent>
     </Card>
   )
@@ -181,20 +328,89 @@ export default function BrowsePage() {
   const [investModal, setInvestModal] = useState<SagToken | null>(null)
   const [investAmount, setInvestAmount] = useState('')
   const [processing, setProcessing] = useState(false)
-  const [depositStep, setDepositStep] = useState<'idle' | 'depositing' | 'proving' | 'done'>('idle')
-  const [depositTxHash, setDepositTxHash] = useState('')
-  const [cc3TxHash, setCc3TxHash] = useState('')
   const [depositError, setDepositError] = useState('')
-  const [proofTimer, setProofTimer] = useState(0)
-  const proofTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const stored = localStorage.getItem('sanad-active-invest-jobs')
+      return stored ? JSON.parse(stored) : []
+    } catch { return [] }
+  })
+  const activeJobsRef = useRef<ActiveJob[]>([])
+  activeJobsRef.current = activeJobs
+  const recordedJobsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    try { localStorage.setItem('sanad-active-invest-jobs', JSON.stringify(activeJobs)) } catch {}
+  }, [activeJobs])
+
+  // Poll active jobs
+  useEffect(() => {
+    const pending = activeJobsRef.current.filter(j => j.status === 'queued' || j.status === 'proving')
+    if (pending.length === 0) return
+
+    const interval = setInterval(async () => {
+      for (const job of pending) {
+        try {
+          const res = await apiInstance.get(`/investor/deposit/status/${job.jobId}`)
+          if (res.data?.success && res.data?.data) {
+            const { state, result, error: err, progress } = res.data.data
+
+            if (state === 'COMPLETED' && result) {
+              if (!recordedJobsRef.current.has(job.jobId)) {
+                recordedJobsRef.current.add(job.jobId)
+                const cc3Hash = result.transactionHash || result.cc3TxHash || ''
+                setActiveJobs(prev => prev.map(j =>
+                  j.jobId === job.jobId
+                    ? { ...j, status: 'completed' as const, progress: 100, message: 'Proof verified on CC3!', cc3TxHash: cc3Hash }
+                    : j
+                ))
+                toast.success(`CC3 proof verified for ${job.sagName}!`)
+                apiInstance.post('/investor/invest', {
+                  sagTokenId: job.sagTokenId,
+                  amountUsd: job.amountUsd,
+                  sourceTxHash: job.depositTxHash,
+                  cc3TxHash: cc3Hash,
+                  ethAmount: job.ethAmount,
+                }).then(() => {
+                  toast.success(`Investment recorded for ${job.sagName}!`)
+                  apiInstance.get('/sag/').then(r => {
+                    if (r.data.success) setSags(r.data.data ?? [])
+                  })
+                }).catch(() => {
+                  toast.error(`Failed to record investment for ${job.sagName}. Click retry.`)
+                })
+              }
+            } else if (state === 'FAILED') {
+              if (!recordedJobsRef.current.has(job.jobId)) {
+                recordedJobsRef.current.add(job.jobId)
+                setActiveJobs(prev => prev.map(j =>
+                  j.jobId === job.jobId
+                    ? { ...j, status: 'failed' as const, error: err || 'Proof failed' }
+                    : j
+                ))
+              }
+            } else {
+              setActiveJobs(prev => prev.map(j =>
+                j.jobId === job.jobId
+                  ? { ...j, status: 'proving' as const, progress: progress || j.progress, message: getProofStageMessage(progress || j.progress) }
+                  : j
+              ))
+            }
+          }
+        } catch {}
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [activeJobs.length])
 
   useEffect(() => {
     apiInstance
       .get('/sag/')
       .then((res) => {
-        if (res.data.success) {
-          setSags(res.data.data ?? [])
-        }
+        if (res.data.success) setSags(res.data.data ?? [])
       })
       .catch((err) => {
         console.error('Failed to fetch SAGs:', err)
@@ -208,7 +424,7 @@ export default function BrowsePage() {
         .catch(() => setEthPrice(0))
     }
     fetchEthPrice()
-    const interval = setInterval(fetchEthPrice, 60_000) // refresh every 60s
+    const interval = setInterval(fetchEthPrice, 60_000)
     return () => clearInterval(interval)
   }, [])
 
@@ -224,13 +440,37 @@ export default function BrowsePage() {
     return matchesSearch && matchesStatus
   })
 
-  const openInvestModal = (sag: SagToken) => {
+  const openInvestModal = (e: React.MouseEvent, sag: SagToken) => {
+    e.stopPropagation()
     setInvestModal(sag)
     setInvestAmount('')
-    setDepositStep('idle')
-    setDepositTxHash('')
-    setCc3TxHash('')
     setDepositError('')
+  }
+
+  const dismissJob = (jobId: string) => {
+    setActiveJobs(prev => prev.filter(j => j.jobId !== jobId))
+  }
+
+  const retryJob = async (job: ActiveJob) => {
+    recordedJobsRef.current.delete(job.jobId)
+    setActiveJobs(prev => prev.map(j =>
+      j.jobId === job.jobId ? { ...j, status: 'proving' as const, error: undefined, progress: 0, message: 'Retrying...' } : j
+    ))
+    try {
+      const proveRes = await apiInstance.post('/investor/deposit/prove', {
+        sourceTxHash: job.depositTxHash,
+        chainKey: 1,
+      })
+      if (!proveRes.data?.success) throw new Error(proveRes.data?.error || 'Failed to queue proof')
+      const { jobId: newJobId } = proveRes.data.data
+      setActiveJobs(prev => prev.map(j =>
+        j.jobId === job.jobId ? { ...j, jobId: newJobId, status: 'proving' as const, progress: 0, message: 'Proof job re-queued...' } : j
+      ))
+    } catch (err: any) {
+      setActiveJobs(prev => prev.map(j =>
+        j.jobId === job.jobId ? { ...j, status: 'failed' as const, error: err.message || 'Retry failed' } : j
+      ))
+    }
   }
 
   return (
@@ -238,15 +478,38 @@ export default function BrowsePage() {
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <div className="mx-auto max-w-7xl space-y-6">
           {/* Header */}
-          <div>
-            <p className="kicker-gold">Invest</p>
-            <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
-              Browse SAG Tokens
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Invest in gold-backed collateral tokens and earn returns
-            </p>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="kicker-gold">Invest</p>
+              <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+                Browse SAG Tokens
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Invest in gold-backed collateral tokens and earn returns
+              </p>
+            </div>
+            <Link href="/dashboard/investments" className="text-xs text-blue-600 hover:underline font-medium">
+              My Investments →
+            </Link>
           </div>
+
+          {/* Active Jobs Banner */}
+          {activeJobs.length > 0 && (
+            <div className="space-y-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-purple-600">
+                {activeJobs.filter(j => j.status === 'proving' || j.status === 'queued').length} active proof{activeJobs.filter(j => j.status === 'proving' || j.status === 'queued').length !== 1 ? 's' : ''}
+              </p>
+              <div className="grid gap-2">
+                {activeJobs.map(job => (
+                  <ActiveJobCard
+                    key={job.jobId}
+                    job={job}
+                    onDismiss={() => dismissJob(job.jobId)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Search + Filter */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -333,384 +596,154 @@ export default function BrowsePage() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg font-bold">Invest in {investModal.sagName}</h3>
-                <button onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositStep('idle'); setDepositTxHash(''); setCc3TxHash(''); setDepositError(''); }}>
+                <button onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositError(''); }} disabled={processing}>
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
 
               <div className="rounded-xl bg-muted p-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>Target: <span className="font-medium">${(investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0).toLocaleString()}</span></div>
+                  <div>Min Investment: <span className="font-medium">${Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}</span></div>
                   <div>ROI: <span className="font-medium text-emerald-600">{investModal.sagProperties?.investorRoiPercentage || 12}%/mo</span></div>
                   <div>Weight: <span className="font-medium">{investModal.sagProperties?.weightG}g</span></div>
                   <div>Duration: <span className="font-medium">{investModal.sagProperties?.loanDurationMonths || 3} months</span></div>
                 </div>
               </div>
 
-              {/* Amount Input (only in idle state) */}
-              {depositStep === 'idle' && (
-                <div className="space-y-2">
-                  <Label>Investment Amount (USD)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      placeholder="Amount"
-                      value={investAmount}
-                      onChange={(e) => setInvestAmount(e.target.value)}
-                      className="rounded-xl pl-7"
-                      min={Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}
-                    />
-                  </div>
-                  {ethPrice > 0 && investAmount && (
-                    <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(6)} ETH @ ${ethPrice.toLocaleString()}/ETH</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground">Min: ${Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}</p>
+              <div className="space-y-2">
+                <Label>Investment Amount (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={investAmount}
+                    onChange={(e) => setInvestAmount(e.target.value)}
+                    className="rounded-xl pl-7"
+                    disabled={processing}
+                    min={Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}
+                  />
                 </div>
-              )}
-
-              {/* Step Progress */}
-              {depositStep !== 'idle' && (
-                <div className="rounded-xl border border-black/10 bg-[#FAFAF8] p-4 space-y-3">
-                  {/* Step 1: Sepolia Deposit */}
-                  <div className="flex items-center gap-3">
-                    {depositStep === 'done' || depositTxHash ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                    ) : depositStep === 'depositing' ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-xs font-medium">Deposit ETH to InvestorVault (Sepolia)</p>
-                      {depositTxHash && (
-                        <a href={`${SEPOLIA_EXPLORER_URL}/tx/${depositTxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-                          {depositTxHash.slice(0, 10)}...{depositTxHash.slice(-6)} <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  {/* Step 2: CC3 Proof */}
-                  <div className="flex items-center gap-3">
-                    {depositStep === 'done' && cc3TxHash ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                    ) : depositStep === 'proving' ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-purple-600 shrink-0" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-xs font-medium">Attestcoin Proof on CC3</p>
-                      {depositStep === 'proving' && !cc3TxHash && (
-                        <p className="text-[10px] text-muted-foreground">Waiting for Attestcoin Prover to index block... ({Math.floor(proofTimer / 60)}m {proofTimer % 60}s)</p>
-                      )}
-                      {cc3TxHash && (
-                        <p className="text-[10px] text-purple-600 font-mono">{cc3TxHash.slice(0, 10)}...{cc3TxHash.slice(-6)}</p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Step 3: Record Investment */}
-                  <div className="flex items-center gap-3">
-                    {depositStep === 'done' ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                    )}
-                    <p className="text-xs font-medium">Record Investment</p>
-                  </div>
-                  {depositStep === 'done' && (
-                    <Progress value={100} className="h-2" />
-                  )}
-                </div>
-              )}
-
-              {/* Error */}
-              {depositError && (
-                <div className="space-y-2">
-                  <div className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-50 p-3 text-xs text-rose-950">
-                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] break-all">{depositError}</p>
-                  </div>
-                  {/* Retry CC3 proof if Sepolia deposit succeeded but proof failed */}
-                  {depositTxHash && !cc3TxHash && (
-                    <Button
-                      onClick={async () => {
-                        setDepositError('')
-                        setDepositStep('proving')
-                        setProcessing(true)
-                        setProofTimer(0)
-                        if (proofTimerRef.current) clearInterval(proofTimerRef.current)
-                        proofTimerRef.current = setInterval(() => setProofTimer((t) => t + 1), 1000)
-
-                        try {
-<<<<<<< HEAD
-                          toast.info('Retrying CC3 proof...')
-                          let proofAlreadySettled = false
-                          try {
-                            const proveRes = await apiInstance.post('/investor/deposit/prove', {
-                              sourceTxHash: depositTxHash,
-                              chainKey: 1,
-                            }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
-                            if (!proveRes.data?.success) {
-                              const errMsg = proveRes.data?.error || 'CC3 proof failed'
-                              if (errMsg.includes('already settled') || errMsg.includes('already processed')) {
-                                proofAlreadySettled = true
-                              } else {
-                                throw new Error(errMsg)
-                              }
-                            } else {
-                              setCc3TxHash(proveRes.data.data?.cc3TxHash || proveRes.data.data?.transactionHash || '')
-                            }
-                          } catch (proveErr: any) {
-                            const errMsg = proveErr?.response?.data?.error || proveErr?.response?.data?.message || proveErr.message || ''
-                            if (errMsg.includes('already settled') || errMsg.includes('already processed')) {
-                              proofAlreadySettled = true
-                            } else {
-                              throw proveErr
-                            }
-                          }
-=======
-                          toast.info('Queuing CC3 proof verification job...')
-                          const proveRes = await apiInstance.post('/investor/deposit/prove', {
-                            sourceTxHash: depositTxHash,
-                            chainKey: 1,
-                          })
-                          if (!proveRes.data?.success) {
-                            throw new Error(proveRes.data?.error || 'Failed to queue CC3 proof')
-                          }
-
-                          const { jobId } = proveRes.data.data
-                          let settledHash = ''
-                          const maxAttempts = 150
-                          let attempts = 0
-
-                          while (attempts < maxAttempts) {
-                            await new Promise((r) => setTimeout(r, 2500))
-                            attempts++
-                            try {
-                              const statRes = await apiInstance.get(`/investor/deposit/status/${jobId}`)
-                              if (statRes.data?.success && statRes.data?.data) {
-                                const { state, result, error } = statRes.data.data
-                                if (state === 'COMPLETED' && result) {
-                                  settledHash = result.transactionHash || result.cc3TxHash || ''
-                                  break
-                                } else if (state === 'FAILED') {
-                                  throw new Error(error || 'CC3 proof verification failed')
-                                }
-                              }
-                            } catch (pErr: any) {
-                              if (pErr.message && !pErr.message.includes('Network Error') && pErr.response?.status !== 404) {
-                                throw pErr
-                              }
-                            }
-                          }
-
-                          if (!settledHash) {
-                            throw new Error('Timed out waiting for Attestcoin proof verification.')
-                          }
-
-                          setCc3TxHash(settledHash)
->>>>>>> c25d2d6 (feat(proofs): migrate Attestcoin proof and settle flows to async BullMQ jobs with live polling)
-                          if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
-
-                          if (proofAlreadySettled) {
-                            toast.info('Proof already on-chain. Recording investment...')
-                          } else {
-                            toast.success('CC3 proof verified!')
-                          }
-
-                          // Step 3: Record investment
-                          await apiInstance.post('/investor/invest', {
-                            sagTokenId: investModal.tokenId,
-                            amountUsd: Number(investAmount),
-                          })
-                          setDepositStep('done')
-                          toast.success('Investment complete!')
-                          const res = await apiInstance.get('/sag/')
-                          if (res.data.success) setSags(res.data.data ?? [])
-                        } catch (retryErr: any) {
-                          const backendErr = retryErr?.response?.data?.error || retryErr?.response?.data?.message || ''
-                          setDepositError(backendErr || retryErr.message || 'CC3 proof retry failed')
-                          toast.error(backendErr || 'CC3 proof retry failed')
-                        } finally {
-                          if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
-                          setProcessing(false)
-                        }
-                      }}
-                      disabled={processing}
-                      className="w-full rounded-xl gap-2 bg-purple-600 text-white hover:bg-purple-700"
-                    >
-                      {processing ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Verifying Attestcoin Proof...</>
-                      ) : (
-                        <><RefreshCw className="h-4 w-4" /> Retry CC3 Proof</>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositStep('idle'); setDepositTxHash(''); setCc3TxHash(''); setDepositError(''); setProofTimer(0); }}
-                  disabled={depositStep === 'depositing' || depositStep === 'proving'}
-                >
-                  {depositStep === 'done' ? 'Close' : 'Cancel'}
-                </Button>
-                {depositStep === 'idle' && (
-                  <Button
-                    onClick={async () => {
-                      if (!investModal || !investAmount || ethPrice <= 0) return
-                      setProcessing(true)
-                      setDepositError('')
-                      try {
-                        const usdAmount = Number(investAmount)
-                        const ethAmount = usdAmount / ethPrice
-                        const weiAmount = ethers.parseEther(ethAmount.toFixed(18))
-
-                        // Step 1: MetaMask deposit to InvestorVault on Sepolia
-                        setDepositStep('depositing')
-                        toast.info(`Depositing ${ethAmount.toFixed(6)} ETH to InvestorVault...`)
-
-                        if (typeof window === 'undefined' || !(window as any).ethereum) {
-                          throw new Error('No EVM wallet detected. Please install MetaMask.')
-                        }
-
-                        const provider = new ethers.BrowserProvider((window as any).ethereum)
-                        const network = await provider.getNetwork()
-                        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
-                          toast.info('Switching wallet to Ethereum Sepolia...')
-                          await switchOrAddSepoliaNetwork()
-                        }
-
-                        const signer = await provider.getSigner()
-                        const userAddress = await signer.getAddress()
-
-                        // Pre-flight: EIP-7702 delegation detection
-                        const delegation = await checkEip7702Delegation(provider, userAddress)
-                        if (delegation.isDelegated) {
-                          throw new Error(
-                            `EIP-7702 Delegation Detected: Your wallet (${userAddress.slice(0, 8)}...) has active delegation to ${delegation.delegatedAddress?.slice(0, 8)}... ` +
-                            `Transactions are routed through a DelegationManager with 0 wei value, which prevents CC3 proof verification. ` +
-                            `Please revoke EIP-7702 delegation or use a standard EOA wallet.`
-                          )
-                        }
-
-                        const vaultContract = new ethers.Contract(
-                          SEPOLIA_INVESTOR_VAULT_ADDRESS,
-                          INVESTOR_VAULT_ABI,
-                          signer
-                        )
-
-                        const tx = await vaultContract.deposit(weiAmount, { value: weiAmount })
-                        setDepositTxHash(tx.hash)
-                        toast.info('Waiting for Sepolia confirmation...')
-                        const receipt = await tx.wait(1)
-
-                        // Verify the deposit actually succeeded (check tx status)
-                        if (receipt.status !== 1) {
-                          throw new Error('Transaction reverted on-chain. The deposit did not go through.')
-                        }
-                        toast.success('Sepolia deposit confirmed!')
-
-                        // Step 2: Attestcoin proof on CC3 (Async BullMQ Queue + Polling)
-                        setDepositStep('proving')
-                        setProofTimer(0)
-                        if (proofTimerRef.current) clearInterval(proofTimerRef.current)
-                        proofTimerRef.current = setInterval(() => setProofTimer((t) => t + 1), 1000)
-                        toast.info('Queued Attestcoin proof verification on CC3...')
-
-                        const proveRes = await apiInstance.post('/investor/deposit/prove', {
-                          sourceTxHash: tx.hash,
-                          chainKey: 1,
-                        })
-
-                        if (!proveRes.data?.success) {
-                          throw new Error(proveRes.data?.error || 'Failed to queue CC3 proof')
-                        }
-
-                        const { jobId } = proveRes.data.data
-                        let settledHash = ''
-                        const maxAttempts = 150
-                        let attempts = 0
-
-                        while (attempts < maxAttempts) {
-                          await new Promise((r) => setTimeout(r, 2500))
-                          attempts++
-                          try {
-                            const statRes = await apiInstance.get(`/investor/deposit/status/${jobId}`)
-                            if (statRes.data?.success && statRes.data?.data) {
-                              const { state, result, error } = statRes.data.data
-                              if (state === 'COMPLETED' && result) {
-                                settledHash = result.transactionHash || result.cc3TxHash || ''
-                                break
-                              } else if (state === 'FAILED') {
-                                throw new Error(error || 'CC3 proof verification failed')
-                              }
-                            }
-                          } catch (pErr: any) {
-                            if (pErr.message && !pErr.message.includes('Network Error') && pErr.response?.status !== 404) {
-                              throw pErr
-                            }
-                          }
-                        }
-
-                        if (!settledHash) {
-                          throw new Error('Timed out waiting for Attestcoin proof verification.')
-                        }
-
-                        setCc3TxHash(settledHash)
-                        if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
-                        toast.success('CC3 proof verified!')
-
-                        // Step 3: Record investment in backend
-                        await apiInstance.post('/investor/invest', {
-                          sagTokenId: investModal.tokenId,
-                          amountUsd: usdAmount,
-                        })
-
-                        setDepositStep('done')
-                        toast.success('Investment complete!')
-
-                        // Refresh SAG list
-                        const res = await apiInstance.get('/sag/')
-                        if (res.data.success) setSags(res.data.data ?? [])
-                      } catch (err: any) {
-                        // Extract actual backend error from Axios response
-                        const backendError = err?.response?.data?.error || err?.response?.data?.message || ''
-                        const msg = err?.message || ''
-                        let friendly = 'Deposit failed'
-                        if (msg.includes('user-rejected') || msg.includes('User denied') || msg.includes('ACTION_REJECTED') || err?.code === 4001) {
-                          friendly = 'Transaction cancelled. You rejected the request in MetaMask.'
-                        } else if (msg.includes('insufficient funds')) {
-                          friendly = 'Insufficient ETH balance in your wallet.'
-                        } else if (msg.includes('network') || msg.includes('chain')) {
-                          friendly = 'Network error. Please make sure you are on Sepolia.'
-                        } else if (backendError) {
-                          friendly = backendError
-                        } else {
-                          friendly = msg
-                        }
-                        if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
-                        setProofTimer(0)
-                        setDepositError(friendly)
-                        toast.error(friendly)
-                      } finally {
-                        setProcessing(false)
-                      }
-                    }}
-                    disabled={processing || !investAmount || ethPrice <= 0}
-                    className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
-                  >
-                    {processing ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
-                    ) : (
-                      <><Send className="h-4 w-4" /> Invest</>
-                    )}
-                  </Button>
+                {ethPrice > 0 && investAmount && (
+                  <p className="text-xs text-muted-foreground">~{(Number(investAmount) / ethPrice).toFixed(6)} ETH @ ${ethPrice.toLocaleString()}/ETH</p>
                 )}
+                <p className="text-[10px] text-muted-foreground">Min: ${Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}</p>
+              </div>
+
+              {depositError && (
+                <div className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-50 p-3 text-xs text-rose-950">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] break-all">{depositError}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setInvestModal(null); setInvestAmount(''); setDepositError(''); }} disabled={processing}>Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    if (!investModal || !investAmount || ethPrice <= 0) return
+                    setProcessing(true)
+                    setDepositError('')
+                    try {
+                      const usdAmount = Number(investAmount)
+                      const ethAmount = usdAmount / ethPrice
+                      const weiAmount = ethers.parseEther(ethAmount.toFixed(18))
+
+                      toast.info(`Depositing ${ethAmount.toFixed(6)} ETH to InvestorVault...`)
+
+                      if (typeof window === 'undefined' || !(window as any).ethereum) {
+                        throw new Error('No EVM wallet detected. Please install MetaMask.')
+                      }
+
+                      const provider = new ethers.BrowserProvider((window as any).ethereum)
+                      const network = await provider.getNetwork()
+                      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+                        toast.info('Switching wallet to Ethereum Sepolia...')
+                        await switchOrAddSepoliaNetwork()
+                      }
+
+                      const signer = await provider.getSigner()
+                      const userAddress = await signer.getAddress()
+
+                      const delegation = await checkEip7702Delegation(provider, userAddress)
+                      if (delegation.isDelegated) {
+                        throw new Error(
+                          `EIP-7702 Delegation Detected: Your wallet (${userAddress.slice(0, 8)}...) has active delegation to ${delegation.delegatedAddress?.slice(0, 8)}... ` +
+                          `Transactions are routed through a DelegationManager with 0 wei value, which prevents CC3 proof verification. ` +
+                          `Please revoke EIP-7702 delegation or use a standard EOA wallet.`
+                        )
+                      }
+
+                      const vaultContract = new ethers.Contract(
+                        SEPOLIA_INVESTOR_VAULT_ADDRESS,
+                        INVESTOR_VAULT_ABI,
+                        signer
+                      )
+
+                      const tx = await vaultContract.deposit(weiAmount, { value: weiAmount })
+                      toast.info('Waiting for Sepolia confirmation...')
+                      const receipt = await tx.wait(1)
+
+                      if (receipt.status !== 1) {
+                        throw new Error('Transaction reverted on-chain. The deposit did not go through.')
+                      }
+
+                      toast.success('Sepolia deposit confirmed! Proof processing in background...')
+
+                      const proveRes = await apiInstance.post('/investor/deposit/prove', {
+                        sourceTxHash: tx.hash,
+                        chainKey: 1,
+                      })
+
+                      const jobId = proveRes.data?.data?.jobId || `deposit-${tx.hash.toLowerCase()}`
+
+                      const newJob: ActiveJob = {
+                        jobId,
+                        sagName: investModal.sagName || `SAG #${investModal.tokenId}`,
+                        sagTokenId: investModal.tokenId,
+                        depositTxHash: tx.hash,
+                        amountUsd: usdAmount,
+                        ethAmount,
+                        progress: 0,
+                        message: 'Proof job queued...',
+                        status: 'queued',
+                        startedAt: Date.now(),
+                      }
+                      setActiveJobs(prev => [newJob, ...prev])
+
+                      setInvestModal(null)
+                      setInvestAmount('')
+                      setDepositError('')
+                    } catch (err: any) {
+                      const backendError = err?.response?.data?.error || err?.response?.data?.message || ''
+                      const msg = err?.message || ''
+                      let friendly = 'Deposit failed'
+                      if (msg.includes('user-rejected') || msg.includes('User denied') || msg.includes('ACTION_REJECTED') || err?.code === 4001) {
+                        friendly = 'Transaction cancelled. You rejected the request in MetaMask.'
+                      } else if (msg.includes('insufficient funds')) {
+                        friendly = 'Insufficient ETH balance in your wallet.'
+                      } else if (msg.includes('network') || msg.includes('chain')) {
+                        friendly = 'Network error. Please make sure you are on Sepolia.'
+                      } else if (backendError) {
+                        friendly = backendError
+                      } else {
+                        friendly = msg
+                      }
+                      setDepositError(friendly)
+                      toast.error(friendly)
+                    } finally {
+                      setProcessing(false)
+                    }
+                  }}
+                  disabled={processing || !investAmount || ethPrice <= 0}
+                  className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+                  ) : (
+                    <><Send className="h-4 w-4" /> Invest</>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
