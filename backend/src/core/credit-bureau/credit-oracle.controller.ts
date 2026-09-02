@@ -171,7 +171,7 @@ export class CreditOracleController {
 
   /**
    * POST /api/credit-oracle/prove-pawnshop-payment
-   * Proves a pawnshop-to-borrower ETH payment on CC3 via Attestcoin BlockProver
+   * Proves a pawnshop-to-borrower ETH payment on CC3 via Attestcoin BlockProver (Async BullMQ)
    */
   public async provePawnshopPayment(req: Request, res: Response): Promise<void> {
     try {
@@ -181,27 +181,135 @@ export class CreditOracleController {
         return;
       }
 
-      const result = await this.relayerService.provePawnshopPayment(
-        sourceTxHash,
-        chainKey ? Number(chainKey) : 1,
-        borrowerAddress,
+      const { crossChainProofQueue, JOB_TYPES } = await import('@/bullmq/scheduler.js');
+      const jobId = `pawnshop-pay-${sourceTxHash.toLowerCase()}`;
+
+      const existingJob = await crossChainProofQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state !== 'failed') {
+          res.status(202).json({
+            success: true,
+            message: 'Pawnshop payment proof job already active or completed',
+            data: {
+              jobId: existingJob.id,
+              status: state.toUpperCase(),
+              statusUrl: `/api/v1/credit-oracle/proof/status/${existingJob.id}`,
+            },
+          });
+          return;
+        }
+        await existingJob.remove();
+      }
+
+      console.log(`[${new Date().toISOString()}] Enqueuing pawnshop payment proof job ${jobId} for sourceTx ${sourceTxHash}`);
+
+      const job = await crossChainProofQueue.add(
+        JOB_TYPES.PROVE_PAWNSHOP_PAYMENT,
+        {
+          type: 'pawnshop-payment',
+          sourceTxHash,
+          chainKey: chainKey ? Number(chainKey) : 1,
+          borrowerAddress,
+        },
+        {
+          jobId,
+          priority: 1,
+        }
       );
 
-      if (!result.success) {
-        res.status(500).json({ success: false, message: result.error });
+      res.status(202).json({
+        success: true,
+        message: 'Pawnshop payment proof job queued successfully on Creditcoin CC3',
+        data: {
+          jobId: job.id,
+          status: 'QUEUED',
+          statusUrl: `/api/v1/credit-oracle/proof/status/${job.id}`,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (err: any) {
+      console.error('[CreditOracleController] provePawnshopPayment error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Failed to queue pawnshop payment proof' });
+    }
+  }
+
+  /**
+   * POST /api/v1/credit-oracle/prove-loan-funding OR /api/v1/loan/fund/prove
+   * Cryptographically verifies an Ethereum Sepolia loan funding tx and settles on CC3 (Async BullMQ)
+   */
+  public async proveLoanFunding(req: Request, res: Response): Promise<void> {
+    try {
+      const { tokenId, txHash, sourceTxHash, chainKey } = req.body;
+      const targetHash = txHash || sourceTxHash;
+
+      if (!tokenId || !targetHash) {
+        res.status(400).json({
+          success: false,
+          message: 'tokenId and txHash (or sourceTxHash) are required'
+        });
         return;
       }
 
-      res.status(200).json({ success: true, data: result });
+      const { crossChainProofQueue, JOB_TYPES } = await import('@/bullmq/scheduler.js');
+      const jobId = `fund-${Number(tokenId)}-${targetHash.toLowerCase()}`;
+
+      const existingJob = await crossChainProofQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state !== 'failed') {
+          res.status(202).json({
+            success: true,
+            message: 'Loan funding proof job already active or completed',
+            data: {
+              jobId: existingJob.id,
+              status: state.toUpperCase(),
+              statusUrl: `/api/v1/credit-oracle/proof/status/${existingJob.id}`,
+            },
+          });
+          return;
+        }
+        await existingJob.remove();
+      }
+
+      console.log(`[${new Date().toISOString()}] Enqueuing loan funding proof job ${jobId} for Token #${tokenId}, sourceTx ${targetHash}`);
+
+      const job = await crossChainProofQueue.add(
+        JOB_TYPES.PROVE_LOAN_FUNDING,
+        {
+          type: 'loan-funding',
+          sourceTxHash: targetHash,
+          tokenId: Number(tokenId),
+          chainKey: chainKey ? Number(chainKey) : 1,
+        },
+        {
+          jobId,
+          priority: 1,
+        }
+      );
+
+      res.status(202).json({
+        success: true,
+        message: 'Loan funding proof job queued successfully on Creditcoin CC3',
+        data: {
+          jobId: job.id,
+          status: 'QUEUED',
+          statusUrl: `/api/v1/credit-oracle/proof/status/${job.id}`,
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (err: any) {
-      console.error('[CreditOracleController] provePawnshopPayment error:', err);
-      res.status(500).json({ success: false, message: err.message || 'Failed to prove pawnshop payment' });
+      console.error('[CreditOracleController] proveLoanFunding error:', err);
+      res.status(500).json({
+        success: false,
+        message: err.message || 'Failed to queue loan funding proof'
+      });
     }
   }
 
   /**
    * POST /api/v1/credit-oracle/prove-repayment OR /api/v1/loan/repay/prove
-   * Cryptographically verifies an Ethereum Sepolia repayment tx and settles the loan on CC3
+   * Cryptographically verifies an Ethereum Sepolia repayment tx and settles the loan on CC3 (Async BullMQ)
    */
   public async proveRepayment(req: Request, res: Response): Promise<void> {
     try {
@@ -216,30 +324,101 @@ export class CreditOracleController {
         return;
       }
 
-      const result = await this.relayerService.proveAndSettleSepoliaRepayment(
-        Number(tokenId),
-        targetHash,
-        chainKey ? Number(chainKey) : 1
-      );
+      const { crossChainProofQueue, JOB_TYPES } = await import('@/bullmq/scheduler.js');
+      const jobId = `repay-${Number(tokenId)}-${targetHash.toLowerCase()}`;
 
-      if (!result.success) {
-        res.status(500).json({
-          success: false,
-          message: result.error || 'Failed to prove and settle repayment on Creditcoin'
-        });
-        return;
+      const existingJob = await crossChainProofQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state !== 'failed') {
+          res.status(202).json({
+            success: true,
+            message: 'Repayment proof job already active or completed',
+            data: {
+              jobId: existingJob.id,
+              status: state.toUpperCase(),
+              statusUrl: `/api/v1/loan/repay/status/${existingJob.id}`,
+            },
+          });
+          return;
+        }
+        await existingJob.remove();
       }
 
-      res.status(200).json({
+      console.log(`[${new Date().toISOString()}] Enqueuing repayment proof job ${jobId} for Token #${tokenId}, sourceTx ${targetHash}`);
+
+      const job = await crossChainProofQueue.add(
+        JOB_TYPES.PROVE_REPAYMENT,
+        {
+          type: 'repayment',
+          sourceTxHash: targetHash,
+          tokenId: Number(tokenId),
+          chainKey: chainKey ? Number(chainKey) : 1,
+        },
+        {
+          jobId,
+          priority: 1,
+        }
+      );
+
+      res.status(202).json({
         success: true,
-        data: result
+        message: 'Repayment proof job queued successfully on Creditcoin CC3',
+        data: {
+          jobId: job.id,
+          status: 'QUEUED',
+          statusUrl: `/api/v1/loan/repay/status/${job.id}`,
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (err: any) {
       console.error('[CreditOracleController] proveRepayment error:', err);
       res.status(500).json({
         success: false,
-        message: err.message || 'Failed to prove and settle cross-chain repayment'
+        message: err.message || 'Failed to queue cross-chain repayment proof'
       });
+    }
+  }
+
+  /**
+   * GET /api/v1/credit-oracle/proof/status/:jobId OR /api/v1/loan/repay/status/:jobId
+   * Retrieves the status of any async proof job from BullMQ
+   */
+  public async getProofStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+      if (!jobId) {
+        res.status(400).json({ success: false, error: 'jobId is required' });
+        return;
+      }
+
+      const { crossChainProofQueue } = await import('@/bullmq/scheduler.js');
+      const job = await crossChainProofQueue.getJob(jobId);
+
+      if (!job) {
+        res.status(404).json({ success: false, error: 'Job not found' });
+        return;
+      }
+
+      const state = await job.getState();
+      const progress = job.progress;
+      const result = job.returnvalue;
+      const failedReason = job.failedReason;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          jobId: job.id,
+          state: state.toUpperCase(),
+          progress: progress || 0,
+          result: result || null,
+          error: failedReason || null,
+          attemptsMade: job.attemptsMade,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error fetching proof job status:', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to fetch job status' });
     }
   }
 }

@@ -618,6 +618,82 @@ export class AttestcoinOracleRelayerService {
   }
 
   /**
+   * Prove a cross-chain Ethereum Sepolia (chainKey: 1) loan funding transaction on Creditcoin CC3.
+   * Cryptographically verifies the fundLoan() transaction via Attestcoin BlockProver (0xFD2),
+   * validates token appraisal valuation against SAGToken, and updates loanInvestor/loanBalance on CC3.
+   */
+  public async proveAndFundLoanCrossChain(
+    tokenId: number,
+    sourceTxHash: string,
+    chainKey: number = 1
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    blockNumber?: number;
+    explorerUrl?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Loan Funding Tx: ${sourceTxHash}`);
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
+          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        }
+      }
+
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      }
+
+      const proofData = proofResult.data;
+      const poolContract = new ethers.Contract(
+        CREDITCOIN_CONFIG.contracts.liquidityPoolAddress,
+        SANAD_LIQUIDITY_POOL_ABI,
+        this.signer
+      );
+
+      const txBytes = proofData.txBytes || proofData.encodedTransaction;
+
+      console.log(`[AttestcoinRelayer] Calling verifyAndFundLoanCrossChain for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
+      const tx = await poolContract.verifyAndFundLoanCrossChain(
+        tokenId,
+        proofData.chainKey,
+        proofData.headerNumber,
+        txBytes,
+        proofData.merkleProof,
+        proofData.continuityProof,
+        sourceTxHash
+      );
+
+      console.log(`[AttestcoinRelayer] Loan Funding Settlement broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+      };
+    } catch (err: any) {
+      console.error(`[AttestcoinRelayer] Error proving Sepolia loan funding:`, err);
+      return {
+        success: false,
+        error: err.message || 'Failed to submit loan funding proof to Creditcoin',
+      };
+    }
+  }
+
+  /**
    * Prepare unsigned CC3 transaction data for pawnshop payment proof.
    * Returns the data needed for MetaMask to sign and submit on CC3.
    */

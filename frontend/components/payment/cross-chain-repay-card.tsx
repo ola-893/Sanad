@@ -130,10 +130,10 @@ export function CrossChainRepayCard() {
         }
       }
 
-      // 2. Request Attestcoin Proof & Settle on CC3
+      // 2. Request Attestcoin Proof & Settle on CC3 (Async Queue + Polling)
       setStatus("proving")
-      setProgressPercent(60)
-      setStatusText("Generating Attestcoin cryptographic proof via CC3 Prover...")
+      setProgressPercent(50)
+      setStatusText("Queuing Attestcoin cryptographic proof job on Creditcoin CC3...")
 
       const response = await apiInstance.post("/loan/repay/prove", {
         tokenId: Number(tokenId),
@@ -142,11 +142,51 @@ export function CrossChainRepayCard() {
       }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
 
       if (!response.data?.success) {
-        throw new Error(response.data?.error || response.data?.message || "Attestcoin proof generation failed")
+        throw new Error(response.data?.error || response.data?.message || "Failed to queue repayment proof")
       }
 
-      const resultData = response.data.data
-      const settledCc3Hash = resultData.cc3TxHash || resultData.transactionHash
+      const { jobId } = response.data.data
+      toast.info("Repayment proof job queued. Polling Attestcoin indexing & CC3 settlement...")
+
+      // 3. Poll for job completion
+      let settledCc3Hash = ""
+      const maxPollAttempts = 150 // ~5 minutes max
+      let pollAttempts = 0
+
+      while (pollAttempts < maxPollAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 2500))
+        pollAttempts++
+
+        try {
+          const statusRes = await apiInstance.get(`/loan/repay/status/${jobId}`)
+          if (statusRes.data?.success && statusRes.data?.data) {
+            const jobData = statusRes.data.data
+            const { state, progress, result, error } = jobData
+
+            if (progress) {
+              setProgressPercent(Math.max(50, progress))
+            }
+
+            if (state === "COMPLETED" && result) {
+              settledCc3Hash = result.transactionHash || result.cc3TxHash || ""
+              break
+            } else if (state === "FAILED") {
+              throw new Error(error || "Attestcoin repayment proof job failed on Creditcoin CC3")
+            } else {
+              setStatusText(`Attestcoin indexing & repayment settlement in progress... (${state.toLowerCase()}, attempt ${jobData.attemptsMade || 1})`)
+            }
+          }
+        } catch (pollErr: any) {
+          if (pollErr.message && !pollErr.message.includes("Network Error") && pollErr.response?.status !== 404) {
+            throw pollErr
+          }
+        }
+      }
+
+      if (!settledCc3Hash) {
+        throw new Error("Timed out waiting for Attestcoin proof verification. The job is still processing in background.")
+      }
+
       setCc3TxHash(settledCc3Hash)
       setProgressPercent(100)
       setStatus("settled")

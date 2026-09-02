@@ -438,7 +438,12 @@ export default function BrowsePage() {
                         setDepositError('')
                         setDepositStep('proving')
                         setProcessing(true)
+                        setProofTimer(0)
+                        if (proofTimerRef.current) clearInterval(proofTimerRef.current)
+                        proofTimerRef.current = setInterval(() => setProofTimer((t) => t + 1), 1000)
+
                         try {
+<<<<<<< HEAD
                           toast.info('Retrying CC3 proof...')
                           let proofAlreadySettled = false
                           try {
@@ -464,6 +469,48 @@ export default function BrowsePage() {
                               throw proveErr
                             }
                           }
+=======
+                          toast.info('Queuing CC3 proof verification job...')
+                          const proveRes = await apiInstance.post('/investor/deposit/prove', {
+                            sourceTxHash: depositTxHash,
+                            chainKey: 1,
+                          })
+                          if (!proveRes.data?.success) {
+                            throw new Error(proveRes.data?.error || 'Failed to queue CC3 proof')
+                          }
+
+                          const { jobId } = proveRes.data.data
+                          let settledHash = ''
+                          const maxAttempts = 150
+                          let attempts = 0
+
+                          while (attempts < maxAttempts) {
+                            await new Promise((r) => setTimeout(r, 2500))
+                            attempts++
+                            try {
+                              const statRes = await apiInstance.get(`/investor/deposit/status/${jobId}`)
+                              if (statRes.data?.success && statRes.data?.data) {
+                                const { state, result, error } = statRes.data.data
+                                if (state === 'COMPLETED' && result) {
+                                  settledHash = result.transactionHash || result.cc3TxHash || ''
+                                  break
+                                } else if (state === 'FAILED') {
+                                  throw new Error(error || 'CC3 proof verification failed')
+                                }
+                              }
+                            } catch (pErr: any) {
+                              if (pErr.message && !pErr.message.includes('Network Error') && pErr.response?.status !== 404) {
+                                throw pErr
+                              }
+                            }
+                          }
+
+                          if (!settledHash) {
+                            throw new Error('Timed out waiting for Attestcoin proof verification.')
+                          }
+
+                          setCc3TxHash(settledHash)
+>>>>>>> c25d2d6 (feat(proofs): migrate Attestcoin proof and settle flows to async BullMQ jobs with live polling)
                           if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
 
                           if (proofAlreadySettled) {
@@ -486,6 +533,7 @@ export default function BrowsePage() {
                           setDepositError(backendErr || retryErr.message || 'CC3 proof retry failed')
                           toast.error(backendErr || 'CC3 proof retry failed')
                         } finally {
+                          if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
                           setProcessing(false)
                         }
                       }}
@@ -493,7 +541,7 @@ export default function BrowsePage() {
                       className="w-full rounded-xl gap-2 bg-purple-600 text-white hover:bg-purple-700"
                     >
                       {processing ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Retrying...</>
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Verifying Attestcoin Proof...</>
                       ) : (
                         <><RefreshCw className="h-4 w-4" /> Retry CC3 Proof</>
                       )}
@@ -565,59 +613,57 @@ export default function BrowsePage() {
                         if (receipt.status !== 1) {
                           throw new Error('Transaction reverted on-chain. The deposit did not go through.')
                         }
-                        // Verify recipient — accept if it matches vault directly or via delegation proxy
-                        const toAddr = (receipt.to || '').toLowerCase()
-                        const vaultAddr = SEPOLIA_INVESTOR_VAULT_ADDRESS.toLowerCase()
-                        if (toAddr === vaultAddr) {
-                          // Direct deposit to vault — confirmed
-                        } else {
-                          // Delegation proxy — verify vault address appears in calldata
-                          const inputLower = (receipt.data || '').toLowerCase()
-                          if (inputLower.includes(vaultAddr.slice(2))) {
-                            // Vault address found in calldata — delegation forwarded correctly
-                          } else {
-                            // Unknown recipient — warn but continue (CC3 prover will catch any real issues)
-                            console.warn(`Deposit recipient ${receipt.to} is not the expected vault ${SEPOLIA_INVESTOR_VAULT_ADDRESS}. Proceeding anyway.`)
-                          }
-                        }
                         toast.success('Sepolia deposit confirmed!')
 
-                        // Step 2: Attestcoin proof on CC3
+                        // Step 2: Attestcoin proof on CC3 (Async BullMQ Queue + Polling)
                         setDepositStep('proving')
                         setProofTimer(0)
+                        if (proofTimerRef.current) clearInterval(proofTimerRef.current)
                         proofTimerRef.current = setInterval(() => setProofTimer((t) => t + 1), 1000)
-                        toast.info('Generating Attestcoin proof on CC3 — this can take a few minutes...')
+                        toast.info('Queued Attestcoin proof verification on CC3...')
 
-                        let proofAlreadySettled = false
-                        try {
-                          const proveRes = await apiInstance.post('/investor/deposit/prove', {
-                            sourceTxHash: tx.hash,
-                            chainKey: 1,
-                          }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
-                          if (!proveRes.data?.success) {
-                            const errMsg = proveRes.data?.error || 'CC3 proof failed'
-                            if (errMsg.includes('already settled') || errMsg.includes('already processed')) {
-                              proofAlreadySettled = true
-                            } else {
-                              throw new Error(errMsg)
+                        const proveRes = await apiInstance.post('/investor/deposit/prove', {
+                          sourceTxHash: tx.hash,
+                          chainKey: 1,
+                        })
+
+                        if (!proveRes.data?.success) {
+                          throw new Error(proveRes.data?.error || 'Failed to queue CC3 proof')
+                        }
+
+                        const { jobId } = proveRes.data.data
+                        let settledHash = ''
+                        const maxAttempts = 150
+                        let attempts = 0
+
+                        while (attempts < maxAttempts) {
+                          await new Promise((r) => setTimeout(r, 2500))
+                          attempts++
+                          try {
+                            const statRes = await apiInstance.get(`/investor/deposit/status/${jobId}`)
+                            if (statRes.data?.success && statRes.data?.data) {
+                              const { state, result, error } = statRes.data.data
+                              if (state === 'COMPLETED' && result) {
+                                settledHash = result.transactionHash || result.cc3TxHash || ''
+                                break
+                              } else if (state === 'FAILED') {
+                                throw new Error(error || 'CC3 proof verification failed')
+                              }
                             }
-                          } else {
-                            setCc3TxHash(proveRes.data.data?.cc3TxHash || proveRes.data.data?.transactionHash || '')
-                          }
-                        } catch (proveErr: any) {
-                          const errMsg = proveErr?.response?.data?.error || proveErr?.response?.data?.message || proveErr.message || ''
-                          if (errMsg.includes('already settled') || errMsg.includes('already processed')) {
-                            proofAlreadySettled = true
-                          } else {
-                            throw proveErr
+                          } catch (pErr: any) {
+                            if (pErr.message && !pErr.message.includes('Network Error') && pErr.response?.status !== 404) {
+                              throw pErr
+                            }
                           }
                         }
+
+                        if (!settledHash) {
+                          throw new Error('Timed out waiting for Attestcoin proof verification.')
+                        }
+
+                        setCc3TxHash(settledHash)
                         if (proofTimerRef.current) { clearInterval(proofTimerRef.current); proofTimerRef.current = null; }
-                        if (proofAlreadySettled) {
-                          toast.info('CC3 proof already verified — proceeding to record investment...')
-                        } else {
-                          toast.success('CC3 proof verified!')
-                        }
+                        toast.success('CC3 proof verified!')
 
                         // Step 3: Record investment in backend
                         await apiInstance.post('/investor/invest', {

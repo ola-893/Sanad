@@ -293,18 +293,43 @@ export default function PawnshopRequestsPage() {
     try {
       let cc3Hash = payCc3Hash
 
-      // Auto-prove on CC3 if no CC3 hash provided
+      // Auto-prove on CC3 if no CC3 hash provided (Async BullMQ Queue + Polling)
       if (!cc3Hash) {
-        toast.info("Proving payment on CC3 via Attestcoin...")
+        toast.info("Queuing payment proof job on CC3 via Attestcoin...")
         try {
           const proofRes = await apiInstance.post("/credit-oracle/prove-pawnshop-payment", {
             sourceTxHash: payTxHash,
             chainKey: 1,
             borrowerAddress: payModal.borrowerWallet,
           })
-          cc3Hash = proofRes.data?.data?.cc3TxHash || ""
+          if (proofRes.data?.success && proofRes.data?.data?.jobId) {
+            const { jobId } = proofRes.data.data
+            // Poll for completion
+            const maxAttempts = 150
+            let attempts = 0
+            while (attempts < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 2500))
+              attempts++
+              try {
+                const statRes = await apiInstance.get(`/credit-oracle/proof/status/${jobId}`)
+                if (statRes.data?.success && statRes.data?.data) {
+                  const { state, result, error } = statRes.data.data
+                  if (state === "COMPLETED" && result) {
+                    cc3Hash = result.transactionHash || result.cc3TxHash || ""
+                    break
+                  } else if (state === "FAILED") {
+                    throw new Error(error || "Attestation failed")
+                  }
+                }
+              } catch (pErr: any) {
+                if (pErr.message && !pErr.message.includes("Network Error") && pErr.response?.status !== 404) {
+                  throw pErr
+                }
+              }
+            }
+          }
           if (cc3Hash) {
-            toast.success("CC3 attestation proof generated!")
+            toast.success("CC3 attestation proof verified!")
           }
         } catch (proofErr: any) {
           console.warn("CC3 auto-proof failed, recording payment without proof:", proofErr?.message)
