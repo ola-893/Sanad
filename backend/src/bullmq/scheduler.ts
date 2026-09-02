@@ -1,6 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { processAsyncCreditcoinSag, AsyncCreditcoinSagJobData } from '../services/async-creditcoin-sag.service.js';
 import { processGoldPriceJob, GoldPriceJobData } from '../services/async-gold-price.service.js';
+import { processCrossChainProofJob, CrossChainProofJobData } from '../services/async-cross-chain-proof.service.js';
 
 // Redis connection configuration
 const redisConnection = {
@@ -14,13 +15,18 @@ const redisConnection = {
 export const QUEUE_NAMES = {
   SAG_CREATION: 'sag-creation-queue',
   GOLD_PRICE: 'gold-price-queue',
-  SCHEDULER: 'creditcoin-scheduler-queue'
+  SCHEDULER: 'creditcoin-scheduler-queue',
+  PROVE_AND_SETTLE: 'prove-and-settle-queue',
 } as const;
 
 // Job types
 export const JOB_TYPES = {
   CREATE_SAG: 'create-sag',
-  FETCH_GOLD_PRICE: 'fetch-gold-price'
+  FETCH_GOLD_PRICE: 'fetch-gold-price',
+  PROVE_DEPOSIT: 'prove-deposit',
+  PROVE_REPAYMENT: 'prove-repayment',
+  PROVE_LOAN_FUNDING: 'prove-loan-funding',
+  PROVE_PAWNSHOP_PAYMENT: 'prove-pawnshop-payment',
 } as const;
 
 // Create queues
@@ -46,6 +52,25 @@ export const goldPriceQueue = new Queue(QUEUE_NAMES.GOLD_PRICE, {
     backoff: {
       type: 'exponential',
       delay: 2000,
+    },
+  },
+});
+
+/**
+ * Cross-Chain Proof & Settlement Queue
+ * Attestcoin block attestation on CC3 takes between 30s to ~4 minutes under varying network load.
+ * We configure 30 attempts with 10-second fixed backoff delay, establishing a deliberate ~5 minute
+ * outer time bound for block height indexing before marking a job permanently failed.
+ */
+export const crossChainProofQueue = new Queue(QUEUE_NAMES.PROVE_AND_SETTLE, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    removeOnComplete: 100,
+    removeOnFail: 50,
+    attempts: 30,
+    backoff: {
+      type: 'fixed',
+      delay: 10000, // 10s between attestation polling retries
     },
   },
 });
@@ -95,6 +120,29 @@ export const goldPriceWorker = new Worker(
   }
 );
 
+/**
+ * Cross-chain proof & settlement worker
+ */
+export const crossChainProofWorker = new Worker(
+  QUEUE_NAMES.PROVE_AND_SETTLE,
+  async (job: Job<CrossChainProofJobData>) => {
+    const { type, sourceTxHash } = job.data;
+    console.log(`[${new Date().toISOString()}] [BullMQ] Starting cross-chain proof job #${job.id} (${type} / ${sourceTxHash.slice(0, 10)}...)`);
+    try {
+      const result = await processCrossChainProofJob(job);
+      console.log(`[BullMQ] Cross-chain proof job #${job.id} completed successfully: ${result.transactionHash}`);
+      return result;
+    } catch (error: any) {
+      console.error(`[BullMQ] Cross-chain proof job #${job.id} failed attempt ${job.attemptsMade}:`, error.message);
+      throw error;
+    }
+  },
+  {
+    connection: redisConnection,
+    concurrency: 5,
+  }
+);
+
 // Worker error listeners
 sagCreationWorker.on('failed', (job, err) => {
   console.error(`SAG creation job ${job?.id} failed:`, err);
@@ -102,4 +150,8 @@ sagCreationWorker.on('failed', (job, err) => {
 
 goldPriceWorker.on('failed', (job, err) => {
   console.error(`Gold price job ${job?.id} failed:`, err);
+});
+
+crossChainProofWorker.on('failed', (job, err) => {
+  console.error(`Cross-chain proof job ${job?.id} failed permanently after max attempts:`, err);
 });

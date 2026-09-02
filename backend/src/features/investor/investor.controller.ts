@@ -117,7 +117,7 @@ export class InvestorController {
   }
 
   /**
-   * Cryptographically prove a Sepolia investor deposit transaction and credit LP balance on CC3
+   * Cryptographically prove a Sepolia investor deposit transaction and credit LP balance on CC3 (Async BullMQ Queue)
    * POST /api/v1/investor/deposit/prove
    */
   async proveDeposit(req: Request, res: Response): Promise<void> {
@@ -128,23 +128,102 @@ export class InvestorController {
         return;
       }
 
-      const { AttestcoinOracleRelayerService } = await import('@/core/credit-bureau/attestcoin-oracle-relayer.service.js');
-      const relayerService = new AttestcoinOracleRelayerService();
-      const result = await relayerService.proveAndRecordSepoliaDeposit(sourceTxHash, Number(chainKey));
+      const userInfo = await getUserDataByToken(req.headers.authorization?.split(' ')[1] || '').catch(() => null);
 
-      if (!result.success) {
-        res.status(400).json({ success: false, error: result.error });
+      const { crossChainProofQueue, JOB_TYPES } = await import('@/bullmq/scheduler.js');
+      const jobId = `deposit-${sourceTxHash.toLowerCase()}`;
+
+      // Check if job already exists
+      const existingJob = await crossChainProofQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state !== 'failed') {
+          res.status(202).json({
+            success: true,
+            message: 'Deposit proof job already active or completed',
+            data: {
+              jobId: existingJob.id,
+              status: state.toUpperCase(),
+              statusUrl: `/api/v1/investor/deposit/status/${existingJob.id}`,
+            },
+          });
+          return;
+        }
+        // If it failed previously, remove it to allow clean re-attempt
+        await existingJob.remove();
+      }
+
+      console.log(`[${new Date().toISOString()}] Enqueuing deposit proof job ${jobId} for sourceTx ${sourceTxHash}`);
+
+      const job = await crossChainProofQueue.add(
+        JOB_TYPES.PROVE_DEPOSIT,
+        {
+          type: 'deposit',
+          sourceTxHash,
+          chainKey: Number(chainKey),
+          userId: userInfo?.accountId || '',
+        },
+        {
+          jobId,
+          priority: 1,
+        }
+      );
+
+      res.status(202).json({
+        success: true,
+        message: 'Deposit proof job queued successfully on Creditcoin CC3',
+        data: {
+          jobId: job.id,
+          status: 'QUEUED',
+          statusUrl: `/api/v1/investor/deposit/status/${job.id}`,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      console.error('Error queuing Sepolia deposit proof:', error);
+      res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+    }
+  }
+
+  /**
+   * Get the status of an async deposit proof job
+   * GET /api/v1/investor/deposit/status/:jobId
+   */
+  async getDepositStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+      if (!jobId) {
+        res.status(400).json({ success: false, error: 'jobId is required' });
         return;
       }
 
+      const { crossChainProofQueue } = await import('@/bullmq/scheduler.js');
+      const job = await crossChainProofQueue.getJob(jobId);
+
+      if (!job) {
+        res.status(404).json({ success: false, error: 'Job not found' });
+        return;
+      }
+
+      const state = await job.getState();
+      const progress = job.progress;
+      const result = job.returnvalue;
+      const failedReason = job.failedReason;
+
       res.status(200).json({
         success: true,
-        message: 'Sepolia deposit verified and LP balance credited successfully on Creditcoin CC3',
-        data: result,
+        data: {
+          jobId: job.id,
+          state: state.toUpperCase(),
+          progress: progress || 0,
+          result: result || null,
+          error: failedReason || null,
+          attemptsMade: job.attemptsMade,
+        },
       });
     } catch (error: any) {
-      console.error('Error proving Sepolia deposit:', error);
-      res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+      console.error('Error fetching deposit proof job status:', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to fetch job status' });
     }
   }
 

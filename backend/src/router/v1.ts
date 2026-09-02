@@ -24,8 +24,14 @@ const v1Router = express.Router();
 // Public Creditcoin & Attestcoin Protocol Routes (Verification & Settlement)
 v1Router.use('/creditcoin', creditcoinRoutes);
 v1Router.use('/credit-oracle', creditOracleRoutes);
-v1Router.post('/loan/repay/prove', (req, res) => new CreditOracleController().proveRepayment(req, res));
+const creditOracleCtrl = new CreditOracleController();
+v1Router.post('/loan/repay/prove', (req, res) => creditOracleCtrl.proveRepayment(req, res));
+v1Router.get('/loan/repay/status/:jobId', (req, res) => creditOracleCtrl.getProofStatus(req, res));
+v1Router.post('/loan/fund/prove', (req, res) => creditOracleCtrl.proveLoanFunding(req, res));
+v1Router.get('/loan/fund/status/:jobId', (req, res) => creditOracleCtrl.getProofStatus(req, res));
 v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveDeposit(req, res));
+v1Router.get('/investor/deposit/status/:jobId', (req, res) => investorController.getDepositStatus(req, res));
+v1Router.get('/proof/status/:jobId', (req, res) => creditOracleCtrl.getProofStatus(req, res));
 
 // Use the feature routes
 v1Router.use('/health', healthRoutes);
