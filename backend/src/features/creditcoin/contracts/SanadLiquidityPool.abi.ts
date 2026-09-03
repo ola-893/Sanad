@@ -55,5 +55,11 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function setInvestorVaultAddress(address _investorVault) external",
   "event InvestorVaultUpdated(address indexed oldVault, address indexed newVault)",
   "function verifyAndRecordDeposit(uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash, uint256 claimedAmount) external returns (bool)",
-  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 totalProvenCapital, uint256 timestamp)"
+  "event CrossChainDepositVerified(address indexed investor, uint64 indexed chainKey, bytes32 indexed sourceTxHash, uint256 amount, uint256 totalProvenCapital, uint256 timestamp)",
+
+  // Investor Return Distribution (Sepolia settleInvestor -> CC3 BlockProver)
+  "function verifyAndRecordReturnDistribution(uint256 tokenId, uint64 chainKey, uint64 headerNumber, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) continuityProof, bytes32 sourceTxHash) external returns (bool)",
+  "function returnDistributed(uint256 tokenId) external view returns (bool)",
+  "function returnAmountDistributed(uint256 tokenId) external view returns (uint256)",
+  "event ReturnDistributionVerified(uint256 indexed tokenId, address indexed pawnshop, uint256 amount, bytes32 indexed sourceTxHash, uint256 timestamp)"
 ] as const;
