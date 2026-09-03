@@ -727,7 +727,12 @@ export default function BrowsePage() {
                         signer
                       )
 
-                      const tx = await vaultContract.deposit(weiAmount, { value: weiAmount })
+                      // Use fundLoan() instead of deposit() so loanPawnshops[tokenId] is recorded on-chain
+                      const sagTokenId = Number(investModal.tokenId)
+                      const pawnshopWallet = investModal.sagProperties?.pawnshopWallet || investModal.sagProperties?.borrowerWallet || '0x0000000000000000000000000000000000000000'
+                      const appraisedValueUSD = Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) / 0.7)
+
+                      const tx = await vaultContract.fundLoan(sagTokenId, pawnshopWallet, appraisedValueUSD, { value: weiAmount })
                       toast.info('Waiting for Sepolia confirmation...')
                       const receipt = await tx.wait(1)
 

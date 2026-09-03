@@ -513,7 +513,8 @@ export class PledgeRequestController {
       const karat = request.verifiedKarat || goldDetails.karat;
       const appraisedValue = request.verifiedAppraisedValueUsd || goldDetails.estimatedValue;
       const loanAmount = request.paymentAmountUsd || appraisedValue * 0.7;
-      const tenureDays = (request.loanDurationMonths || 1) * 30;
+      const loanDurationMonths = req.body?.loanDurationMonths || request.loanDurationMonths || 3;
+      const tenureDays = loanDurationMonths * 30;
 
       console.log(`[PledgeRequest] Auto-minting SAG: weight=${weightGrams}g, karat=${karat}, value=$${appraisedValue}, loan=$${loanAmount}`);
 
@@ -536,6 +537,16 @@ export class PledgeRequestController {
       const investmentTarget = req.body?.investmentTargetUsd || request.paymentAmountUsd || Number(appraisedValue) * 0.7;
       const minInvestment = Math.round(Number(investmentTarget) * 0.1);
       const updated = await recordSagMint(request.id, mintResult.tokenId!, Number(investmentTarget), Number(minInvestment));
+
+      // Update loan duration if changed
+      if (req.body?.loanDurationMonths) {
+        const { pool } = await import("@/db/index.js");
+        const maturityDate = new Date(Date.now() + loanDurationMonths * 30 * 24 * 60 * 60 * 1000);
+        await pool.query(
+          `UPDATE main.pledge_request SET loan_duration_months = $1, loan_maturity_date = $2, updated_at = NOW() WHERE id = $3`,
+          [loanDurationMonths, maturityDate, request.id]
+        );
+      }
 
       // Create SAG record in sag table for pawnshop dashboard
       try {
@@ -565,7 +576,7 @@ export class PledgeRequestController {
             investmentTargetUsd: Number(investmentTarget),
             minInvestmentUsd: Number(minInvestment),
             investmentFilledUsd: 0,
-            loanDurationMonths: Number(request.loanDurationMonths || tenureDays / 30),
+            loanDurationMonths: Number(loanDurationMonths),
             borrowerWallet: request.borrowerWallet,
             pawnshopWallet: request.pawnshopWallet,
             originationDate: new Date().toISOString(),
