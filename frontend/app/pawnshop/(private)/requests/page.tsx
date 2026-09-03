@@ -37,6 +37,23 @@ import apiInstance from "@/lib/axios-v1"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
+// Convert loan duration (in months) to test-mode minutes
+// Real: 1 day=1d, 1mo=30d, etc. Test: scaled down for quick testing
+function getTestDurationMinutes(months: number): number {
+  if (months <= 0) return 1 // < 1 month (e.g. 1 day) → 1 min
+  if (months < 1) return 1 // fraction (e.g. 0.03 = 1 day) → 1 min
+  return Math.round(months * 5) // 1mo=5min, 2mo=10min, 3mo=15min, 6mo=30min, 12mo=60min
+}
+
+// Format loan duration for display
+function formatDuration(months: number): string {
+  if (months <= 0) return "1 day"
+  if (months < 1) return "1 day"
+  if (months === 1) return "1 month"
+  if (months === 12) return "1 year"
+  return `${months} months`
+}
+
 interface GoldDetails {
   assetType: string
   karat: number
@@ -718,7 +735,7 @@ export default function PawnshopRequestsPage() {
                               )}
                               {req.loanDurationMonths && (
                                 <div className="mt-2 flex items-center gap-2 text-xs">
-                                  <span className="font-medium">Loan Duration: {req.loanDurationMonths} months</span>
+                                  <span className="font-medium">Loan Duration: {formatDuration(req.loanDurationMonths)}</span>
                                   {req.loanMaturityDate && (
                                     <span className="text-muted-foreground">(Due: {new Date(req.loanMaturityDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })})</span>
                                   )}
@@ -999,13 +1016,16 @@ export default function PawnshopRequestsPage() {
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value="">Select duration...</option>
+                    <option value="0.03">1 day</option>
+                    <option value="1">1 month</option>
+                    <option value="2">2 months</option>
                     <option value="3">3 months</option>
                     <option value="6">6 months</option>
-                    <option value="12">12 months</option>
+                    <option value="12">1 year (12 months)</option>
                   </select>
                   {verifyDuration && (
                     <p className="text-xs text-muted-foreground">
-                      Repayment due: {new Date(Date.now() + Number(verifyDuration) * 5 * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (in {Number(verifyDuration) * 5} minutes for testing)
+                      Repayment due: {new Date(Date.now() + getTestDurationMinutes(Number(verifyDuration)) * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (in {getTestDurationMinutes(Number(verifyDuration))} min for testing)
                     </p>
                   )}
                 </div>
@@ -1166,7 +1186,7 @@ export default function PawnshopRequestsPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <span className="ml-2 font-medium">{sagModal.loanDurationMonths} months</span>
+                    <span className="ml-2 font-medium">{formatDuration(sagModal.loanDurationMonths || 3)}</span>
                   </div>
                 </div>
               </div>

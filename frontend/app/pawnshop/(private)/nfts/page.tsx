@@ -6,7 +6,7 @@ import apiInstance from '@/lib/axios-v1'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChevronLeft, ChevronRight, ExternalLinkIcon, Plus, ArrowLeftRight, Loader2, Eye, Calendar, DollarSign, TrendingUp, Info, Search, Grid, List, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLinkIcon, Plus, ArrowLeftRight, Loader2, Eye, Calendar, DollarSign, TrendingUp, Info, Search, Grid, List, CheckCircle, XCircle, Clock, Gem } from 'lucide-react'
 import Link from 'next/link'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectLabel, SelectItem } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -36,6 +36,14 @@ interface SAGProperties {
   investorFinancingType: string
   investorRoiPercentage: number
   investorRoiFixedAmount?: number
+  imageUrl?: string[]
+  originationDate?: string
+  maturityDate?: string
+  loanDurationMonths?: number
+  investmentTargetUsd?: number
+  minInvestmentUsd?: number
+  investmentFilledUsd?: number
+  purity?: number
 }
 
 interface SAG {
@@ -75,6 +83,14 @@ interface TokenInfo {
 interface TokenResponse {
   success: boolean
   data: TokenInfo
+}
+
+function formatDuration(months: number): string {
+  if (months <= 0) return "1 day"
+  if (months < 1) return "1 day"
+  if (months === 1) return "1 month"
+  if (months === 12) return "1 year"
+  return `${months} months`
 }
 
 // Buy Back Dialog Component
@@ -326,6 +342,17 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
     enabled: isOpen && !!sag.tokenId, // Only fetch when dialog is open and tokenId exists
   })
 
+  const { data: investorsData, isLoading: investorsLoading } = useQuery({
+    queryKey: ['sag-investors', sag.tokenId],
+    queryFn: async () => {
+      const response = await apiInstance.get(`/investor/sag/${sag.tokenId}/investments`)
+      return response.data
+    },
+    enabled: isOpen && !!sag.tokenId,
+  })
+
+  const investors = investorsData?.data || []
+
   const sharePrice = sag.sagProperties.valuation / sag.sagProperties.mintShare
   const monthlyReturn = (sharePrice * sag.sagProperties.investorRoiPercentage) / 100
   // const totalReturn = sharePrice + (monthlyReturn * sag.sagProperties.tenorM)
@@ -462,7 +489,7 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground dark:text-muted-foreground">Investment Tenor:</span>
-                      <span className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.tenorM} months</span>
+                      <span className="font-medium text-foreground dark:text-gray-100">{formatDuration(sag.sagProperties.loanDurationMonths || Math.round(sag.sagProperties.tenorM / 30))}</span>
                     </div>
                   </>
                 ): null}
@@ -613,6 +640,85 @@ function ViewDetailsDialog({ sag }: { sag: SAG }) {
               </CardContent>
             </Card>
           ): null}
+
+          {/* Investors List */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Investors ({investors.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {investorsLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : investors.length === 0 ? (
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center py-4">
+                  No investors yet
+                </p>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Investor</TableHead>
+                        <TableHead className="text-xs">Amount</TableHead>
+                        <TableHead className="text-xs">ETH</TableHead>
+                        <TableHead className="text-xs">Date</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs">Proof</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {investors.map((inv: any) => (
+                        <TableRow key={inv.id}>
+                          <TableCell>
+                            <div className="text-xs font-mono">
+                              {inv.user_id ? `${inv.user_id.slice(0, 6)}...${inv.user_id.slice(-4)}` : 'Unknown'}
+                            </div>
+                            {inv.username && (
+                              <div className="text-[10px] text-muted-foreground">{inv.username}</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">
+                            ${Number(inv.amount_usd).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">
+                            {inv.eth_amount ? `~${Number(inv.eth_amount).toFixed(6)}` : '—'}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(inv.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`text-[10px] ${inv.status === 'completed' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                              {inv.status || 'completed'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {inv.cc3_tx_hash ? (
+                              <a
+                                href={`https://creditcoin-testnet.blockscout.com/tx/${inv.cc3_tx_hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-primary hover:underline font-mono"
+                              >
+                                {inv.cc3_tx_hash.slice(0, 8)}... ↗
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Pending</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex justify-end pt-4">
@@ -828,7 +934,7 @@ function PawnshopNFTs() {
                     <div>
                       <div className="font-medium text-foreground dark:text-gray-100">{sag.sagProperties.mintShare.toLocaleString()} shares</div>
                       <div className="text-sm text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.investorRoiPercentage}% ROI</div>
-                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">{sag.sagProperties.tenorM} months</div>
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">{formatDuration(sag.sagProperties.loanDurationMonths || Math.round(sag.sagProperties.tenorM / 30))}</div>
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(sag.status || 'active')}</TableCell>
@@ -912,7 +1018,7 @@ function PawnshopNFTs() {
     if (nfts.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4 dark:text-muted-foreground">No NFTs found</p>
+          <p className="text-muted-foreground mb-4">No NFTs found</p>
           <Button asChild>
             <Link href="/pawnshop/nfts/new">Create Your First NFT</Link>
           </Button>
@@ -923,90 +1029,111 @@ function PawnshopNFTs() {
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {nfts.map((sag) => (
-            <Card
-              key={sag.sagId}
-              className={`hover:shadow-lg dark:hover:shadow-gray-700/20 transition-all duration-200 ${sag.status === 'closed'
-                  ? 'border-l-4 border-l-red-500 bg-destructive/10/30 dark:bg-red-900/10 hover:bg-destructive/10/50 dark:hover:bg-red-900/20 opacity-80 dark:border-border'
-                  : 'border-l-4 border-l-green-500 bg-success/10/30 dark:bg-green-900/10 hover:bg-success/10/50 dark:hover:bg-green-900/20 dark:border-border'
-                }`}
-            >
-              <CardHeader className={`pb-2 ${sag.status === 'closed' ? 'opacity-75' : ''}`}>
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className={`text-base truncate ${sag.status === 'closed' ? 'text-muted-foreground dark:text-muted-foreground' : 'text-foreground dark:text-gray-100'}`}>
-                        {sag.sagName}
-                      </CardTitle>
-                      <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${sag.status === 'closed'
-                          ? 'bg-destructive/10 dark:bg-red-900/30 text-destructive dark:text-red-300 border border-destructive/30 dark:border-red-700'
-                          : 'bg-success/10 dark:bg-green-900/30 text-success dark:text-green-300 border border-success/30 dark:border-green-700'
-                        }`}>
-                        {sag.status === 'closed' ? 'CLOSED' : 'ACTIVE'}
+          {nfts.map((sag) => {
+            const sagImages = sag.sagProperties.imageUrl || []
+            const hasThumb = sagImages.length > 0
+            const thumbUrl = hasThumb ? (() => {
+              const url = sagImages[0]
+              const match = url.match(/\/uploads\/(.*)/)
+              if (match) return `/api/uploads/${match[1]}`
+              const filename = url.split('/').pop()
+              return filename ? `/api/uploads/${filename}` : url
+            })() : ''
+
+            const originationDate = sag.sagProperties.originationDate ? new Date(sag.sagProperties.originationDate) : null
+            const durationMonths = sag.sagProperties.loanDurationMonths || Math.round(sag.sagProperties.tenorM / 30)
+            const realMaturityDate = originationDate ? new Date(originationDate.getTime() + durationMonths * 30 * 24 * 60 * 60 * 1000) : null
+            const now = new Date()
+            const totalDays = durationMonths * 30
+            const elapsedDays = originationDate ? Math.max(0, Math.min(totalDays, (now.getTime() - originationDate.getTime()) / (1000*60*60*24))) : 0
+            const remainingDays = Math.max(0, totalDays - elapsedDays)
+            const roi = sag.sagProperties.investorRoiPercentage || 2
+            const remainingMonths = remainingDays / 30
+            const proratedReturn = roi * remainingMonths
+
+            return (
+              <Link key={sag.sagId} href={`/pawnshop/nfts/${sag.sagId}`} className="block group">
+                <Card className={`relative overflow-hidden transition-all duration-300 group-hover:shadow-lg group-hover:shadow-accent/10 group-hover:-translate-y-0.5 border-border/50 ${sag.status === 'closed' ? 'opacity-60' : ''}`}>
+                  {/* Image Header */}
+                  <div className="relative h-36 bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50 dark:from-amber-950/20 dark:via-amber-900/10 dark:to-amber-950/20">
+                    {hasThumb ? (
+                      <img
+                        src={thumbUrl}
+                        alt={sag.sagName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Gem className="h-12 w-12 text-amber-300/40" />
+                      </div>
+                    )}
+                    {/* Status + Duration overlay */}
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                      <Badge className={`text-[10px] font-medium ${sag.status === 'closed'
+                        ? 'bg-destructive/90 text-white'
+                        : 'bg-accent/90 text-white'
+                      }`}>
+                        {sag.status === 'closed' ? 'Closed' : 'Active'}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] bg-background/80 backdrop-blur-sm border-border/50">
+                        {durationMonths}mo · {roi}%/mo
+                      </Badge>
+                    </div>
+                    {/* Valuation overlay */}
+                    <div className="absolute bottom-2 left-2">
+                      <div className="bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-border/30">
+                        <p className="text-lg font-bold">${sag.sagProperties.valuation?.toLocaleString()}</p>
+                        {ethPrice > 0 && sag.sagProperties.valuation > 0 && (
+                          <p className="text-[10px] font-mono text-muted-foreground">~{(sag.sagProperties.valuation / ethPrice).toFixed(4)} ETH</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4 space-y-3">
+                    {/* Title + Description */}
+                    <div>
+                      <h3 className="font-semibold text-base truncate group-hover:text-accent transition-colors">{sag.sagName}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{sag.sagDescription}</p>
+                    </div>
+
+                    {/* Key Stats */}
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div className="text-center p-1.5 rounded-md bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground">Weight</p>
+                        <p className="text-sm font-bold">{sag.sagProperties.weightG}g</p>
+                      </div>
+                      <div className="text-center p-1.5 rounded-md bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground">Karat</p>
+                        <p className="text-sm font-bold">{sag.sagProperties.karat}K</p>
+                      </div>
+                      <div className="text-center p-1.5 rounded-md bg-accent/10">
+                        <p className="text-[10px] text-accent/70">Return</p>
+                        <p className="text-sm font-bold text-accent">{proratedReturn.toFixed(1)}%</p>
+                      </div>
+                    </div>
+
+                    {/* Time remaining */}
+                    {remainingDays > 0 && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{remainingDays.toFixed(0)} days remaining</span>
+                      </div>
+                    )}
+
+                    {/* Bottom action row */}
+                    <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                      <span className="text-[10px] text-muted-foreground">Token #{sag.tokenId}</span>
+                      <span className="text-xs font-medium text-accent group-hover:underline">
+                        View Details →
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                      {sag.sagDescription}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className={`pt-0 ${sag.status === 'closed' ? 'opacity-75' : ''}`}>
-                {/* Key Stats Row with ETH equivalents */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div className="rounded-lg bg-muted/50 p-2 text-center">
-                    <p className="text-[10px] text-muted-foreground">Valuation</p>
-                    <p className="text-sm font-bold">${sag.sagProperties.valuation?.toLocaleString() || '0'}</p>
-                    {ethPrice > 0 && sag.sagProperties.valuation > 0 && (
-                      <p className="text-[10px] font-mono text-muted-foreground/70">~{(sag.sagProperties.valuation / ethPrice).toFixed(4)} ETH</p>
-                    )}
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-2 text-center">
-                    <p className="text-[10px] text-muted-foreground">Loan</p>
-                    <p className="text-sm font-bold text-emerald-600">${sag.sagProperties.loan?.toLocaleString() || '0'}</p>
-                    {ethPrice > 0 && sag.sagProperties.loan && sag.sagProperties.loan > 0 && (
-                      <p className="text-[10px] font-mono text-muted-foreground/70">~{(sag.sagProperties.loan / ethPrice).toFixed(4)} ETH</p>
-                    )}
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-2 text-center">
-                    <p className="text-[10px] text-muted-foreground">ROI/mo</p>
-                    <p className="text-sm font-bold text-emerald-600">{sag.sagProperties.investorRoiPercentage || 0}%</p>
-                  </div>
-                </div>
-
-                {/* Compact Details */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Weight:</span>
-                    <span className="font-medium">{sag.sagProperties.weightG}g</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Karat:</span>
-                    <span className="font-medium">{sag.sagProperties.karat}K</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-medium">{sag.sagProperties.tenorM ? Math.round(sag.sagProperties.tenorM / 30) : 3} months</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shares:</span>
-                    <span className="font-medium">{sag.sagProperties.mintShare.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mt-3">
-                  {
-                    sag.status !== 'closed' ? (
-                      <ViewDetailsDialog sag={sag} />
-                    ) : null
-                  }
-                  {sag.sagProperties.enableMinting && sag.tokenId && sag.status !== 'closed' ? (
-                    <BuyBackDialog sag={sag} />
-                  ): null}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
 
         {/* Pagination Controls */}

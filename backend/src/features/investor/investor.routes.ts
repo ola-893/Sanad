@@ -11,6 +11,7 @@ router.get('/wallet/balance', investorController.getInvestorWalletBalance.bind(i
 router.post('/deposit/prove', investorController.proveDeposit.bind(investorController));
 router.get('/deposit/status/:jobId', investorController.getDepositStatus.bind(investorController));
 router.post('/invest', investorController.recordInvestment.bind(investorController));
+router.get('/sag/:tokenId/investments', investorController.getSagInvestments.bind(investorController));
 router.get('/investments', investorController.getInvestments.bind(investorController));
 
 export { router as investorRoutes };

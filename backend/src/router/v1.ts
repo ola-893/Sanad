@@ -56,13 +56,25 @@ v1Router.use('/rbac', rbacRoutes);
 // Scheduler & queue management
 v1Router.use('/scheduler', schedulerRoutes);
 
-// ETH/USD price from CoinGecko
+// ETH/USD price from CoinGecko with cached fallback
+let lastEthPrice = 0
+let lastEthPriceTime = 0
+
 v1Router.get('/eth-price', async (_req, res) => {
   try {
     const { data } = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', { timeout: 5000 });
-    res.json({ success: true, data: { usd: data.ethereum?.usd || 0 } });
+    const price = data.ethereum?.usd
+    if (price && price > 0) {
+      lastEthPrice = price
+      lastEthPriceTime = Date.now()
+      res.json({ success: true, data: { usd: price } })
+      return
+    }
+    throw new Error('No price data')
   } catch {
-    res.json({ success: true, data: { usd: 4500 } });
+    // Return last known price if recent (< 5 min), otherwise 0
+    const isRecent = lastEthPrice > 0 && (Date.now() - lastEthPriceTime) < 5 * 60 * 1000
+    res.json({ success: true, data: { usd: isRecent ? lastEthPrice : 0 } })
   }
 });
 

@@ -46,6 +46,14 @@ const glass = 'glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 sh
  * Convert a full image URL (e.g. http://localhost:5002/uploads/xxx.jpg)
  * to the Next.js proxy path (/api/uploads/xxx.jpg)
  */
+function formatDuration(months: number): string {
+  if (months <= 0) return "1 day"
+  if (months < 1) return "1 day"
+  if (months === 1) return "1 month"
+  if (months === 12) return "1 year"
+  return `${months} months`
+}
+
 function getImageUrl(url: string): string {
   if (!url) return ''
   if (url.startsWith('/api/uploads/')) return url
@@ -235,18 +243,19 @@ export default function SagDetailPage() {
   const progressPct = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
   const roi = props?.investorRoiPercentage || 2
   const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
+  const durationLabel = formatDuration(duration)
   const isFunded = remaining <= 0
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
 
-  // Timeline calculations
+  // Timeline calculations — always compute REAL duration from originationDate + loanDurationMonths
   const originationDate = props?.originationDate ? new Date(props.originationDate) : new Date(sag.createdAt)
-  const maturityDate = props?.maturityDate ? new Date(props.maturityDate) : new Date(originationDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)
+  const realMaturityDate = new Date(originationDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)
   const now = new Date()
-  const totalDays = Math.max(1, (maturityDate.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24))
+  const totalDays = Math.max(1, duration * 30)
   const elapsedDays = Math.max(0, Math.min(totalDays, (now.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24)))
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const remainingMonths = remainingDays / 30
-  const isExpired = now > maturityDate
+  const isExpired = now > realMaturityDate
   const isStarted = now >= originationDate
   const elapsedPct = Math.min(100, (elapsedDays / totalDays) * 100)
 
@@ -482,7 +491,7 @@ export default function SagDetailPage() {
                 <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
                   <Clock className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                   <p className="text-lg font-bold text-[#171414]">{formatTimeLeft()}</p>
-                  <p className="text-[10px] text-muted-foreground">{duration}mo duration</p>
+                  <p className="text-[10px] text-muted-foreground">{durationLabel} duration</p>
                 </div>
               </div>
 
@@ -508,7 +517,7 @@ export default function SagDetailPage() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <p className="font-medium text-[#171414]">{maturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="font-medium text-[#171414]">{realMaturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                       <p className="text-[10px] text-muted-foreground">Expires</p>
                     </div>
                   </div>

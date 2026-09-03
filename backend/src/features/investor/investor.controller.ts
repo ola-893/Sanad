@@ -319,6 +319,38 @@ export class InvestorController {
   }
 
   /**
+   * GET /investor/sag/:tokenId/investments -- List all investors for a specific SAG token
+   */
+  async getSagInvestments(req: Request, res: Response): Promise<void> {
+    try {
+      const { tokenId } = req.params;
+      if (!tokenId) {
+        res.status(400).json({ success: false, error: 'tokenId is required' });
+        return;
+      }
+
+      const { pool } = await import('@/db/index.js');
+      const result = await pool.query(
+        `SELECT i.id, i.user_id, i.amount_usd, i.eth_amount, i.source_tx_hash, i.cc3_tx_hash, i.status, i.created_at,
+                u.user_first_name, u.user_last_name, u.user_email, u.account_id
+         FROM main.investment i
+         LEFT JOIN main."user" u ON i.user_id = u.user_id
+         WHERE i.sag_token_id = $1
+         ORDER BY i.created_at ASC`,
+        [tokenId]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows,
+      });
+    } catch (error: any) {
+      console.error('Error fetching SAG investments:', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to fetch SAG investments' });
+    }
+  }
+
+  /**
    * GET /investor/investments -- List all investments for the authenticated investor
    */
   async getInvestments(req: Request, res: Response): Promise<void> {

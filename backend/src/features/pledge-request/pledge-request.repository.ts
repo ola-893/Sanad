@@ -38,6 +38,51 @@ export async function createPledgeRequest(data: {
   return result;
 }
 
+export async function getBorrowerLoans(borrowerId: string): Promise<any[]> {
+  const { pool } = await import("@/db/index.js");
+  const result = await pool.query(
+    `SELECT 
+      pr.id,
+      pr.borrower_id as "borrowerId",
+      pr.borrower_wallet as "borrowerWallet",
+      pr.pawnshop_id as "pawnshopId",
+      pr.pawnshop_wallet as "pawnshopWallet",
+      pr.gold_details as "goldDetails",
+      pr.status,
+      pr.pawnshop_notes as "pawnshopNotes",
+      pr.borrower_credit_score as "borrowerCreditScore",
+      pr.verified_weight_g as "verifiedWeightG",
+      pr.verified_karat as "verifiedKarat",
+      pr.verified_appraised_value_usd as "verifiedAppraisedValueUsd",
+      pr.payment_amount_usd as "paymentAmountUsd",
+      pr.payment_tx_hash as "paymentTxHash",
+      pr.payment_cc3_tx_hash as "paymentCc3TxHash",
+      pr.payment_status as "paymentStatus",
+      pr.paid_at as "paidAt",
+      pr.sag_token_id as "sagTokenId",
+      pr.sag_minted_at as "sagMintedAt",
+      pr.pawnshop_contact_name as "pawnshopContactName",
+      pr.pawnshop_contact_phone as "pawnshopContactPhone",
+      pr.pawnshop_location as "pawnshopLocation",
+      pr.loan_duration_months as "loanDurationMonths",
+      pr.loan_maturity_date as "loanMaturityDate",
+      pr.created_at as "createdAt",
+      pr.updated_at as "updatedAt",
+      COALESCE(r.total_repaid, 0)::numeric as "totalRepaid",
+      COALESCE(r.repayment_count, 0)::int as "repaymentCount"
+    FROM main.pledge_request pr
+    LEFT JOIN (
+      SELECT pledge_request_id, SUM(amount_usd) as total_repaid, COUNT(*) as repayment_count
+      FROM main.loan_repayment
+      GROUP BY pledge_request_id
+    ) r ON r.pledge_request_id = pr.id
+    WHERE pr.borrower_id = $1
+    ORDER BY pr.created_at DESC`,
+    [borrowerId]
+  );
+  return result.rows;
+}
+
 export async function getPledgeRequestsByBorrower(
   borrowerId: string,
   pageSize = 20,
@@ -142,10 +187,16 @@ export async function verifyGold(
   if (data.verifiedAppraisedValueUsd !== undefined) updateData.verifiedAppraisedValueUsd = String(data.verifiedAppraisedValueUsd);
 
   // Loan duration: save duration and calculate maturity date
-  // Display: 3, 6, 12 months. Actual: 15, 30, 60 minutes (for testing)
+  // Display: 1 day, 1-6 months, 1 year. Actual: scaled down for testing
   if (data.loanDurationMonths && data.verificationStatus === "verified") {
     updateData.loanDurationMonths = data.loanDurationMonths;
-    const durationMinutes = data.loanDurationMonths * 5; // 3mo=15min, 6mo=30min, 12mo=60min
+    // Test mode: 1 day=1min, 1mo=5min, 2mo=10min, 3mo=15min, 6mo=30min, 12mo=60min
+    let durationMinutes: number;
+    if (data.loanDurationMonths < 1) {
+      durationMinutes = 1; // 1 day → 1 min for testing
+    } else {
+      durationMinutes = Math.max(1, Math.round(data.loanDurationMonths * 5));
+    }
     const maturity = new Date();
     maturity.setMinutes(maturity.getMinutes() + durationMinutes);
     updateData.loanMaturityDate = maturity;
@@ -346,4 +397,198 @@ export async function getBorrowerProfileForPledge(userId: string): Promise<{
   }
 
   return { creditScore, creditTier, events, transactionLinks };
+}
+
+/**
+ * Get all borrowers for a pawnshop with aggregated loan status
+ */
+export async function getBorrowersByPawnshop(pawnshopId: string): Promise<any[]> {
+  const { pool } = await import("@/db/index.js");
+  const result = await pool.query(
+    `SELECT 
+      pr.borrower_id as "borrowerId",
+      pr.borrower_wallet as "borrowerWallet",
+      u.user_first_name as "borrowerFirstName",
+      u.user_last_name as "borrowerLastName",
+      pr.borrower_credit_score as "creditScore",
+      pr.borrower_credit_tier as "creditTier",
+      pr.gold_details as "goldDetails",
+      pr.verified_weight_g as "verifiedWeightG",
+      pr.verified_karat as "verifiedKarat",
+      pr.verified_appraised_value_usd as "verifiedAppraisedValueUsd",
+      pr.payment_amount_usd as "paymentAmountUsd",
+      pr.payment_status as "paymentStatus",
+      pr.payment_tx_hash as "paymentTxHash",
+      pr.sag_token_id as "sagTokenId",
+      pr.sag_minted_at as "sagMintedAt",
+      pr.loan_duration_months as "loanDurationMonths",
+      pr.loan_maturity_date as "loanMaturityDate",
+      pr.status as "status",
+      pr.created_at as "createdAt",
+      pr.updated_at as "updatedAt",
+      COALESCE(r.total_repaid, 0)::numeric as "totalRepaid",
+      COALESCE(r.repayment_count, 0)::int as "repaymentCount"
+    FROM main.pledge_request pr
+    LEFT JOIN main.user u ON pr.borrower_id = u.user_id
+    LEFT JOIN (
+      SELECT pledge_request_id, SUM(amount_usd) as total_repaid, COUNT(*) as repayment_count
+      FROM main.loan_repayment
+      GROUP BY pledge_request_id
+    ) r ON r.pledge_request_id = pr.id
+    WHERE pr.pawnshop_id = $1
+    ORDER BY pr.updated_at DESC`,
+    [pawnshopId]
+  );
+  return result.rows;
+}
+
+/**
+ * Get full borrower detail for a specific pledge request
+ */
+export async function getBorrowerDetail(pawnshopId: string, borrowerId: string): Promise<any> {
+  const { pool } = await import("@/db/index.js");
+  
+  // Get all pledge requests for this borrower with this pawnshop
+  const requestsResult = await pool.query(
+    `SELECT 
+      pr.id,
+      pr.borrower_id as "borrowerId",
+      pr.borrower_wallet as "borrowerWallet",
+      pr.pawnshop_id as "pawnshopId",
+      pr.pawnshop_wallet as "pawnshopWallet",
+      pr.gold_details as "goldDetails",
+      pr.requested_amount as "requestedAmount",
+      pr.status,
+      pr.pawnshop_notes as "pawnshopNotes",
+      pr.sag_id as "sagId",
+      pr.borrower_credit_score as "borrowerCreditScore",
+      pr.borrower_credit_tier as "borrowerCreditTier",
+      pr.borrower_events as "borrowerEvents",
+      pr.borrower_transaction_links as "borrowerTransactionLinks",
+      pr.gold_images as "goldImages",
+      pr.verification_status as "verificationStatus",
+      pr.verification_notes as "verificationNotes",
+      pr.verified_weight_g as "verifiedWeightG",
+      pr.verified_karat as "verifiedKarat",
+      pr.verified_purity as "verifiedPurity",
+      pr.verified_appraised_value_usd as "verifiedAppraisedValueUsd",
+      pr.payment_amount_usd as "paymentAmountUsd",
+      pr.payment_tx_hash as "paymentTxHash",
+      pr.payment_cc3_tx_hash as "paymentCc3TxHash",
+      pr.payment_status as "paymentStatus",
+      pr.paid_at as "paidAt",
+      pr.sag_token_id as "sagTokenId",
+      pr.sag_minted_at as "sagMintedAt",
+      pr.pawnshop_contact_name as "pawnshopContactName",
+      pr.pawnshop_contact_phone as "pawnshopContactPhone",
+      pr.pawnshop_location as "pawnshopLocation",
+      pr.loan_duration_months as "loanDurationMonths",
+      pr.loan_maturity_date as "loanMaturityDate",
+      pr.investment_target_usd as "investmentTargetUsd",
+      pr.investment_filled_usd as "investmentFilledUsd",
+      pr.min_investment_usd as "minInvestmentUsd",
+      pr.created_at as "createdAt",
+      pr.updated_at as "updatedAt",
+      u.user_first_name as "borrowerFirstName",
+      u.user_last_name as "borrowerLastName",
+      u.user_email as "borrowerEmail"
+    FROM main.pledge_request pr
+    LEFT JOIN main.user u ON pr.borrower_id = u.user_id
+    WHERE pr.pawnshop_id = $1 AND pr.borrower_id = $2
+    ORDER BY pr.created_at DESC`,
+    [pawnshopId, borrowerId]
+  );
+
+  if (requestsResult.rows.length === 0) return null;
+
+  // Get investments for the borrower's SAGs
+  const sagTokenIds = requestsResult.rows
+    .map(r => r.sag_token_id)
+    .filter(Boolean);
+
+  let investments: any[] = [];
+  if (sagTokenIds.length > 0) {
+    const invResult = await pool.query(
+      `SELECT 
+        i.id,
+        i.user_id as "userId",
+        i.sag_token_id as "sagTokenId",
+        i.amount_usd as "amountUsd",
+        i.eth_amount as "ethAmount",
+        i.source_tx_hash as "sourceTxHash",
+        i.source_chain as "sourceChain",
+        i.cc3_tx_hash as "cc3TxHash",
+        i.status,
+        i.created_at as "createdAt",
+        i.updated_at as "updatedAt",
+        u.user_first_name as "investorFirstName",
+        u.user_last_name as "investorLastName",
+        u.wallet_id as "investorWallet"
+      FROM main.investment i
+      LEFT JOIN main.user u ON i.user_id = u.user_id
+      WHERE i.sag_token_id = ANY($1)
+      ORDER BY i.created_at DESC`,
+      [sagTokenIds]
+    );
+    investments = invResult.rows;
+  }
+
+  // Get repayments for all pledge requests
+  const pledgeRequestIds = requestsResult.rows.map(r => r.id);
+  let repayments: any[] = [];
+  if (pledgeRequestIds.length > 0) {
+    const repayResult = await pool.query(
+      `SELECT lr.*, lr.cc3_tx_hash as "cc3TxHash", lr.tx_hash as "txHash"
+       FROM main.loan_repayment lr
+       WHERE lr.pledge_request_id = ANY($1)
+       ORDER BY lr.created_at DESC`,
+      [pledgeRequestIds]
+    );
+    repayments = repayResult.rows;
+  }
+
+  return {
+    requests: requestsResult.rows,
+    investments,
+    repayments,
+  };
+}
+
+/**
+ * Record a borrower repayment against a pledge request
+ */
+export async function recordRepayment(data: {
+  pledgeRequestId: string;
+  borrowerId: string;
+  pawnshopId: string;
+  amountUsd: number;
+  txHash?: string;
+  cc3TxHash?: string;
+  notes?: string;
+}): Promise<any> {
+  const { pool } = await import("@/db/index.js");
+  const result = await pool.query(
+    `INSERT INTO main.loan_repayment (pledge_request_id, borrower_id, pawnshop_id, amount_usd, tx_hash, cc3_tx_hash, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING *`,
+    [data.pledgeRequestId, data.borrowerId, data.pawnshopId, data.amountUsd, data.txHash || null, data.cc3TxHash || null, data.notes || null]
+  );
+  return result.rows[0];
+}
+
+/**
+ * Get all repayments for a pledge request
+ */
+export async function getRepaymentsByPledgeRequest(pledgeRequestId: string): Promise<any[]> {
+  const { pool } = await import("@/db/index.js");
+  const result = await pool.query(
+    `SELECT lr.*, lr.cc3_tx_hash as "cc3TxHash", lr.tx_hash as "txHash",
+            u.user_first_name as "borrowerFirstName", u.user_last_name as "borrowerLastName"
+     FROM main.loan_repayment lr
+     LEFT JOIN main.user u ON lr.borrower_id = u.user_id
+     WHERE lr.pledge_request_id = $1
+     ORDER BY lr.created_at DESC`,
+    [pledgeRequestId]
+  );
+  return result.rows;
 }
