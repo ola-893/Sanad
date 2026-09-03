@@ -33,6 +33,18 @@ v1Router.post('/investor/deposit/prove', (req, res) => investorController.proveD
 v1Router.get('/investor/deposit/status/:jobId', (req, res) => investorController.getDepositStatus(req, res));
 v1Router.get('/proof/status/:jobId', (req, res) => creditOracleCtrl.getProofStatus(req, res));
 
+// Investor Return Distribution (reuses proof status for job polling)
+v1Router.get('/loan/return/status/:jobId', (req, res) => creditOracleCtrl.getProofStatus(req, res));
+v1Router.get('/investor/returns/:walletAddress', async (req, res) => {
+  try {
+    const { getLoanReturnsByInvestor } = await import('@/features/loan-return/loan-return.repository.js');
+    const returns = await getLoanReturnsByInvestor(req.params.walletAddress);
+    res.json({ success: true, data: returns });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Use the feature routes
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);

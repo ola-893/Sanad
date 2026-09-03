@@ -69,6 +69,10 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     // Track active loan balance per SAG collateral token
     mapping(uint256 => uint256) public tokenLoanBalance;
 
+    // Track investor return distribution per SAG collateral token (Sepolia settleInvestor)
+    mapping(uint256 => bool) public returnDistributed;
+    mapping(uint256 => uint256) public returnAmountDistributed;
+
     // Dutch Auction State
     struct LiquidationAuction {
         uint256 tokenId;
@@ -100,6 +104,13 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         address indexed payer,
         uint256 principalRepaid,
         uint256 ujrahFeePaid,
+        uint256 timestamp
+    );
+    event ReturnDistributionVerified(
+        uint256 indexed tokenId,
+        address indexed pawnshop,
+        uint256 amount,
+        bytes32 indexed sourceTxHash,
         uint256 timestamp
     );
 
@@ -474,6 +485,101 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
             calldataAppraisedUSD,
             block.timestamp
         );
+
+        return true;
+    }
+
+    /**
+     * @notice Verifies an Attestcoin inclusion proof on-chain for an investor return distribution event on Sepolia.
+     * @dev Settled via RepaymentGateway.settleInvestor(uint256,uint256) (selector: 0x58ffdcee).
+     *      Decodes chunk0 for (from, to, value, data).
+     *      Requires to == repaymentGatewayAddress (settleInvestor lives on RepaymentGateway, not InvestorVault).
+     *      Requires from == sagToken.ownerOf(tokenId) (binds caller to the correct pawnshop).
+     *      Requires calldataTokenId == tokenId and value == calldataAmount (defense in depth).
+     *      Does NOT decode or verify the recipient address (guaranteed by settleInvestor to pay loanFunders(tokenId)).
+     *      Does NOT feed into SanadCreditOracle or investorTotalProvenCapital (receiving a return is a loan-closure fact).
+     *      Updates returnDistributed and returnAmountDistributed mappings.
+     *      Emits ReturnDistributionVerified.
+     * @param tokenId SAG Token ID on Creditcoin CC3
+     * @param chainKey Chain Key (1 for Ethereum Sepolia)
+     * @param headerNumber Block header number where settlement was mined
+     * @param encodedTransaction Encoded transaction structure (txType, chunks)
+     * @param merkleProof Attestcoin Merkle proof
+     * @param continuityProof Attestcoin Continuity proof
+     * @param sourceTxHash Hash of the settleInvestor transaction on Sepolia
+     */
+    function verifyAndRecordReturnDistribution(
+        uint256 tokenId,
+        uint64 chainKey,
+        uint64 headerNumber,
+        bytes calldata encodedTransaction,
+        IBlockProver.MerkleProof calldata merkleProof,
+        IBlockProver.ContinuityProof calldata continuityProof,
+        bytes32 sourceTxHash
+    ) external returns (bool) {
+        require(!processedSourceTransactions[sourceTxHash], "Return distribution transaction already settled");
+
+        // Compliance checks to block settlement on frozen loans/accounts
+        require(!sagToken.frozenToken(tokenId), "Compliance: Token is frozen");
+        address pawnshop = sagToken.ownerOf(tokenId);
+        require(!sagToken.frozenAddress(pawnshop), "Compliance: Pawnshop address is frozen");
+
+        // 1. Execute verification against Creditcoin native BlockProver (0xFD2)
+        IBlockProver blockProver = IBlockProver(BLOCK_PROVER_PRECOMPILE);
+        bool isValid = blockProver.verify(chainKey, headerNumber, encodedTransaction, merkleProof, continuityProof);
+        require(isValid, "Invalid Attestcoin cross-chain proof");
+
+        // 2. Decode outer ABI structure (uint8 txType, bytes[] chunks)
+        (uint8 txType, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length >= 2, "Malformed encodedTransaction chunks");
+        require(txType <= 4, "Invalid transaction type");
+
+        // 3. Decode Chunk 0 (Common EVM transaction fields)
+        (
+            /* uint64 nonce */,
+            /* uint64 gasLimit */,
+            address from,
+            bool toIsNull,
+            address to,
+            uint256 value,
+            bytes memory data
+        ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
+
+        require(!toIsNull, "Target contract cannot be null");
+        require(repaymentGatewayAddress != address(0), "RepaymentGateway address not configured");
+        require(to == repaymentGatewayAddress, "Target contract does not match RepaymentGateway");
+        require(data.length >= 68, "Invalid calldata length for settleInvestor(uint256,uint256)");
+
+        // 4. Validate Function Selector (settleInvestor(uint256,uint256) = 0x58ffdcee)
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+        require(selector == 0x58ffdcee, "Invalid function selector for settleInvestor(uint256,uint256)");
+
+        // 5. Decode Calldata Parameters (tokenId, amount)
+        uint256 calldataTokenId;
+        uint256 calldataAmount;
+        assembly {
+            calldataTokenId := mload(add(data, 36))
+            calldataAmount := mload(add(data, 68))
+        }
+        require(calldataTokenId == tokenId, "Token ID in calldata does not match claimed tokenId");
+        require(value == calldataAmount, "Transaction value does not match settleInvestor amount");
+        require(from == pawnshop, "Caller does not match assigned pawnshop for token");
+
+        // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
+        uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
+        require(receiptStatus == 1, "Source transaction was reverted on Ethereum Sepolia");
+
+        // 7. Mark source transaction as settled to prevent replay
+        processedSourceTransactions[sourceTxHash] = true;
+
+        // 8. Record return distribution state (isolated from credit oracle / proven capital)
+        returnDistributed[tokenId] = true;
+        returnAmountDistributed[tokenId] = calldataAmount;
+
+        emit ReturnDistributionVerified(tokenId, pawnshop, calldataAmount, sourceTxHash, block.timestamp);
 
         return true;
     }
