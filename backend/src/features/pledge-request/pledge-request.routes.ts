@@ -9,6 +9,7 @@ router.use(authenticateJWT);
 router.post('/', pledgeRequestController.create.bind(pledgeRequestController));
 router.get('/mine', pledgeRequestController.getMine.bind(pledgeRequestController));
 router.get('/my-loans', pledgeRequestController.getMyLoans.bind(pledgeRequestController));
+router.post('/repay-by-sag/:tokenId', pledgeRequestController.repayBySag.bind(pledgeRequestController));
 router.get('/borrowers', pledgeRequestController.getBorrowers.bind(pledgeRequestController));
 router.get('/borrowers/:borrowerId', pledgeRequestController.getBorrowerDetailById.bind(pledgeRequestController));
 router.get('/pawnshops', pledgeRequestController.listPawnshops.bind(pledgeRequestController));

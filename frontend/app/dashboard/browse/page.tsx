@@ -28,6 +28,7 @@ import {
   Weight,
 } from 'lucide-react'
 import apiInstance from '@/lib/axios-v1'
+import { useProofProgress } from '@/store/proof-progress'
 import {
   SEPOLIA_INVESTOR_VAULT_ADDRESS,
   INVESTOR_VAULT_ABI,
@@ -367,6 +368,7 @@ export default function BrowsePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [ethPrice, setEthPrice] = useState(0)
+  const { addJob: addProofJob } = useProofProgress()
   const [investModal, setInvestModal] = useState<SagToken | null>(null)
   const [investAmount, setInvestAmount] = useState('')
   const [processing, setProcessing] = useState(false)
@@ -752,6 +754,15 @@ export default function BrowsePage() {
                         startedAt: Date.now(),
                       }
                       setActiveJobs(prev => [newJob, ...prev])
+                      addProofJob({
+                        type: 'invest',
+                        jobId,
+                        sagName: investModal.sagName || `SAG #${investModal.tokenId}`,
+                        sagTokenId: investModal.tokenId,
+                        amountUsd: usdAmount,
+                        ethAmount: ethAmount.toFixed(6),
+                        sourceTxHash: tx.hash,
+                      })
 
                       setInvestModal(null)
                       setInvestAmount('')

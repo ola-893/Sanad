@@ -741,6 +741,58 @@ export class PledgeRequestController {
   }
 
   /**
+   * POST /pledge-requests/repay-by-sag/:tokenId -- Record repayment by SAG token ID
+   * Called by frontend after Sepolia tx confirms, before/during CC3 proof
+   */
+  async repayBySag(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user) {
+        res.status(401).json({ success: false, error: "Unauthorized" });
+        return;
+      }
+
+      const { tokenId } = req.params;
+      const { txHash, amountUsd, cc3TxHash } = req.body || {};
+
+      // Find the pledge request by SAG token ID
+      const { pool } = await import("@/db/index.js");
+      const prResult = await pool.query(
+        `SELECT id, borrower_id, pawnshop_id FROM main.pledge_request WHERE sag_token_id = $1 LIMIT 1`,
+        [tokenId]
+      );
+
+      if (prResult.rows.length === 0) {
+        res.status(404).json({ success: false, error: "No pledge request found for this SAG token" });
+        return;
+      }
+
+      const pr = prResult.rows[0];
+
+      // Record the repayment
+      const repayment = await recordRepayment({
+        pledgeRequestId: pr.id,
+        borrowerId: user.userId!,
+        pawnshopId: pr.pawnshop_id,
+        amountUsd: Number(amountUsd) || 0,
+        txHash: txHash || "",
+        cc3TxHash: cc3TxHash || "",
+        notes: "Borrower repayment via RepaymentGateway",
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Repayment recorded",
+        data: repayment,
+      });
+    } catch (error) {
+      console.error("Error recording repayment by SAG:", error);
+      res.status(500).json({ success: false, error: "Failed to record repayment" });
+    }
+  }
+
+  /**
    * GET /pledge-requests/pawnshops -- List all active pawnshops (for borrower selection)
    */
   async listPawnshops(_req: Request, res: Response): Promise<void> {

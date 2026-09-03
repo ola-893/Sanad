@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { ConditionalLayout } from "@/components/conditional-layout"
 import { QueryProvider } from "@/components/query-client-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
+import { ProofBanner } from "@/components/proof-banner"
 
 const hankenGrotesk = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" })
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-display" })
@@ -47,6 +48,7 @@ export default function RootLayout({
                   {children}
                 </ConditionalLayout>
                 <EnhancedChatWidget />
+                <ProofBanner />
                 <Toaster />
               </AuthProvider>
             </LanguageProvider>
