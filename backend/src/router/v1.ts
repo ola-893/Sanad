@@ -61,6 +61,13 @@ let lastEthPrice = 0
 let lastEthPriceTime = 0
 
 v1Router.get('/eth-price', async (_req, res) => {
+  // Return cached price if fresh (< 60s)
+  if (lastEthPrice > 0 && (Date.now() - lastEthPriceTime) < 60 * 1000) {
+    res.json({ success: true, data: { usd: lastEthPrice } })
+    return
+  }
+
+  // Source 1: CoinGecko
   try {
     const { data } = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', { timeout: 5000 });
     const price = data.ethereum?.usd
@@ -70,12 +77,35 @@ v1Router.get('/eth-price', async (_req, res) => {
       res.json({ success: true, data: { usd: price } })
       return
     }
-    throw new Error('No price data')
-  } catch {
-    // Return last known price if recent (< 5 min), otherwise 0
-    const isRecent = lastEthPrice > 0 && (Date.now() - lastEthPriceTime) < 5 * 60 * 1000
-    res.json({ success: true, data: { usd: isRecent ? lastEthPrice : 0 } })
-  }
+  } catch {}
+
+  // Source 2: Binance public API
+  try {
+    const { data } = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT', { timeout: 5000 });
+    const price = parseFloat(data?.price)
+    if (price && price > 0) {
+      lastEthPrice = price
+      lastEthPriceTime = Date.now()
+      res.json({ success: true, data: { usd: price } })
+      return
+    }
+  } catch {}
+
+  // Source 3: CoinCap
+  try {
+    const { data } = await axios.get('https://api.coincap.io/v2/assets/ethereum', { timeout: 5000 });
+    const price = parseFloat(data?.data?.priceUsd)
+    if (price && price > 0) {
+      lastEthPrice = price
+      lastEthPriceTime = Date.now()
+      res.json({ success: true, data: { usd: price } })
+      return
+    }
+  } catch {}
+
+  // Fallback: return last known price if < 10 min old, otherwise 0
+  const isRecent = lastEthPrice > 0 && (Date.now() - lastEthPriceTime) < 10 * 60 * 1000
+  res.json({ success: true, data: { usd: isRecent ? lastEthPrice : 0 } })
 });
 
 export default v1Router;

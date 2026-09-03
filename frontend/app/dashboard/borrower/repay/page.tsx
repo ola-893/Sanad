@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import { toast } from "sonner"
 import {
@@ -19,13 +17,15 @@ import {
   ExternalLink,
   Wallet,
   Shield,
-  Coins,
-  Cpu,
-  Sparkles,
-  CreditCard,
+  Scale,
+  Clock,
+  ArrowRight,
+  Copy,
+  Zap,
 } from "lucide-react"
 import { ethers } from "ethers"
 import apiInstance from "@/lib/axios-v1"
+import { useProofProgress } from "@/store/proof-progress"
 import {
   SEPOLIA_REPAYMENT_GATEWAY_ADDRESS,
   REPAYMENT_GATEWAY_ABI,
@@ -34,12 +34,14 @@ import {
   SEPOLIA_CHAIN_ID,
 } from "@/lib/contracts/sepolia-gateways"
 
-const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
+const SEPOLIA_EXPLORER = "https://eth-sepolia.blockscout.com"
+const CC3_EXPLORER = "https://creditcoin-testnet.blockscout.com"
 
-type StepStatus = "idle" | "selecting" | "broadcasting" | "sepolia_confirmed" | "proving" | "settled" | "error"
+type StepStatus = "idle" | "broadcasting" | "sepolia_confirmed" | "proving" | "settled" | "error"
 
 interface Loan {
   sagId: string
+  tokenId: string
   sagName: string
   status: string
   approvalStatus: string
@@ -56,25 +58,29 @@ interface Loan {
 
 export default function BorrowerRepayPage() {
   const router = useRouter()
-  const { walletAddress } = useWalletAuth()
+  const { walletAddress, balance } = useWalletAuth()
+  const { addJob } = useProofProgress()
 
   const [loans, setLoans] = useState<Loan[]>([])
   const [loadingLoans, setLoadingLoans] = useState(true)
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
-
   const [repayAmount, setRepayAmount] = useState("")
   const [status, setStatus] = useState<StepStatus>("idle")
   const [sepoliaTxHash, setSepoliaTxHash] = useState("")
   const [sepoliaBlock, setSepoliaBlock] = useState<number | null>(null)
-  const [cc3TxHash, setCc3TxHash] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
-  const [progressPercent, setProgressPercent] = useState(0)
-  const [statusText, setStatusText] = useState("")
+  const [ethPrice, setEthPrice] = useState(0)
+  const [lockedPrice, setLockedPrice] = useState(0)
 
-  const cc3ExplorerBase =
-    process.env.NEXT_PUBLIC_CREDITCOIN_EXPLORER_URL || "https://creditcoin-testnet.blockscout.com"
+  const walletBalance = balance || "0"
 
-  // Fetch borrower's active loans
+  useEffect(() => {
+    apiInstance
+      .get("/eth-price")
+      .then((res) => setEthPrice(res.data?.data?.usd || 0))
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     apiInstance
       .get("/sag")
@@ -97,8 +103,6 @@ export default function BorrowerRepayPage() {
 
     setErrorMessage("")
     setStatus("broadcasting")
-    setProgressPercent(15)
-    setStatusText("Broadcasting repayment to Sepolia Repayment Gateway...")
 
     try {
       if (typeof window !== "undefined" && (window as any).ethereum) {
@@ -117,88 +121,72 @@ export default function BorrowerRepayPage() {
           signer
         )
 
-        const tokenId = BigInt(selectedLoan.sagId)
+        const tokenId = BigInt(selectedLoan.tokenId)
         const value = ethers.parseEther(repayAmount)
 
-        toast.info(`Sending ${repayAmount} ETH to Sepolia RepaymentGateway...`)
-
+        const usdAmount = (Number(repayAmount) * (lockedPrice || ethPrice)).toFixed(2)
+        toast.info(`Sending ${repayAmount} ETH (~$${usdAmount}) to RepaymentGateway...`)
         const tx = await gatewayContract.repay(tokenId, value, { value })
         setSepoliaTxHash(tx.hash)
-
-        setStatusText(`Waiting for Sepolia block confirmation (Tx: ${tx.hash.slice(0, 10)}...)...`)
-        setProgressPercent(35)
 
         const receipt = await tx.wait(1)
         setSepoliaBlock(receipt.blockNumber)
         setStatus("sepolia_confirmed")
-        toast.success(`Sepolia repayment confirmed in block #${receipt.blockNumber}!`)
+        toast.success(`Confirmed in block #${receipt.blockNumber}!`)
 
-        // Auto-prove on CC3 (Async BullMQ Queue + Polling)
+        // Record repayment in backend
+        const usdVal = (Number(repayAmount) * (lockedPrice || ethPrice)).toFixed(2)
+        try {
+          await apiInstance.post(`/pledge-requests/repay-by-sag/${selectedLoan.tokenId}`, {
+            txHash: tx.hash,
+            amountUsd: Number(usdVal),
+          }, { timeout: 10000 })
+        } catch {}
+
+        // Queue CC3 proof in background
         setStatus("proving")
-        setProgressPercent(50)
-        setStatusText("Queuing Attestcoin cryptographic proof job on Creditcoin CC3...")
-
-        const response = await apiInstance.post("/loan/repay/prove", {
-          tokenId: Number(selectedLoan.sagId),
-          sourceTxHash: tx.hash,
-          chainKey: 1,
-        }, { timeout: 900000 })  // 15 min — CC3 proof can be slow
-
-        if (!response.data?.success) {
-          throw new Error(response.data?.error || response.data?.message || "Failed to queue repayment proof")
-        }
-
-        const { jobId } = response.data.data
-        toast.info("Repayment proof job queued. Polling Attestcoin indexing & CC3 settlement...")
-
-        // Poll for completion
-        let settledCc3Hash = ""
-        const maxPollAttempts = 150
-        let pollAttempts = 0
-
-        while (pollAttempts < maxPollAttempts) {
-          await new Promise((r) => setTimeout(r, 2500))
-          pollAttempts++
-
-          try {
-            const statusRes = await apiInstance.get(`/loan/repay/status/${jobId}`)
-            if (statusRes.data?.success && statusRes.data?.data) {
-              const { state, progress, result, error } = statusRes.data.data
-              if (progress) setProgressPercent(Math.max(50, progress))
-              if (state === "COMPLETED" && result) {
-                settledCc3Hash = result.transactionHash || result.cc3TxHash || ""
-                break
-              } else if (state === "FAILED") {
-                throw new Error(error || "Attestcoin repayment proof job failed on CC3")
-              }
-            }
-          } catch (pErr: any) {
-            if (pErr.message && !pErr.message.includes("Network Error") && pErr.response?.status !== 404) {
-              throw pErr
-            }
+        try {
+          const response = await apiInstance.post(
+            "/loan/repay/prove",
+            { tokenId: Number(selectedLoan.tokenId), sourceTxHash: tx.hash, chainKey: 1 },
+            { timeout: 30000 }
+          )
+          if (response.data?.success) {
+            addJob({
+              type: "repay",
+              jobId: response.data.data.jobId,
+              sagName: selectedLoan.sagName || `SAG #${selectedLoan.tokenId}`,
+              sagTokenId: selectedLoan.tokenId,
+              amountUsd: selectedLoan.sagProperties?.loan || 0,
+              ethAmount: repayAmount,
+              sourceTxHash: tx.hash,
+            })
           }
-        }
+        } catch {}
 
-        if (!settledCc3Hash) {
-          throw new Error("Timed out waiting for Attestcoin repayment proof verification.")
-        }
-
-        setCc3TxHash(settledCc3Hash)
-        setProgressPercent(100)
         setStatus("settled")
-        setStatusText("Cross-chain repayment verified and loan settled on Creditcoin CC3!")
-
-        toast.success("Cross-chain repayment cryptographically verified on CC3!", {
-          description: `Settlement Tx: ${settledCc3Hash?.slice(0, 12)}...`,
-        })
+        toast.success("Repayment sent! CC3 proof processing in background.")
       } else {
         throw new Error("No EVM wallet detected. Please install MetaMask.")
       }
     } catch (err: any) {
       console.error("Repayment error:", err)
       setStatus("error")
-      setErrorMessage(err.message || "Repayment failed")
-      toast.error(err.message || "Failed to process repayment")
+      const msg = err?.message || "Repayment failed"
+      if (msg.includes("user-rejected") || msg.includes("User denied") || msg.includes("ACTION_REJECTED")) {
+        setErrorMessage("You cancelled the transaction in MetaMask. No funds were sent.")
+      } else if (msg.includes("insufficient funds") || msg.includes("INSUFFICIENT_FUNDS")) {
+        setErrorMessage(
+          `Your wallet doesn\'t have enough ETH for this repayment.${ethPrice > 0 && repayAmount ? ` You need ~$${(Number(repayAmount) * ethPrice).toFixed(2)} USD worth of ETH.` : ""} Top up your wallet and try again.`
+        )
+      } else if (msg.includes("nonce")) {
+        setErrorMessage("Transaction nonce error. Please wait a moment and try again, or restart MetaMask.")
+      } else if (msg.includes("network") || msg.includes("chain")) {
+        setErrorMessage("Network error. Please make sure your wallet is connected to Sepolia.")
+      } else {
+        setErrorMessage(msg)
+      }
+      toast.error("Repayment failed")
     }
   }
 
@@ -208,292 +196,309 @@ export default function BorrowerRepayPage() {
     setRepayAmount("")
     setSepoliaTxHash("")
     setSepoliaBlock(null)
-    setCc3TxHash("")
     setErrorMessage("")
-    setProgressPercent(0)
-    setStatusText("")
   }
 
   return (
-    <ProtectedRoute requiredRole="borrower">
-      <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-        <div className="mx-auto max-w-3xl space-y-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/dashboard/borrower")}
-            className="gap-2 text-muted-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+    <div className="mx-auto max-w-2xl space-y-6 pt-2">
+      {/* Back */}
+      <button
+        onClick={() => router.push("/dashboard/borrower")}
+        className="flex items-center gap-2 text-sm font-bold text-[#4A4A4A] hover:text-[#171414] transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
 
-          {/* Header */}
-          <div>
-            <p className="kicker-gold">Loan Repayment</p>
-            <h1 className="text-3xl font-display font-bold text-[#171414]">
-              Repay Your Gold Loan
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Pay via Ethereum Sepolia. Attestcoin cryptographically verifies your payment on CC3.
-            </p>
-          </div>
+      {/* Header */}
+      <div>
+        <p className="kicker mb-2">Loan Repayment</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#171414]">
+          Repay Your Loan
+        </h1>
+        <p className="mt-2 text-sm text-[#4A4A4A]">
+          Send ETH to the RepaymentGateway on Sepolia. Attestcoin verifies your payment on CC3.
+        </p>
+      </div>
 
-          {/* Attestcoin Architecture Notice */}
-          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-xs text-cyan-950 space-y-1.5">
-            <div className="flex items-center gap-2 font-semibold text-cyan-900">
-              <Shield className="h-4 w-4 text-cyan-600" />
-              <span>Attestcoin Cross-Chain Repayment</span>
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              Your ETH payment on Sepolia is cryptographically verified by Creditcoin's Attestcoin Prover
-              and settled on CC3 -- no cross-chain bridges needed. Both the Sepolia source tx and CC3
-              proof tx are recorded for full auditability.
-            </p>
-          </div>
+      {/* Success State */}
+      {status === "settled" && (
+        <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#171414]">Repayment Sent</h3>
+                <p className="mt-1 text-sm text-[#4A4A4A]">
+                  {repayAmount} ETH (~${(Number(repayAmount) * (lockedPrice || ethPrice)).toFixed(2)} USD) for SAG #{selectedLoan?.tokenId} confirmed on Sepolia.
+                  <br />
+                  CC3 proof is being generated in the background.
+                </p>
+              </div>
 
-          {/* Success State */}
-          {status === "settled" && (
-            <Card className={glass}>
-              <CardContent className="p-8">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-700" />
+              {/* Tx links */}
+              <div className="w-full max-w-sm space-y-2">
+                {sepoliaTxHash && (
+                  <div className="flex items-center justify-between rounded-xl bg-[#171414]/3 p-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Sepolia Tx</span>
+                    <a
+                      href={`${SEPOLIA_EXPLORER}/tx/${sepoliaTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 font-mono text-xs text-[#e1bac2] hover:underline"
+                    >
+                      {sepoliaTxHash.slice(0, 10)}...{sepoliaTxHash.slice(-6)}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
-                  <div className="text-center">
-                    <h3 className="font-display text-xl font-bold text-[#171414]">Repayment Complete!</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Your repayment of {repayAmount} ETH for SAG #{selectedLoan?.sagId} has been
-                      cryptographically verified on CC3.
-                    </p>
-                  </div>
-
-                  {/* Tx Summary */}
-                  <div className="w-full max-w-md rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Loan</span>
-                      <span className="font-mono text-sm font-bold text-[#171414]">SAG #{selectedLoan?.sagId}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Amount Paid</span>
-                      <span className="font-mono text-sm font-bold text-emerald-700">{repayAmount} ETH</span>
-                    </div>
-
-                    {/* Dual tx hashes */}
-                    <div className="pt-2 border-t border-[#171414]/10 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">1. Sepolia Source Tx</span>
-                        <a
-                          href={`${SEPOLIA_EXPLORER_URL}/tx/${sepoliaTxHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-[11px] text-cyan-700 hover:underline flex items-center gap-1"
-                        >
-                          {sepoliaTxHash.slice(0, 10)}...{sepoliaTxHash.slice(-6)}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">2. CC3 Proof Tx</span>
-                        <a
-                          href={`${cc3ExplorerBase}/tx/${cc3TxHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-[11px] text-emerald-700 hover:underline flex items-center gap-1"
-                        >
-                          {cc3TxHash.slice(0, 10)}...{cc3TxHash.slice(-6)}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-muted-foreground">Status</span>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px]">
-                        Repaid & Settled on CC3
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    onClick={resetForm}
-                    className="rounded-full"
-                  >
-                    Make Another Repayment
-                  </Button>
+                )}
+                <div className="flex items-center justify-between rounded-xl bg-[#171414]/3 p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">CC3 Proof</span>
+                  <span className="text-xs text-[#4A4A4A]/60">Processing in background...</span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
 
-          {/* Repayment Form */}
-          {status !== "settled" && (
-            <Card className={glass}>
-              <CardHeader>
-                <CardTitle className="font-display flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/15">
-                    <CreditCard className="h-4 w-4 text-cyan-700" />
-                  </span>
-                  Make Repayment
-                </CardTitle>
-                <CardDescription>
-                  Select your active loan and enter the repayment amount in ETH
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Loan Selection */}
-                <div className="space-y-2">
-                  <Label>Select Active Loan</Label>
-                  {loadingLoans ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading your loans...
-                    </div>
-                  ) : loans.length === 0 ? (
-                    <div className="text-sm text-muted-foreground py-3">
-                      No active loans found. Apply for a loan first.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {loans.map((loan) => (
-                        <button
-                          key={loan.sagId}
-                          onClick={() => {
-                            setSelectedLoan(loan)
-                            setRepayAmount(String(loan.sagProperties?.loan || ""))
-                          }}
-                          disabled={status === "broadcasting" || status === "proving"}
-                          className={`w-full rounded-xl border p-4 text-left transition-all ${
-                            selectedLoan?.sagId === loan.sagId
-                              ? "border-cyan-500 bg-cyan-50 shadow-md"
-                              : "border-[#171414]/10 bg-white/40 hover:bg-white/60"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
+              <Button onClick={resetForm} variant="outline" className="rounded-xl mt-2">
+                Make Another Repayment
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Repayment Form */}
+      {status !== "settled" && (
+        <>
+          {/* How it works */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Wallet, label: "Send ETH", desc: "To RepaymentGateway" },
+              { icon: Shield, label: "Attestcoin Proves", desc: "On CC3" },
+              { icon: CheckCircle2, label: "Settled", desc: "Pawnshop receives" },
+            ].map((step, i) => (
+              <div key={step.label} className="flex flex-col items-center text-center rounded-xl bg-white/50 border border-white/60 p-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171414]/5 mb-2">
+                  <step.icon className="h-4 w-4 text-[#e1bac2]" />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#171414]">{step.label}</p>
+                <p className="text-[9px] text-[#4A4A4A]/50">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Loan Selection */}
+          <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#4A4A4A]/60">Select Active Loan</Label>
+                {loadingLoans ? (
+                  <div className="flex items-center gap-2 text-sm text-[#4A4A4A]/60 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#e1bac2]" /> Loading loans...
+                  </div>
+                ) : loans.length === 0 ? (
+                  <div className="py-4 text-center">
+                    <Scale className="mx-auto mb-2 h-8 w-8 text-[#4A4A4A]/20" />
+                    <p className="text-sm font-bold text-[#171414]">No active loans</p>
+                    <p className="text-xs text-[#4A4A4A]/50">Apply for a loan first.</p>
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {loans.map((loan) => (
+                      <button
+                        key={loan.sagId}
+                        onClick={() => {
+                          setSelectedLoan(loan)
+                          setRepayAmount("")
+                        }}
+                        disabled={status === "broadcasting" || status === "proving"}
+                        className={`w-full rounded-xl border p-4 text-left transition-all ${
+                          selectedLoan?.sagId === loan.sagId
+                            ? "border-[#e1bac2] bg-[#e1bac2]/10 shadow-sm"
+                            : "border-white/60 bg-white/40 hover:bg-white/60 hover:border-[#e1bac2]/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#171414]/5">
+                              <Scale className="h-5 w-5 text-[#e1bac2]" />
+                            </div>
                             <div>
-                              <p className="text-sm font-medium text-[#171414]">
-                                {loan.sagName || `SAG #${loan.sagId}`}
+                              <p className="text-sm font-bold text-[#171414]">
+                                {loan.sagName || `SAG #${loan.tokenId}`}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-[#4A4A4A]/60">
                                 {loan.sagProperties?.weightG}g {loan.sagProperties?.karat}K Gold
                               </p>
                             </div>
+                          </div>
+                          <div className="flex items-center gap-3">
                             <div className="text-right">
                               <p className="text-sm font-bold text-[#171414]">
-                                ${loan.sagProperties?.loan?.toLocaleString()} {loan.sagProperties?.currency || "USD"}
+                                ${loan.sagProperties?.loan?.toLocaleString()}
                               </p>
-                              <Badge variant="outline" className="text-[9px] font-mono border-emerald-200 bg-emerald-50 text-emerald-700">
-                                Active
-                              </Badge>
+                              <p className="text-[10px] text-[#4A4A4A]/50">Loan Amount</p>
                             </div>
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] font-bold">
+                              Active
+                            </Badge>
                           </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Amount Input */}
-                {selectedLoan && (
-                  <div className="space-y-2">
-                    <Label htmlFor="repay-amount">Repayment Amount (ETH)</Label>
-                    <div className="relative">
-                      <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="repay-amount"
-                        type="number"
-                        placeholder="e.g. 0.005"
-                        value={repayAmount}
-                        onChange={(e) => setRepayAmount(e.target.value)}
-                        disabled={status === "broadcasting" || status === "proving"}
-                        className="rounded-xl pl-10 font-mono"
-                        min="0"
-                        step="0.001"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground">
-                        ETH
-                      </span>
-                    </div>
-                    <div className="flex gap-1.5 pt-1">
-                      {["0.001", "0.005", "0.01", "0.05"].map((preset) => (
-                        <Button
-                          key={preset}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 text-[10px] px-2"
-                          onClick={() => setRepayAmount(preset)}
-                          disabled={status === "broadcasting" || status === "proving"}
-                        >
-                          {preset} ETH
-                        </Button>
-                      ))}
-                    </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
 
-                {/* Progress Bar */}
-                {(status === "broadcasting" || status === "sepolia_confirmed" || status === "proving") && (
-                  <div className="space-y-2 rounded-2xl border border-black/10 bg-[#FAFAF8] p-4">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1.5">
-                        <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-                        {statusText}
+          {/* Amount Input */}
+          {selectedLoan && (
+            <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
+              <CardContent className="p-5 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-[#4A4A4A]/60">Repayment Amount</Label>
+                    {walletBalance && Number(walletBalance) > 0 && (
+                      <span className="text-[10px] text-[#4A4A4A]/50">
+                        Wallet: {Number(walletBalance).toFixed(4)} ETH{ethPrice > 0 && <span> ≈ ${(Number(walletBalance) * ethPrice).toFixed(2)}</span>}
                       </span>
-                      <span className="font-mono text-muted-foreground">{progressPercent}%</span>
+                    )}
+                  </div>
+                  <div className="mt-3 relative">
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A4A4A]/40" />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={repayAmount}
+                      onChange={(e) => setRepayAmount(e.target.value)}
+                      disabled={status === "broadcasting" || status === "proving"}
+                      className="rounded-xl pl-10 pr-16 font-mono text-lg h-12"
+                      min="0"
+                      step="0.001"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-[#4A4A4A]/40">
+                      ETH
+                    </span>
+                  </div>
+                  {repayAmount && ethPrice > 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-xs text-[#4A4A4A]/60">
+                        ≈ ${(Number(repayAmount) * (lockedPrice || ethPrice)).toFixed(2)} USD
+                      </p>
+                      <p className="text-[10px] text-[#4A4A4A]/40">
+                        @ ${(lockedPrice || ethPrice).toLocaleString()}/ETH
+                        {lockedPrice > 0 && lockedPrice !== ethPrice && (
+                          <span className="ml-1 text-[#e1bac2]">locked</span>
+                        )}
+                      </p>
                     </div>
-                    <Progress value={progressPercent} className="h-2" />
+                  )}
+                  {repayAmount && walletBalance && Number(repayAmount) > Number(walletBalance) && (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      ⚠ Amount exceeds your wallet balance ({Number(walletBalance).toFixed(4)} ETH)
+                    </p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    {["0.001", "0.005", "0.01", "0.05"].map((eth) => (
+                      <button
+                        key={eth}
+                        type="button"
+                        onClick={() => {
+                          setRepayAmount(eth)
+                          setLockedPrice(ethPrice)
+                        }}
+                        disabled={status === "broadcasting" || status === "proving"}
+                        className="flex-1 rounded-lg border border-[#171414]/10 bg-white/50 px-3 py-2 text-center transition-colors hover:bg-[#e1bac2]/10 hover:border-[#e1bac2]/30 disabled:opacity-50"
+                      >
+                        <p className="font-mono text-xs font-bold text-[#171414]">{eth}</p>
+                        <p className="font-mono text-[9px] text-[#4A4A4A]/40">ETH</p>
+                        {ethPrice > 0 && (
+                          <p className="font-mono text-[9px] text-[#4A4A4A]/50">${(Number(eth) * ethPrice).toFixed(2)}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Progress */}
+                {(status === "broadcasting" || status === "sepolia_confirmed" || status === "proving") && (
+                  <div className="rounded-xl bg-[#171414]/3 p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#e1bac2]" />
+                      <span className="text-xs font-bold text-[#171414]">
+                        {status === "broadcasting" && "Sending to RepaymentGateway..."}
+                        {status === "sepolia_confirmed" && "Confirmed! Queuing CC3 proof..."}
+                        {status === "proving" && "CC3 proof queued. Check banner for progress."}
+                      </span>
+                    </div>
+                    {sepoliaTxHash && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[#4A4A4A]/50">Sepolia Tx</span>
+                        <a
+                          href={`${SEPOLIA_EXPLORER}/tx/${sepoliaTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 font-mono text-[#e1bac2] hover:underline"
+                        >
+                          {sepoliaTxHash.slice(0, 10)}... <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Error */}
                 {status === "error" && errorMessage && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-950">
-                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <p className="font-semibold text-rose-900">Repayment Error</p>
-                      <p className="font-mono text-[11px] break-all">{errorMessage}</p>
+                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-red-800">Repayment Failed</p>
+                      <p className="mt-1 text-[11px] text-red-600 font-mono break-all">{errorMessage}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Submit */}
-                <Button
-                  onClick={handleRepay}
-                  disabled={!selectedLoan || !repayAmount || Number(repayAmount) <= 0 || status === "broadcasting" || status === "proving"}
-                  className="w-full rounded-xl bg-[#171414] text-[#E1BAC2] hover:bg-black gap-2"
-                >
-                  {status === "broadcasting" || status === "proving" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing Cross-Chain Proof...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 text-cyan-400" />
-                      Repay on Sepolia & Settle via Attestcoin
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await switchOrAddSepoliaNetwork()
-                      toast.success("Switched to Ethereum Sepolia")
-                    } catch (err: any) {
-                      toast.error(err.message)
-                    }
-                  }}
-                  className="w-full rounded-xl"
-                >
-                  Switch Wallet to Sepolia
-                </Button>
+                {/* Actions */}
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleRepay}
+                    disabled={!selectedLoan || !repayAmount || Number(repayAmount) <= 0 || (walletBalance && Number(repayAmount) > Number(walletBalance)) || status === "broadcasting" || status === "proving"}
+                    className="w-full rounded-xl bg-[#171414] text-[#E1BAC2] hover:bg-black h-12 text-sm font-bold gap-2"
+                  >
+                    {status === "broadcasting" || status === "proving" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        Repay on Sepolia
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await switchOrAddSepoliaNetwork()
+                        toast.success("Switched to Sepolia")
+                      } catch (err: any) {
+                        toast.error(err.message)
+                      }
+                    }}
+                    className="w-full rounded-xl text-xs h-9"
+                  >
+                    Switch Wallet to Sepolia
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
-        </div>
-      </div>
-    </ProtectedRoute>
+        </>
+      )}
+    </div>
   )
 }
