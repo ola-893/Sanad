@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ProofJobType = 'invest' | 'repay'
+export type ProofJobType = 'invest' | 'repay' | 'settle'
 export type ProofJobStatus = 'queued' | 'proving' | 'completed' | 'failed'
 
 export interface ProofJob {

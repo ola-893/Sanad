@@ -538,7 +538,8 @@ export async function getBorrowerDetail(pawnshopId: string, borrowerId: string):
   let repayments: any[] = [];
   if (pledgeRequestIds.length > 0) {
     const repayResult = await pool.query(
-      `SELECT lr.*, lr.cc3_tx_hash as "cc3TxHash", lr.tx_hash as "txHash"
+      `SELECT lr.*, lr.cc3_tx_hash as "cc3TxHash", lr.tx_hash as "txHash",
+              lr.amount_usd as "amountUsd", lr.created_at as "createdAt"
        FROM main.loan_repayment lr
        WHERE lr.pledge_request_id = ANY($1)
        ORDER BY lr.created_at DESC`,

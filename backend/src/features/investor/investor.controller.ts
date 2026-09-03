@@ -331,8 +331,13 @@ export class InvestorController {
 
       const { pool } = await import('@/db/index.js');
       const result = await pool.query(
-        `SELECT i.id, i.user_id, i.amount_usd, i.eth_amount, i.source_tx_hash, i.cc3_tx_hash, i.status, i.created_at,
-                u.user_first_name, u.user_last_name, u.user_email, u.account_id
+        `SELECT i.id, i.user_id as "userId", i.sag_token_id as "sagTokenId",
+                i.amount_usd as "amountUsd", i.eth_amount as "ethAmount",
+                i.source_tx_hash as "sourceTxHash", i.cc3_tx_hash as "cc3TxHash",
+                i.status, i.created_at as "createdAt",
+                u.user_first_name as "investorFirstName",
+                u.user_last_name as "investorLastName",
+                u.user_email, u.account_id as "investorWallet"
          FROM main.investment i
          LEFT JOIN main."user" u ON i.user_id = u.user_id
          WHERE i.sag_token_id = $1

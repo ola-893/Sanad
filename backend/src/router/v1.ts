@@ -44,6 +44,15 @@ v1Router.get('/investor/returns/:walletAddress', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+v1Router.get('/pawnshop/returns/:walletAddress', async (req, res) => {
+  try {
+    const { getLoanReturnsByPawnshop } = await import('@/features/loan-return/loan-return.repository.js');
+    const returns = await getLoanReturnsByPawnshop(req.params.walletAddress);
+    res.json({ success: true, data: returns });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Use the feature routes
 v1Router.use('/health', healthRoutes);

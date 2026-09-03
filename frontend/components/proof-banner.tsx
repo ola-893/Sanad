@@ -26,7 +26,7 @@ function ProofJobRow({ job }: { job: ProofJob }) {
         )}
         <div className="min-w-0">
           <p className="text-xs font-bold text-[#171414] truncate">
-            {job.type === "invest" ? "Investment" : "Repayment"} — {job.sagName || `SAG #${job.sagTokenId}`}
+            {job.type === "invest" ? "Investment" : job.type === "settle" ? "Return Settlement" : "Repayment"} — {job.sagName || `SAG #${job.sagTokenId}`}
           </p>
           <p className="text-[10px] text-[#4A4A4A]/60 truncate">{job.message}</p>
         </div>
@@ -111,6 +111,11 @@ export function ProofBanner() {
                   cc3TxHash: cc3Hash,
                   amountUsd: job.amountUsd || 0,
                 }, { timeout: 10000 }).catch(() => {})
+              }
+              // Update loan_return record with CC3 hash for settle type
+              if (job.type === "settle" && cc3Hash) {
+                // The backend already stores it via the proof job update
+                // Just notify the user
               }
             } else if (state === "FAILED") {
               polledRef.current.add(`${job.id}-done`)
