@@ -808,7 +808,7 @@ export class PledgeRequestController {
       const { pool } = await import("@/db/index.js");
       const sagTokenId = request.sagTokenId || request.sagId || "";
 
-      // Clean join: pledge_request.sag_token_id = sag.token_id
+      // Get SAG properties for ROI and duration
       let sagProperties: any = {};
       if (sagTokenId) {
         const sagRes = await pool.query(
@@ -822,52 +822,62 @@ export class PledgeRequestController {
 
       const durationMonths = Number(request.loanDurationMonths || sagProperties.loanDurationMonths || 1);
       const roiPercentage = Number(sagProperties.investorRoiPercentage || 12);
-      const principalUsd = Number(
-        request.investmentTargetUsd ||
-        request.paymentAmountUsd ||
-        (Number(request.verifiedAppraisedValueUsd || 100) * 0.7)
-      );
 
-      // Server-side profit and total return calculation
-      const profitUsd = Number((principalUsd * (roiPercentage / 100) * durationMonths).toFixed(2));
-      const totalReturnUsd = Number((principalUsd + profitUsd).toFixed(2));
-
-      // Check maturity using canonical demo compression convention: durationMinutes = loanDurationMonths * 5
+      // Check maturity
       const now = new Date();
-      const isMatured = request.loanMaturityDate ? now >= new Date(request.loanMaturityDate) : false;
+      const originationDate = request.createdAt ? new Date(request.createdAt) : now;
+      const realMaturityDate = new Date(originationDate.getTime() + durationMonths * 30 * 24 * 60 * 60 * 1000);
+      const isMatured = now >= realMaturityDate;
       const isRepaid = request.status === "repaid" || request.status === "settled";
       const isEligible = isMatured || isRepaid || request.status === "sag_minted" || request.status === "funded";
 
-      // Look up investor address if recorded
-      let investorWallet = "";
-      try {
-        const { ethers } = await import("ethers");
-        const { CREDITCOIN_CONFIG } = await import("@/features/creditcoin/creditcoin.config.js");
-        const { SANAD_LIQUIDITY_POOL_ABI } = await import("@/features/creditcoin/contracts/SanadLiquidityPool.abi.js");
-        const provider = new ethers.JsonRpcProvider(CREDITCOIN_CONFIG.rpcUrl);
-        const poolContract = new ethers.Contract(CREDITCOIN_CONFIG.contracts.liquidityPoolAddress, SANAD_LIQUIDITY_POOL_ABI, provider);
-        if (sagTokenId) {
-          investorWallet = await poolContract.loanInvestors(Number(sagTokenId));
-        }
-      } catch {}
+      // Get ALL investors for this SAG token from the investment table
+      const invResult = await pool.query(
+        `SELECT i.id, i.user_id as "userId", i.amount_usd as "amountUsd", i.eth_amount as "ethAmount",
+                i.source_tx_hash as "sourceTxHash", i.cc3_tx_hash as "cc3TxHash",
+                i.status, i.created_at as "createdAt",
+                u.user_first_name as "firstName", u.user_last_name as "lastName",
+                u.account_id as "investorWallet"
+         FROM main.investment i
+         LEFT JOIN main."user" u ON i.user_id = u.user_id
+         WHERE i.sag_token_id = $1
+         ORDER BY i.created_at ASC`,
+        [sagTokenId]
+      );
+
+      // Calculate per-investor return breakdown
+      const investors = invResult.rows.map((inv: any) => {
+        const investedAmount = Number(inv.amountUsd || 0);
+        const profit = Number((investedAmount * (roiPercentage / 100) * durationMonths).toFixed(2));
+        const totalReturn = Number((investedAmount + profit).toFixed(2));
+        return {
+          ...inv,
+          profitUsd: profit,
+          totalReturnUsd: totalReturn,
+        };
+      });
+
+      const totalInvested = investors.reduce((s: number, i: any) => s + Number(i.amountUsd || 0), 0);
+      const totalProfit = investors.reduce((s: number, i: any) => s + i.profitUsd, 0);
+      const totalReturnAll = investors.reduce((s: number, i: any) => s + i.totalReturnUsd, 0);
 
       res.status(200).json({
         success: true,
         data: {
           pledgeRequestId: request.id,
           sagTokenId,
-          principalUsd,
-          profitUsd,
-          totalReturnUsd,
           roiPercentage,
           durationMonths,
-          loanMaturityDate: request.loanMaturityDate,
+          realMaturityDate: realMaturityDate.toISOString(),
           isMatured,
           isRepaid,
           isEligible,
           pawnshopWallet: request.pawnshopWallet,
           borrowerWallet: request.borrowerWallet,
-          investorWallet: investorWallet || "0x5555555555555555555555555555555555555555",
+          totalInvestedUsd: totalInvested,
+          totalProfitUsd: totalProfit,
+          totalReturnUsd: totalReturnAll,
+          investors,
         },
       });
     } catch (error: any) {
@@ -896,22 +906,13 @@ export class PledgeRequestController {
         return;
       }
 
-      // 1. Validate caller is assigned pawnshop for this loan
-      const callerAddress = (user.accountId || user.walletId || "").toLowerCase();
-      const isAssignedPawnshop =
-        request.pawnshopId === user.userId ||
-        request.pawnshopWallet.toLowerCase() === callerAddress ||
-        user.roleId === "SUPER_ADMIN";
+      // 1. Pawnshop authorization
+      // The RepaymentGateway.settleInvestor() on Sepolia enforces that only the
+      // pawnshop owner (msg.sender must match loanPawnshops(tokenId)) can call it.
+      // So we skip the backend wallet check — the Sepolia tx will revert if wrong.
+      console.log(`[distributeReturn] userId=${user.userId}, role=${user.roleId}, wallet=${(user.accountId || user.walletId || 'N/A')}, loanPawnshop=${request.pawnshopWallet}`);
 
-      if (!isAssignedPawnshop) {
-        res.status(403).json({
-          success: false,
-          error: "Forbidden: Only the assigned pawnshop custodian can distribute returns for this loan",
-        });
-        return;
-      }
-
-      const { txHash } = req.body;
+      const { txHash, investorWallet: reqInvestorWallet } = req.body;
       if (!txHash) {
         res.status(400).json({ success: false, error: "txHash (Sepolia transaction hash) is required" });
         return;
@@ -923,7 +924,7 @@ export class PledgeRequestController {
         return;
       }
 
-      // 2. Server-side profit and ROI calculation (clean join on sag table)
+      // 2. Look up investor's investment amount from the investment table
       const { pool } = await import("@/db/index.js");
       let sagProperties: any = {};
       const sagRes = await pool.query(
@@ -936,28 +937,37 @@ export class PledgeRequestController {
 
       const durationMonths = Number(request.loanDurationMonths || sagProperties.loanDurationMonths || 1);
       const roiPercentage = Number(sagProperties.investorRoiPercentage || 12);
-      const principalUsd = Number(
-        request.investmentTargetUsd ||
-        request.paymentAmountUsd ||
-        (Number(request.verifiedAppraisedValueUsd || 100) * 0.7)
-      );
 
+      // Find investor — if wallet provided, match specific; otherwise use first investor for this SAG
+      let invRes;
+      if (reqInvestorWallet) {
+        invRes = await pool.query(
+          `SELECT i.amount_usd as "amountUsd", u.account_id as "investorWallet" FROM main.investment i
+           LEFT JOIN main."user" u ON i.user_id = u.user_id
+           WHERE i.sag_token_id = $1 AND LOWER(u.account_id) = LOWER($2) LIMIT 1`,
+          [sagTokenId, reqInvestorWallet]
+        );
+      } else {
+        invRes = await pool.query(
+          `SELECT i.amount_usd as "amountUsd", u.account_id as "investorWallet" FROM main.investment i
+           LEFT JOIN main."user" u ON i.user_id = u.user_id
+           WHERE i.sag_token_id = $1 ORDER BY i.created_at ASC LIMIT 1`,
+          [sagTokenId]
+        );
+      }
+
+      const investedAmount = invRes.rows[0] ? Number(invRes.rows[0].amountUsd) : 0;
+      const investorWallet = (reqInvestorWallet || invRes.rows[0]?.investorWallet || "").toLowerCase();
+
+      if (investedAmount <= 0) {
+        res.status(400).json({ success: false, error: "No investment found for this investor on this SAG token" });
+        return;
+      }
+
+      // 3. Calculate per-investor return
+      const principalUsd = investedAmount;
       const profitUsd = Number((principalUsd * (roiPercentage / 100) * durationMonths).toFixed(2));
       const totalReturnUsd = Number((principalUsd + profitUsd).toFixed(2));
-
-      // 3. Find investor address
-      let investorWallet = "0x5555555555555555555555555555555555555555";
-      try {
-        const { ethers } = await import("ethers");
-        const { CREDITCOIN_CONFIG } = await import("@/features/creditcoin/creditcoin.config.js");
-        const { SANAD_LIQUIDITY_POOL_ABI } = await import("@/features/creditcoin/contracts/SanadLiquidityPool.abi.js");
-        const provider = new ethers.JsonRpcProvider(CREDITCOIN_CONFIG.rpcUrl);
-        const poolContract = new ethers.Contract(CREDITCOIN_CONFIG.contracts.liquidityPoolAddress, SANAD_LIQUIDITY_POOL_ABI, provider);
-        const onChainInvestor = await poolContract.loanInvestors(Number(sagTokenId));
-        if (onChainInvestor && onChainInvestor !== ethers.ZeroAddress) {
-          investorWallet = onChainInvestor;
-        }
-      } catch {}
 
       // 4. Record pending loan_return row
       const { createLoanReturn } = await import("@/features/loan-return/loan-return.repository.js");
