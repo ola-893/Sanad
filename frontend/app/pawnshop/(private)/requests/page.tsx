@@ -174,6 +174,7 @@ export default function PawnshopRequestsPage() {
 
   // SAG mint modal
   const [sagModal, setSagModal] = useState<PledgeRequest | null>(null)
+  const [sagModalDuration, setSagModalDuration] = useState<number>(3)
   const [sagTokenId, setSagTokenId] = useState("")
 
   // Pawnshop profile for pre-filling accept modal
@@ -867,7 +868,7 @@ export default function PawnshopRequestsPage() {
                             {req.status === "funded" && (
                               <Button
                                 size="sm"
-                                onClick={() => setSagModal(req)}
+                                onClick={() => { setSagModal(req); setSagModalDuration(req.loanDurationMonths || 3) }}
                                 className="rounded-lg gap-1 bg-[#171414] text-[#E1BAC2] hover:bg-black"
                               >
                                 <Gem className="h-3 w-3" /> Mint SAG Token
@@ -1186,12 +1187,12 @@ export default function PawnshopRequestsPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <span className="ml-2 font-medium">{formatDuration(sagModal.loanDurationMonths || 3)}</span>
+                    <span className="ml-2 font-medium">{formatDuration(sagModalDuration)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Investment Amount */}
+              {/* Investment Target — read-only, always 70% LTV */}
               <div className="space-y-2">
                 <Label>Investment Target (USD)</Label>
                 <div className="relative">
@@ -1199,12 +1200,34 @@ export default function PawnshopRequestsPage() {
                   <Input
                     type="number"
                     id="investmentTarget"
-                    defaultValue={sagModal.paymentAmountUsd || Math.round((sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue || 0) * 0.7)}
-                    className="rounded-xl pl-7"
+                    value={sagModal.paymentAmountUsd || Math.round((sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue || 0) * 0.7)}
+                    readOnly
+                    className="rounded-xl pl-7 bg-muted cursor-not-allowed"
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Total amount investors can fund. You will receive this after the loan duration.
+                  Fixed at 70% of appraised value (LTV). Minimum investment: 10% of target.
+                </p>
+              </div>
+
+              {/* Loan Duration dropdown */}
+              <div className="space-y-2">
+                <Label>Loan Duration</Label>
+                <select
+                  id="loanDuration"
+                  value={sagModalDuration}
+                  onChange={(e) => setSagModalDuration(Number(e.target.value))}
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value={0.03}>1 day (testing)</option>
+                  <option value={1}>1 month</option>
+                  <option value={2}>2 months</option>
+                  <option value={3}>3 months</option>
+                  <option value={6}>6 months</option>
+                  <option value={12}>1 year</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Duration until loan maturity. Investor ROI scales with duration.
                 </p>
               </div>
 
@@ -1224,13 +1247,16 @@ export default function PawnshopRequestsPage() {
                   onClick={async () => {
                     if (!sagModal) return
                     setProcessing(true)
-                    try {
-                      const targetEl = document.getElementById('investmentTarget') as HTMLInputElement
+                    try {                      const targetEl = document.getElementById('investmentTarget') as HTMLInputElement
+                      const durationEl = document.getElementById('loanDuration') as HTMLSelectElement
                       const investmentTarget = targetEl ? Number(targetEl.value) : 0
+                      const loanDurationMonths = durationEl ? Number(durationEl.value) : 3
 
                       toast.info("Minting SAG token on CC3...")
+
                       const res = await apiInstance.patch(`/pledge-requests/${sagModal.id}/mint-sag`, {
                         investmentTargetUsd: investmentTarget,
+                        loanDurationMonths,
                       })
                       const { sagTxHash, sagExplorerUrl } = res.data?.data || {}
                       if (sagTxHash) {

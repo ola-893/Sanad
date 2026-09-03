@@ -81,6 +81,13 @@ interface ReturnCalc {
   investorWallet: string
 }
 
+function formatDuration(months: number): string {
+  if (months === 0.03) return "1 day"
+  if (months === 1) return "1 month"
+  if (months === 12) return "1 year"
+  return `${months} months`
+}
+
 export default function PawnshopRepaymentsPage() {
   const [funded, setFunded] = useState<PledgeRequest[]>([])
   const [sagMinted, setSagMinted] = useState<PledgeRequest[]>([])
@@ -88,6 +95,7 @@ export default function PawnshopRepaymentsPage() {
   const [activeTab, setActiveTab] = useState<"funded" | "sag_minted">("funded")
   const [ethPrice, setEthPrice] = useState(0)
   const [sagModal, setSagModal] = useState<PledgeRequest | null>(null)
+  const [sagModalDuration, setSagModalDuration] = useState<number>(3)
   const [processing, setProcessing] = useState(false)
 
   // Settle Investor state
@@ -436,7 +444,7 @@ export default function PawnshopRepaymentsPage() {
                         {req.status === 'funded' && !req.sagTokenId && (
                           <div className="mt-3 pt-3 border-t border-[#171414]/5">
                             <Button
-                              onClick={() => setSagModal(req)}
+                              onClick={() => { setSagModal(req); setSagModalDuration(req.loanDurationMonths || 3) }}
                               className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
                             >
                               <Gem className="h-4 w-4" /> Mint SAG Token
@@ -502,12 +510,12 @@ export default function PawnshopRepaymentsPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <span className="ml-2 font-medium">{sagModal.loanDurationMonths} months</span>
+                    <span className="ml-2 font-medium">{formatDuration(sagModalDuration)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Investment Amount */}
+              {/* Investment Target — read-only, always 70% LTV */}
               <div className="space-y-2">
                 <Label>Investment Target (USD)</Label>
                 <div className="relative">
@@ -515,10 +523,35 @@ export default function PawnshopRepaymentsPage() {
                   <Input
                     type="number"
                     id="repayInvestmentTarget"
-                    defaultValue={sagModal.paymentAmountUsd || Math.round((sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue || 0) * 0.7)}
-                    className="rounded-xl pl-7"
+                    value={sagModal.paymentAmountUsd || Math.round((sagModal.verifiedAppraisedValueUsd || sagModal.goldDetails?.estimatedValue || 0) * 0.7)}
+                    readOnly
+                    className="rounded-xl pl-7 bg-muted cursor-not-allowed"
                   />
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Fixed at 70% of appraised value (LTV). Minimum investment: 10% of target.
+                </p>
+              </div>
+
+              {/* Loan Duration dropdown */}
+              <div className="space-y-2">
+                <Label>Loan Duration</Label>
+                <select
+                  id="repayLoanDuration"
+                  value={sagModalDuration}
+                  onChange={(e) => setSagModalDuration(Number(e.target.value))}
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value={0.03}>1 day (testing)</option>
+                  <option value={1}>1 month</option>
+                  <option value={2}>2 months</option>
+                  <option value={3}>3 months</option>
+                  <option value={6}>6 months</option>
+                  <option value={12}>1 year</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Duration until loan maturity. Investor ROI scales with duration.
+                </p>
               </div>
 
               {/* Minimum Investment - auto-computed */}
@@ -539,11 +572,14 @@ export default function PawnshopRepaymentsPage() {
                     setProcessing(true)
                     try {
                       const targetEl = document.getElementById('repayInvestmentTarget') as HTMLInputElement
+                      const durationEl = document.getElementById('repayLoanDuration') as HTMLSelectElement
                       const investmentTarget = targetEl ? Number(targetEl.value) : 0
+                      const loanDurationMonths = durationEl ? Number(durationEl.value) : 3
 
                       toast.info("Minting SAG token on CC3...")
                       const res = await apiInstance.patch(`/pledge-requests/${sagModal.id}/mint-sag`, {
                         investmentTargetUsd: investmentTarget,
+                        loanDurationMonths,
                       })
                       if (res.data?.data?.sagTxHash) {
                         toast.success("SAG token minted on CC3!")
