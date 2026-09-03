@@ -25,4 +25,9 @@ router.patch('/:id/mint-sag', pledgeRequestController.mintSag.bind(pledgeRequest
 router.post('/:id/repayment', pledgeRequestController.recordRepayment.bind(pledgeRequestController));
 router.get('/:id/repayments', pledgeRequestController.getRepayments.bind(pledgeRequestController));
 
+// V3: Investor return distribution (Sepolia settleInvestor → CC3 proof)
+router.get('/:id/return-calculation', pledgeRequestController.calculateReturn.bind(pledgeRequestController));
+router.post('/:id/distribute-return', pledgeRequestController.distributeReturn.bind(pledgeRequestController));
+router.get('/:id/return-distribution', pledgeRequestController.getReturnDistribution.bind(pledgeRequestController));
+
 export { router as pledgeRequestRoutes };

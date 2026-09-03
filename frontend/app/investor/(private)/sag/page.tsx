@@ -49,6 +49,8 @@ export default function InvestorSagPage() {
   const [investModal, setInvestModal] = useState<SagToken | null>(null)
   const [investAmount, setInvestAmount] = useState("")
   const [processing, setProcessing] = useState(false)
+  const [returns, setReturns] = useState<any[]>([])
+  const [returnsLoading, setReturnsLoading] = useState(false)
 
   const fetchSagTokens = async () => {
     setLoading(true)
@@ -71,7 +73,30 @@ export default function InvestorSagPage() {
     }
     fetchEthPrice()
     const interval = setInterval(fetchEthPrice, 60_000)
-    return () => clearInterval(interval)
+
+    // Fetch investor returns if wallet is connected
+    const fetchReturns = async () => {
+      try {
+        const ethereum = (window as any).ethereum
+        if (!ethereum) return
+        const accounts = await ethereum.request({ method: 'eth_accounts' })
+        if (accounts?.[0]) {
+          setReturnsLoading(true)
+          const res = await apiInstance.get(`/investor/returns/${accounts[0]}`)
+          setReturns(res.data?.data || [])
+          setReturnsLoading(false)
+        }
+      } catch {
+        setReturnsLoading(false)
+      }
+    }
+    fetchReturns()
+    const retInterval = setInterval(fetchReturns, 30_000)
+
+    return () => {
+      clearInterval(interval)
+      clearInterval(retInterval)
+    }
   }, [])
 
   const openInvestModal = (token: SagToken) => {
@@ -145,6 +170,83 @@ export default function InvestorSagPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* My Returns Section */}
+          {returns.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-display font-semibold text-[#171414]">My Returns</h2>
+              <div className="grid grid-cols-2 gap-4 mb-2">
+                <Card className="glass-panel rounded-2xl border border-emerald-200 bg-emerald-50/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                        <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          ${returns.filter(r => r.status === 'completed').reduce((s: number, r: any) => s + Number(r.totalReturnUsd || 0), 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-emerald-600">Credited Returns</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="glass-panel rounded-2xl border border-amber-200 bg-amber-50/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
+                        <Clock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-amber-700">
+                          ${returns.filter(r => r.status !== 'completed').reduce((s: number, r: any) => s + Number(r.totalReturnUsd || 0), 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-amber-600">Pending Returns</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="space-y-2">
+                {returns.map((ret: any) => (
+                  <Card key={ret.id} className="rounded-xl border border-[#171414]/10">
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className={`rounded-full text-xs ${
+                          ret.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : ret.status === 'proving'
+                            ? 'bg-purple-100 text-purple-700 border-purple-200'
+                            : 'bg-amber-100 text-amber-700 border-amber-200'
+                        }`}>
+                          {ret.status === 'completed' ? '✓ Verified' : ret.status === 'proving' ? '⏳ Proving' : '⏳ Pending'}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">SAG #{String(ret.sagTokenId).slice(0, 8)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Principal ${Number(ret.principalUsd).toLocaleString()} + Profit ${Number(ret.profitUsd).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-emerald-600">${Number(ret.totalReturnUsd).toLocaleString()}</p>
+                        {ret.sepoliaTxHash && (
+                          <a
+                            href={`https://eth-sepolia.blockscout.com/tx/${ret.sepoliaTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-cyan-600 hover:underline flex items-center gap-1 justify-end"
+                          >
+                            Sepolia <ExternalLink className="h-2 w-2" />
+                          </a>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* SAG Tokens List */}
           {loading ? (
