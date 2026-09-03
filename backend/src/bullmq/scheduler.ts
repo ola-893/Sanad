@@ -27,6 +27,7 @@ export const JOB_TYPES = {
   PROVE_REPAYMENT: 'prove-repayment',
   PROVE_LOAN_FUNDING: 'prove-loan-funding',
   PROVE_PAWNSHOP_PAYMENT: 'prove-pawnshop-payment',
+  PROVE_RETURN_DISTRIBUTION: 'prove-return-distribution',
 } as const;
 
 // Create queues

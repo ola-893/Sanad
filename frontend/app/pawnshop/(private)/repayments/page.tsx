@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,8 +18,16 @@ import {
   TrendingUp,
   Gem,
   Wallet,
+  ArrowUpRight,
+  DollarSign,
 } from "lucide-react"
 import apiInstance from "@/lib/axios-v1"
+import { ethers } from "ethers"
+import {
+  SEPOLIA_REPAYMENT_GATEWAY_ADDRESS,
+  REPAYMENT_GATEWAY_ABI,
+  switchOrAddSepoliaNetwork,
+} from "@/lib/contracts/sepolia-gateways"
 
 interface GoldDetails {
   assetType: string
@@ -56,6 +64,23 @@ interface PledgeRequest {
   borrowerCreditScore?: number
 }
 
+interface ReturnCalc {
+  pledgeRequestId: string
+  sagTokenId: string
+  principalUsd: number
+  profitUsd: number
+  totalReturnUsd: number
+  roiPercentage: number
+  durationMonths: number
+  loanMaturityDate: string | null
+  isMatured: boolean
+  isRepaid: boolean
+  isEligible: boolean
+  pawnshopWallet: string
+  borrowerWallet: string
+  investorWallet: string
+}
+
 export default function PawnshopRepaymentsPage() {
   const [funded, setFunded] = useState<PledgeRequest[]>([])
   const [sagMinted, setSagMinted] = useState<PledgeRequest[]>([])
@@ -64,6 +89,15 @@ export default function PawnshopRepaymentsPage() {
   const [ethPrice, setEthPrice] = useState(0)
   const [sagModal, setSagModal] = useState<PledgeRequest | null>(null)
   const [processing, setProcessing] = useState(false)
+
+  // Settle Investor state
+  const [settleModal, setSettleModal] = useState<PledgeRequest | null>(null)
+  const [settleCalc, setSettleCalc] = useState<ReturnCalc | null>(null)
+  const [settleLoading, setSettleLoading] = useState(false)
+  const [settleStep, setSettleStep] = useState<"preview" | "signing" | "proving" | "done">("preview")
+  const [settleJobId, setSettleJobId] = useState<string | null>(null)
+  const [settleResult, setSettleResult] = useState<any>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchRepayments = async () => {
     setLoading(true)
@@ -93,6 +127,104 @@ export default function PawnshopRepaymentsPage() {
     const interval = setInterval(fetchEthPrice, 60_000)
     return () => clearInterval(interval)
   }, [])
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
+  const openSettleModal = async (req: PledgeRequest) => {
+    setSettleModal(req)
+    setSettleCalc(null)
+    setSettleStep("preview")
+    setSettleJobId(null)
+    setSettleResult(null)
+    setSettleLoading(true)
+    try {
+      const res = await apiInstance.get(`/pledge-requests/${req.id}/return-calculation`)
+      setSettleCalc(res.data.data)
+    } catch (err: any) {
+      toast.error("Failed to calculate return: " + (err.response?.data?.error || err.message))
+    } finally {
+      setSettleLoading(false)
+    }
+  }
+
+  const executeSettleInvestor = useCallback(async () => {
+    if (!settleModal || !settleCalc || !ethPrice) return
+    setSettleStep("signing")
+    setProcessing(true)
+
+    try {
+      // 1. Switch to Sepolia
+      const switched = await switchOrAddSepoliaNetwork()
+      if (!switched) throw new Error("Failed to switch to Sepolia network")
+
+      const ethereum = (window as any).ethereum
+      const provider = new ethers.BrowserProvider(ethereum)
+      const signer = await provider.getSigner()
+
+      // 2. Calculate ETH amount from USD total
+      const totalReturnEth = settleCalc.totalReturnUsd / ethPrice
+      const totalReturnWei = ethers.parseEther(totalReturnEth.toFixed(18))
+
+      // 3. Send settleInvestor transaction on Sepolia
+      const gateway = new ethers.Contract(
+        SEPOLIA_REPAYMENT_GATEWAY_ADDRESS,
+        REPAYMENT_GATEWAY_ABI,
+        signer
+      )
+
+      const tokenId = Number(settleCalc.sagTokenId)
+      toast.info(`Sending settleInvestor(${tokenId}, ${totalReturnWei}) to Sepolia RepaymentGateway...`)
+
+      const tx = await gateway.settleInvestor(tokenId, totalReturnWei, {
+        value: totalReturnWei,
+      })
+
+      toast.info("Transaction broadcast. Waiting for confirmation...")
+      const receipt = await tx.wait()
+      toast.success(`Settle tx confirmed: ${receipt.hash}`)
+
+      // 4. Enqueue CC3 proof via backend
+      setSettleStep("proving")
+      const proofRes = await apiInstance.post(`/pledge-requests/${settleModal.id}/distribute-return`, {
+        txHash: receipt.hash,
+      })
+
+      const jobId = proofRes.data?.data?.jobId
+      setSettleJobId(jobId)
+      toast.info("CC3 proof job queued. Polling for completion...")
+
+      // 5. Poll job status
+      if (jobId) {
+        pollRef.current = setInterval(async () => {
+          try {
+            const status = await apiInstance.get(`/loan/return/status/${jobId}`)
+            const state = status.data?.data?.status || status.data?.data?.state
+            if (state === "completed" || state === "COMPLETED") {
+              if (pollRef.current) clearInterval(pollRef.current)
+              setSettleStep("done")
+              setSettleResult(status.data?.data)
+              toast.success("Return distribution verified on CC3!")
+              fetchRepayments()
+            } else if (state === "failed" || state === "FAILED") {
+              if (pollRef.current) clearInterval(pollRef.current)
+              toast.error("CC3 proof verification failed: " + (status.data?.data?.error || "Unknown error"))
+              setSettleStep("preview")
+            }
+          } catch {}
+        }, 5000)
+      }
+    } catch (err: any) {
+      toast.error(err?.reason || err?.message || "Failed to execute settleInvestor")
+      setSettleStep("preview")
+    } finally {
+      setProcessing(false)
+    }
+  }, [settleModal, settleCalc, ethPrice])
 
   const activeLoans = sagMinted // SAG minted = active loan
   const pendingMint = funded // Funded but SAG not minted yet
@@ -311,6 +443,18 @@ export default function PawnshopRepaymentsPage() {
                             </Button>
                           </div>
                         )}
+
+                        {/* Settle Investor button for active loans with SAG */}
+                        {req.status === 'sag_minted' && req.sagTokenId && (
+                          <div className="mt-3 pt-3 border-t border-[#171414]/5 flex gap-2">
+                            <Button
+                              onClick={() => openSettleModal(req)}
+                              className="rounded-xl gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                            >
+                              <ArrowUpRight className="h-4 w-4" /> Settle Investor Return
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -423,6 +567,142 @@ export default function PawnshopRepaymentsPage() {
           </Card>
         </div>
       )}
+
+      {/* Settle Investor Modal */}
+      {settleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-emerald-600" />
+                Settle Investor Return
+              </CardTitle>
+              <CardDescription>
+                Distribute principal + profit to the funding investor for SAG #{settleModal.sagTokenId?.slice(0, 8)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settleLoading ? (
+                <div className="py-8 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Calculating return figures...</p>
+                </div>
+              ) : settleCalc ? (
+                <>
+                  {/* Server-Calculated Return Breakdown */}
+                  <div className="rounded-xl bg-[#FAFAF8] border border-[#171414]/10 p-4 space-y-3">
+                    <p className="text-[10px] font-mono uppercase text-muted-foreground">Return Breakdown (Server-Calculated)</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Principal:</span>
+                        <p className="font-medium">${settleCalc.principalUsd.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">ROI:</span>
+                        <p className="font-medium">{settleCalc.roiPercentage}% × {settleCalc.durationMonths} mo</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Profit:</span>
+                        <p className="font-medium text-emerald-600">+${settleCalc.profitUsd.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Total Return:</span>
+                        <p className="font-bold text-lg text-emerald-600">${settleCalc.totalReturnUsd.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {ethPrice > 0 && (
+                      <div className="pt-2 border-t border-[#171414]/10 text-xs text-muted-foreground">
+                        ≈ {(settleCalc.totalReturnUsd / ethPrice).toFixed(6)} ETH @ ${ethPrice.toLocaleString()}/ETH
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Investor Address */}
+                  <div className="rounded-xl bg-muted p-3">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Investor Wallet:</span>
+                      <span className="font-mono">{settleCalc.investorWallet.slice(0, 10)}...{settleCalc.investorWallet.slice(-6)}</span>
+                    </div>
+                  </div>
+
+                  {/* Maturity Status */}
+                  <div className="flex items-center gap-2 text-xs">
+                    {settleCalc.isMatured ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 rounded-full">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Loan Matured
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-amber-100 text-amber-700 border-amber-200 rounded-full">
+                        <Clock className="h-3 w-3 mr-1" /> Not Yet Matured
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Step Progress */}
+                  {settleStep === "signing" && (
+                    <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Signing Transaction...</p>
+                        <p className="text-xs text-blue-600">Confirm in MetaMask to send settleInvestor on Sepolia</p>
+                      </div>
+                    </div>
+                  )}
+                  {settleStep === "proving" && (
+                    <div className="rounded-xl bg-purple-50 border border-purple-200 p-3 flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                      <div>
+                        <p className="text-sm font-medium text-purple-800">CC3 Proof Verification...</p>
+                        <p className="text-xs text-purple-600">Waiting for Attestcoin BlockProver to verify on CC3</p>
+                      </div>
+                    </div>
+                  )}
+                  {settleStep === "done" && (
+                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      <div>
+                        <p className="text-sm font-medium text-emerald-800">Return Distribution Verified!</p>
+                        {settleResult?.explorerUrl && (
+                          <a href={settleResult.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
+                            View on CC3 Explorer <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Failed to load return calculation.</p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (pollRef.current) clearInterval(pollRef.current)
+                    setSettleModal(null)
+                  }}
+                  disabled={settleStep === "signing"}
+                  className="rounded-xl"
+                >
+                  {settleStep === "done" ? "Close" : "Cancel"}
+                </Button>
+                {settleStep === "preview" && settleCalc && (
+                  <Button
+                    onClick={executeSettleInvestor}
+                    disabled={processing || !ethPrice}
+                    className="rounded-xl gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <ArrowUpRight className="h-4 w-4" /> Send ${settleCalc.totalReturnUsd.toLocaleString()} to Investor
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </ProtectedRoute>
   )
 }
+

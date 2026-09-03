@@ -2,7 +2,7 @@ import { Job } from 'bullmq';
 import { AttestcoinOracleRelayerService } from '../core/credit-bureau/attestcoin-oracle-relayer.service.js';
 import { getSocketService } from './socket.service.js';
 
-export type CrossChainProofJobType = 'deposit' | 'repayment' | 'loan-funding' | 'pawnshop-payment';
+export type CrossChainProofJobType = 'deposit' | 'repayment' | 'loan-funding' | 'pawnshop-payment' | 'return-distribution';
 
 export interface CrossChainProofJobData {
   type: CrossChainProofJobType;
@@ -76,6 +76,15 @@ export async function processCrossChainProofJob(
       case 'pawnshop-payment': {
         await updateProgress(job, socketService, userId, 'submitting_to_cc3', 75, 'Submitting pawnshop payment proof to CC3 SanadCreditOracle...');
         result = await relayerService.provePawnshopPayment(sourceTxHash, Number(chainKey), borrowerAddress);
+        break;
+      }
+
+      case 'return-distribution': {
+        if (!tokenId) {
+          throw new Error('tokenId is required for return distribution proof settlement');
+        }
+        await updateProgress(job, socketService, userId, 'submitting_to_cc3', 75, `Submitting return distribution proof for Token #${tokenId} to CC3 SanadLiquidityPool (verifyAndRecordReturnDistribution)...`);
+        result = await relayerService.proveAndRecordReturnDistribution(Number(tokenId), sourceTxHash, Number(chainKey));
         break;
       }
 

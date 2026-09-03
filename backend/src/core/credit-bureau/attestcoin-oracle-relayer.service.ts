@@ -694,6 +694,100 @@ export class AttestcoinOracleRelayerService {
   }
 
   /**
+   * Prove a cross-chain Ethereum Sepolia (chainKey: 1) investor return distribution transaction on Creditcoin CC3.
+   * Cryptographically verifies the settleInvestor() transaction via Attestcoin BlockProver (0xFD2),
+   * and updates returnDistributed / returnAmountDistributed on CC3 SanadLiquidityPool.
+   */
+  public async proveAndRecordReturnDistribution(
+    tokenId: number,
+    sourceTxHash: string,
+    chainKey: number = 1
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    blockNumber?: number;
+    explorerUrl?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`[AttestcoinRelayer] Generating proof for Sepolia (chainKey ${chainKey}) Return Distribution Tx: ${sourceTxHash}`);
+      const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, this.proofApiUrl);
+
+      const targetHeight = await this.resolveSourceBlockHeight(sourceTxHash, chainKey);
+      if (targetHeight) {
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${targetHeight} on chain ${chainKey} to be attested by Attestcoin Prover...`);
+          await proofBuilder.waitUntilHeightAttested(chainKey, targetHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${targetHeight} confirmed attested in Prover cache!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice for block #${targetHeight}:`, waitErr.message);
+          throw new Error(`Attestation still pending for block #${targetHeight} after 10 minutes — please try again shortly.`);
+        }
+      }
+
+      const proofResult = await proofBuilder.getProof(sourceTxHash);
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(`Failed to generate Attestcoin proof: ${proofResult.error || 'Proof not available'}`);
+      }
+
+      const proofData = proofResult.data;
+      const poolContract = new ethers.Contract(
+        CREDITCOIN_CONFIG.contracts.liquidityPoolAddress,
+        SANAD_LIQUIDITY_POOL_ABI,
+        this.signer
+      );
+
+      const txBytes = proofData.txBytes || proofData.encodedTransaction;
+
+      console.log(`[AttestcoinRelayer] Calling verifyAndRecordReturnDistribution for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
+      const tx = await poolContract.verifyAndRecordReturnDistribution(
+        tokenId,
+        proofData.chainKey,
+        proofData.headerNumber,
+        txBytes,
+        proofData.merkleProof,
+        proofData.continuityProof,
+        sourceTxHash
+      );
+
+      console.log(`[AttestcoinRelayer] Return Distribution Settlement broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
+      const receipt = await tx.wait();
+
+      // Update database status if loan_return row exists
+      try {
+        const { updateLoanReturnByTxHash } = await import('@/features/loan-return/loan-return.repository.js');
+        await updateLoanReturnByTxHash(sourceTxHash, {
+          cc3TxHash: receipt.hash,
+          status: 'completed',
+          distributedAt: new Date(),
+        });
+      } catch (dbErr: any) {
+        console.warn('[AttestcoinRelayer] Could not update loan_return row:', dbErr.message);
+      }
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+      };
+    } catch (err: any) {
+      console.error(`[AttestcoinRelayer] Error proving Sepolia return distribution:`, err);
+      try {
+        const { updateLoanReturnByTxHash } = await import('@/features/loan-return/loan-return.repository.js');
+        await updateLoanReturnByTxHash(sourceTxHash, {
+          status: 'failed',
+        });
+      } catch {}
+      return {
+        success: false,
+        error: err.message || 'Failed to submit return distribution proof to Creditcoin',
+      };
+    }
+  }
+
+  /**
    * Prepare unsigned CC3 transaction data for pawnshop payment proof.
    * Returns the data needed for MetaMask to sign and submit on CC3.
    */
