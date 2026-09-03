@@ -582,7 +582,10 @@ export async function recordRepayment(data: {
 export async function getRepaymentsByPledgeRequest(pledgeRequestId: string): Promise<any[]> {
   const { pool } = await import("@/db/index.js");
   const result = await pool.query(
-    `SELECT lr.*, lr.cc3_tx_hash as "cc3TxHash", lr.tx_hash as "txHash",
+    `SELECT lr.id, lr.pledge_request_id as "pledgeRequestId", lr.borrower_id as "borrowerId",
+            lr.pawnshop_id as "pawnshopId", lr.amount_usd as "amountUsd",
+            lr.tx_hash as "txHash", lr.cc3_tx_hash as "cc3TxHash", lr.notes, lr.status,
+            lr.created_at as "createdAt",
             u.user_first_name as "borrowerFirstName", u.user_last_name as "borrowerLastName"
      FROM main.loan_repayment lr
      LEFT JOIN main.user u ON lr.borrower_id = u.user_id

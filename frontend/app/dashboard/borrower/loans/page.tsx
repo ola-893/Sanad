@@ -578,15 +578,17 @@ function LoanCard({
                             <p className="text-[10px] text-[#4A4A4A]/50">{formatDateTime(r.createdAt)}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-1">
                           {r.txHash && (
                             <a
                               href={`${SEPOLIA_EXPLORER}/tx/${r.txHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-mono text-[10px] text-[#e1bac2] hover:underline"
+                              className="flex items-center gap-1 font-mono text-[10px] text-[#e1bac2] hover:underline"
                             >
-                              Sepolia ↗
+                              <span className="text-[#4A4A4A]/40">Source:</span>
+                              {r.txHash.slice(0, 6)}...{r.txHash.slice(-4)}
+                              <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                           )}
                           {r.cc3TxHash && (
@@ -594,9 +596,11 @@ function LoanCard({
                               href={`${CC3_EXPLORER}/tx/${r.cc3TxHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-mono text-[10px] text-[#e1bac2] hover:underline"
+                              className="flex items-center gap-1 font-mono text-[10px] text-[#e1bac2] hover:underline"
                             >
-                              CC3 ↗
+                              <span className="text-[#4A4A4A]/40">CC3 Proof:</span>
+                              {r.cc3TxHash.slice(0, 6)}...{r.cc3TxHash.slice(-4)}
+                              <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                           )}
                         </div>
