@@ -43,6 +43,14 @@ const glass = 'glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 sh
  * Convert a full image URL (e.g. http://localhost:5002/uploads/xxx.jpg)
  * to the Next.js proxy path (/api/uploads/xxx.jpg)
  */
+function formatDuration(months: number): string {
+  if (months <= 0) return "1 day"
+  if (months < 1) return "1 day"
+  if (months === 1) return "1 month"
+  if (months === 12) return "1 year"
+  return `${months} months`
+}
+
 function getImageUrl(url: string): string {
   if (!url) return ''
   // Already a proxy path
@@ -117,20 +125,22 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
   const progressPct = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
   const roi = props?.investorRoiPercentage || 2
   const duration = props?.loanDurationMonths || Math.round((props?.tenorM || 90) / 30)
+  const durationLabel = formatDuration(duration)
   const ethAmount = ethPrice > 0 ? (minInvestment / ethPrice).toFixed(4) : '---'
   const status = (sag.approvalStatus ?? sag.sagStatus ?? 'pending').toLowerCase()
   const isFunded = remaining <= 0
   const hasImage = props?.imageUrl && props.imageUrl.length > 0
 
   // Timeline & prorated returns
+  // Always compute REAL duration from originationDate + loanDurationMonths (ignore test-mode maturityDate)
   const originationDate = props?.originationDate ? new Date(props.originationDate) : new Date(sag.createdAt)
-  const maturityDate = props?.maturityDate ? new Date(props.maturityDate) : new Date(originationDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)
+  const realMaturityDate = new Date(originationDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)
   const now = new Date()
-  const totalDays = Math.max(1, (maturityDate.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24))
+  const totalDays = Math.max(1, duration * 30)
   const elapsedDays = Math.max(0, Math.min(totalDays, (now.getTime() - originationDate.getTime()) / (1000 * 60 * 60 * 24)))
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const remainingMonths = remainingDays / 30
-  const isExpired = now > maturityDate
+  const isExpired = now > realMaturityDate
   const proratedRoiTotal = roi * remainingMonths
   const elapsedPct = Math.min(100, (elapsedDays / totalDays) * 100)
   const formatTimeLeft = () => {
@@ -204,7 +214,7 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[10px] font-mono uppercase text-muted-foreground">Minimum Investment</p>
-              {!hasImage && <p className="text-2xl font-bold text-[#171414]">${minInvestment.toLocaleString()}</p>}
+              <p className="text-2xl font-bold text-[#171414]">${minInvestment.toLocaleString()}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-emerald-600 font-mono">~{ethAmount} ETH</p>
@@ -241,7 +251,7 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
             <div className="rounded-lg bg-muted/50 p-2">
               <Clock className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" />
               <p className="text-xs font-bold">{formatTimeLeft()}</p>
-              <p className="text-[9px] text-muted-foreground">{duration}mo term</p>
+              <p className="text-[9px] text-muted-foreground">{durationLabel} term</p>
             </div>
           </div>
 
@@ -252,7 +262,7 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
             </div>
             <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
               <span>Minted {originationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-              <span>Exp {maturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <span>Exp {realMaturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             </div>
           </div>
 
@@ -638,7 +648,7 @@ export default function BrowsePage() {
                   <div>Min Investment: <span className="font-medium">${Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100}</span></div>
                   <div>ROI: <span className="font-medium text-emerald-600">{investModal.sagProperties?.investorRoiPercentage || 2}%/mo</span></div>
                   <div>Weight: <span className="font-medium">{investModal.sagProperties?.weightG}g</span></div>
-                  <div>Duration: <span className="font-medium">{investModal.sagProperties?.loanDurationMonths || 3} months</span></div>
+                  <div>Duration: <span className="font-medium">{formatDuration(investModal.sagProperties?.loanDurationMonths || 3)}</span></div>
                 </div>
               </div>
 

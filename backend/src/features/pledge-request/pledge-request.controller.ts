@@ -17,6 +17,11 @@ import {
   updatePawnshopContact,
   getAllPawnshops,
   getBorrowerProfileForPledge,
+  getBorrowersByPawnshop,
+  getBorrowerDetail,
+  recordRepayment,
+  getRepaymentsByPledgeRequest,
+  getBorrowerLoans,
 } from "./pledge-request.repository.js";
 import { getSocketService } from "../../services/socket.service.js";
 import { createNotification } from "../notification/notification.repository.js";
@@ -560,7 +565,7 @@ export class PledgeRequestController {
             investmentTargetUsd: Number(investmentTarget),
             minInvestmentUsd: Number(minInvestment),
             investmentFilledUsd: 0,
-            loanDurationMonths: Number(tenureDays / 30),
+            loanDurationMonths: Number(request.loanDurationMonths || tenureDays / 30),
             borrowerWallet: request.borrowerWallet,
             pawnshopWallet: request.pawnshopWallet,
             originationDate: new Date().toISOString(),
@@ -599,6 +604,139 @@ export class PledgeRequestController {
     } catch (error) {
       console.error("Error minting SAG:", error);
       res.status(500).json({ success: false, error: "Failed to record SAG mint" });
+    }
+  }
+
+  /**
+   * GET /pledge-requests/my-loans -- Get borrower's loans with repayment data
+   */
+  async getMyLoans(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user) {
+        res.status(401).json({ success: false, error: "Unauthorized" });
+        return;
+      }
+
+      const loans = await getBorrowerLoans(user.userId!);
+      res.status(200).json({ success: true, data: loans });
+    } catch (error) {
+      console.error("Error fetching borrower loans:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch loans" });
+    }
+  }
+
+  /**
+   * GET /pledge-requests/borrowers -- Get all borrowers for this pawnshop
+   */
+  async getBorrowers(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user || user.roleId !== "PAWNSHOP") {
+        res.status(403).json({ success: false, error: "Only pawnshops can view borrowers" });
+        return;
+      }
+
+      const borrowers = await getBorrowersByPawnshop(user.userId!);
+      res.status(200).json({ success: true, data: borrowers });
+    } catch (error) {
+      console.error("Error fetching borrowers:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch borrowers" });
+    }
+  }
+
+  /**
+   * GET /pledge-requests/borrowers/:borrowerId -- Get borrower detail for this pawnshop
+   */
+  async getBorrowerDetailById(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user || user.roleId !== "PAWNSHOP") {
+        res.status(403).json({ success: false, error: "Only pawnshops can view borrower details" });
+        return;
+      }
+
+      const detail = await getBorrowerDetail(user.userId!, req.params.borrowerId as string);
+      if (!detail) {
+        res.status(404).json({ success: false, error: "Borrower not found" });
+        return;
+      }
+      res.status(200).json({ success: true, data: detail });
+    } catch (error) {
+      console.error("Error fetching borrower detail:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch borrower detail" });
+    }
+  }
+
+  /**
+   * POST /pledge-requests/:id/repayment -- Record a borrower repayment
+   */
+  async recordRepayment(req: Request, res: Response): Promise<void> {
+    try {
+      const token = getToken(req);
+      const user = await getUserDataByToken(token);
+      if (!user) {
+        res.status(401).json({ success: false, error: "Unauthorized" });
+        return;
+      }
+
+      const request = await getPledgeRequestById(req.params.id as string);
+      if (!request) {
+        res.status(404).json({ success: false, error: "Pledge request not found" });
+        return;
+      }
+
+      const { amountUsd, txHash, cc3TxHash, notes } = req.body || {};
+      if (!amountUsd || Number(amountUsd) <= 0) {
+        res.status(400).json({ success: false, error: "Valid repayment amount is required" });
+        return;
+      }
+
+      const repayment = await recordRepayment({
+        pledgeRequestId: request.id,
+        borrowerId: request.borrowerId,
+        pawnshopId: request.pawnshopId,
+        amountUsd: Number(amountUsd),
+        txHash,
+        cc3TxHash,
+        notes,
+      });
+
+      // Notify pawnshop via Socket.IO
+      const socket = getSocketService();
+      if (socket?.io) {
+        socket.io.emit("repayment:recorded", {
+          requestId: request.id,
+          borrowerId: request.borrowerId,
+          pawnshopId: request.pawnshopId,
+          amountUsd: Number(amountUsd),
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Repayment recorded successfully",
+        data: repayment,
+      });
+    } catch (error) {
+      console.error("Error recording repayment:", error);
+      res.status(500).json({ success: false, error: "Failed to record repayment" });
+    }
+  }
+
+  /**
+   * GET /pledge-requests/:id/repayments -- Get repayments for a pledge request
+   */
+  async getRepayments(req: Request, res: Response): Promise<void> {
+    try {
+      const repayments = await getRepaymentsByPledgeRequest(req.params.id as string);
+      res.status(200).json({ success: true, data: repayments });
+    } catch (error) {
+      console.error("Error fetching repayments:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch repayments" });
     }
   }
 
