@@ -75,10 +75,18 @@ export default function BorrowerRepayPage() {
   const walletBalance = balance || "0"
 
   useEffect(() => {
-    apiInstance
-      .get("/eth-price")
-      .then((res) => setEthPrice(res.data?.data?.usd || 0))
-      .catch(() => {})
+    const fetchPrice = () => {
+      apiInstance
+        .get("/eth-price")
+        .then((res) => {
+          const price = res.data?.data?.usd
+          if (price && price > 0) setEthPrice(price)
+        })
+        .catch(() => {})
+    }
+    fetchPrice()
+    const interval = setInterval(fetchPrice, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {

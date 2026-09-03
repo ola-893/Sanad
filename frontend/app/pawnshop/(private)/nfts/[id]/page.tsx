@@ -104,8 +104,8 @@ export default function PawnshopNFTDetailPage() {
   useEffect(() => {
     const fetchEthPrice = () => {
       apiInstance.get("/eth-price")
-        .then((res) => setEthPrice(res.data?.data?.usd || 0))
-        .catch(() => setEthPrice(0))
+        .then((res) => { const p = res.data?.data?.usd; if (p && p > 0) setEthPrice(p) })
+        .catch(() => {})
     }
     fetchEthPrice()
     const interval = setInterval(fetchEthPrice, 60_000)

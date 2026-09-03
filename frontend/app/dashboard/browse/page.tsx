@@ -464,8 +464,11 @@ export default function BrowsePage() {
 
     const fetchEthPrice = () => {
       apiInstance.get('/eth-price')
-        .then((res) => setEthPrice(res.data?.data?.usd || 0))
-        .catch(() => setEthPrice(0))
+        .then((res) => {
+          const price = res.data?.data?.usd
+          if (price && price > 0) setEthPrice(price)
+        })
+        .catch(() => {})
     }
     fetchEthPrice()
     const interval = setInterval(fetchEthPrice, 60_000)
