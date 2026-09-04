@@ -186,19 +186,11 @@ export async function verifyGold(
   if (data.verifiedPurity !== undefined) updateData.verifiedPurity = String(data.verifiedPurity);
   if (data.verifiedAppraisedValueUsd !== undefined) updateData.verifiedAppraisedValueUsd = String(data.verifiedAppraisedValueUsd);
 
-  // Loan duration: save duration and calculate maturity date
-  // Display: 1 day, 1-6 months, 1 year. Actual: scaled down for testing
+  // Loan duration: save duration and calculate maturity date (real time)
   if (data.loanDurationMonths && data.verificationStatus === "verified") {
     updateData.loanDurationMonths = data.loanDurationMonths;
-    // Test mode: 1 day=1min, 1mo=5min, 2mo=10min, 3mo=15min, 6mo=30min, 12mo=60min
-    let durationMinutes: number;
-    if (data.loanDurationMonths < 1) {
-      durationMinutes = 1; // 1 day → 1 min for testing
-    } else {
-      durationMinutes = Math.max(1, Math.round(data.loanDurationMonths * 5));
-    }
     const maturity = new Date();
-    maturity.setMinutes(maturity.getMinutes() + durationMinutes);
+    maturity.setDate(maturity.getDate() + data.loanDurationMonths * 30);
     updateData.loanMaturityDate = maturity;
   }
 

@@ -7,6 +7,8 @@ const controller = new CreditOracleController();
 router.post('/discover', controller.discoverWallet.bind(controller));
 router.post('/fetch-proof', controller.fetchProof.bind(controller));
 router.post('/prove-event', controller.proveAndScoreEvent.bind(controller));
+router.post('/auto-prove-all', controller.autoProveAll.bind(controller));
+router.get('/auto-prove-status/:address', controller.getAutoProveStatus.bind(controller));
 router.post('/prove-repayment', controller.proveRepayment.bind(controller));
 router.post('/prove-loan-funding', controller.proveLoanFunding.bind(controller));
 router.post('/prepare-pawnshop-proof', controller.preparePawnshopProof.bind(controller));

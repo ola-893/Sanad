@@ -14,6 +14,7 @@ import {
   Loader2,
   Shield,
   AlertTriangle,
+  AlertCircle,
   CheckCircle,
   Link2,
   Wallet,
@@ -158,6 +159,8 @@ export default function BorrowerCreditPage() {
     proofData?: any
     error?: string
   }>({ open: false, step: "idle" })
+  const [autoProving, setAutoProving] = useState(false)
+  const [autoProveResult, setAutoProveResult] = useState<any>(null)
 
   /* ─── Fetch on-chain credit profile ─── */
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -195,6 +198,46 @@ export default function BorrowerCreditPage() {
     }
   }
   const handleDiscover = () => handleDiscoverWithAddress(discoverAddress)
+
+  /* ─── Auto-prove ALL discovered events (fire + poll) ─── */
+  const handleAutoProveAll = async (addr: string) => {
+    if (!addr) return
+    setAutoProving(true)
+    setAutoProveResult(null)
+    try {
+      // Start auto-prove in background — returns immediately
+      await apiInstance.post("/credit-oracle/auto-prove-all", { address: addr })
+
+      // Poll for completion
+      let attempts = 0
+      const MAX_ATTEMPTS = 120 // 10 min max
+      const pollPromise = new Promise<any>((resolve, reject) => {
+        const interval = setInterval(async () => {
+          attempts++
+          try {
+            const { data } = await apiInstance.get(`/credit-oracle/auto-prove-status/${addr}`)
+            const s = data?.data
+            if (s?.status === 'completed' || s?.status === 'error') {
+              clearInterval(interval)
+              resolve(s)
+            } else if (attempts >= MAX_ATTEMPTS) {
+              clearInterval(interval)
+              reject(new Error('Timed out'))
+            }
+          } catch {}
+        }, 5000)
+      })
+
+      const result = await pollPromise
+      setAutoProveResult(result)
+      queryClient.invalidateQueries({ queryKey: ["proven-events", walletAddress] })
+      queryClient.invalidateQueries({ queryKey: ["credit-profile", walletAddress] })
+    } catch (err: any) {
+      setAutoProveResult({ message: err.message || "Auto-prove failed", eventsProven: 0, eventsFailed: 0 })
+    } finally {
+      setAutoProving(false)
+    }
+  }
 
   /* ─── Fetch Attestcoin proof ─── */
   const handleFetchProof = async (event: any) => {
@@ -568,6 +611,28 @@ export default function BorrowerCreditPage() {
                   </Button>
                 </div>
 
+                {autoProving && (
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                      <div>
+                        <p className="text-sm font-medium text-purple-800">Auto-proving all DeFi events on CC3...</p>
+                        <p className="text-xs text-purple-600">All events including liquidations are proven for credit integrity</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {autoProveResult && !autoProving && (
+                  <div className={`rounded-2xl border p-4 mb-4 ${autoProveResult.eventsProven > 0 ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
+                    <div className="flex items-center gap-3">
+                      {autoProveResult.eventsProven > 0 ? <CheckCircle className="h-5 w-5 text-emerald-600" /> : <AlertCircle className="h-5 w-5 text-amber-600" />}
+                      <div>
+                        <p className="text-sm font-medium text-[#171414]">{autoProveResult.message || `Proven ${autoProveResult.eventsProven} events`}</p>
+                        <p className="text-xs text-[#171414]/50">{autoProveResult.eventsFound || 0} found · {autoProveResult.eventsProven || 0} proven · {autoProveResult.eventsFailed || 0} failed</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {discoveryResult && (
                   <div className="space-y-4">
                     {discoveryResult.message && (

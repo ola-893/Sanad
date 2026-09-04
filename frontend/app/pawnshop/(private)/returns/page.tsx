@@ -110,7 +110,7 @@ function truncateAddress(addr: string): string {
 }
 
 function formatDurationLabel(months: number): string {
-  if (months === 0.03) return "1 day"
+  if (months <= 0) return "1 day"
   if (months === 1) return "1 month"
   if (months === 12) return "1 year"
   return `${months} months`

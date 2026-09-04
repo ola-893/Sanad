@@ -689,10 +689,15 @@ export default function BrowsePage() {
                 <Button
                   onClick={async () => {
                     if (!investModal || !investAmount || ethPrice <= 0) return
+                    const usdAmount = Number(investAmount)
+                    const minInv = Math.round((investModal.sagProperties?.investmentTargetUsd || investModal.sagProperties?.loan || 0) * 0.1) || 100
+                    if (usdAmount < minInv) {
+                      setDepositError(`Minimum investment is $${minInv}. You entered $${usdAmount}.`)
+                      return
+                    }
                     setProcessing(true)
                     setDepositError('')
                     try {
-                      const usdAmount = Number(investAmount)
                       const ethAmount = usdAmount / ethPrice
                       const weiAmount = ethers.parseEther(ethAmount.toFixed(18))
 
