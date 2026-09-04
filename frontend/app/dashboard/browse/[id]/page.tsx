@@ -313,7 +313,11 @@ export default function SagDetailPage() {
       }
 
       const vaultContract = new ethers.Contract(SEPOLIA_INVESTOR_VAULT_ADDRESS, INVESTOR_VAULT_ABI, signer)
-      const tx = await vaultContract.deposit(weiAmount, { value: weiAmount })
+      // Use fundLoan() to record loanPawnshops[tokenId] on-chain, enabling settleInvestor later
+      const pawnshopWallet = props?.pawnshopWallet
+      if (!pawnshopWallet) throw new Error('Pawnshop wallet not found for this SAG')
+      const appraisedValueUSD = Math.round(investmentTarget / 0.7) // reverse 70% LTV
+      const tx = await vaultContract.fundLoan(tokenId, pawnshopWallet, appraisedValueUSD, { value: weiAmount })
       toast.info('Waiting for Sepolia confirmation...')
       const receipt = await tx.wait(1)
       if (receipt.status !== 1) throw new Error('Transaction reverted on-chain.')
@@ -380,57 +384,61 @@ export default function SagDetailPage() {
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Browse
           </Link>
 
-          {/* Gold Images + Info */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Image gallery */}
-            <Card className={`${glass} overflow-hidden`}>
-              <CardContent className="p-0">
-                {images.length > 0 ? (
-                  <div className="relative aspect-square">
+          {/* Bento Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Row 1: Image (2 cols) + Title (1 col) */}
+            <div className="lg:col-span-2 rounded-2xl border border-[#171414]/10 bg-white/60 overflow-hidden">
+              {images.length > 0 ? (
+                <div className="relative group">
+                  <div className="relative w-full bg-[#171414]/5">
                     <img
                       src={getImageUrl(images[currentImage])}
                       alt={sag.sagName}
-                      className="h-full w-full object-cover"
+                      className="w-full h-[360px] object-cover"
                     />
-                    {images.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => setCurrentImage((c) => (c - 1 + images.length) % images.length)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentImage((c) => (c + 1) % images.length)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                          {images.map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setCurrentImage(i)}
-                              className={`h-2 w-2 rounded-full transition ${i === currentImage ? 'bg-white' : 'bg-white/50'}`}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
                   </div>
-                ) : (
-                  <div className="flex aspect-square items-center justify-center bg-muted/30">
-                    <Gem className="h-16 w-16 text-muted-foreground/30" />
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentImage((c) => (c - 1 + images.length) % images.length)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition opacity-0 group-hover:opacity-100"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentImage((c) => (c + 1) % images.length)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition opacity-0 group-hover:opacity-100"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {images.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentImage(i)}
+                            className={`h-2 w-2 rounded-full transition ${i === currentImage ? 'bg-white' : 'bg-white/50'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <div className="px-4 py-2">
+                    <p className="text-[10px] font-mono uppercase text-muted-foreground">
+                      Gold Image {currentImage + 1}/{images.length}
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center bg-muted/30">
+                  <Gem className="h-16 w-16 text-muted-foreground/30" />
+                </div>
+              )}
+            </div>
 
-            {/* Details panel */}
-            <div className="space-y-4">
-              {/* Title + badges */}
+            {/* Title + Status + Badges */}
+            <div className="flex flex-col justify-between rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className={
                     status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                     status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' :
@@ -440,126 +448,173 @@ export default function SagDetailPage() {
                     {isFunded ? 'Fully Funded' : 'Open'}
                   </Badge>
                 </div>
-                <h1 className="font-display text-2xl font-extrabold text-[#171414] mt-1">
+                <h1 className="font-display text-2xl font-extrabold text-[#171414]">
                   {sag.sagName || `SAG #${sag.tokenId}`}
                 </h1>
-                <p className="text-xs text-muted-foreground mt-0.5">Token #{sag.tokenId} · {sag.sagType}</p>
+                <p className="text-xs text-muted-foreground mt-1">Token #{sag.tokenId} · {sag.sagType}</p>
               </div>
-
-              {/* Investment Progress */}
-              <Card className="border border-[#171414]/10 bg-white/60">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-[10px] font-mono uppercase text-muted-foreground">Investment Progress</p>
-                      <p className="text-2xl font-bold text-[#171414]">${investmentFilled.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">/ ${investmentTarget.toLocaleString()}</span></p>
-                    </div>
-                    <div className="text-right">
-                      {ethPrice > 0 && (
-                        <>
-                          <p className="text-xs text-emerald-600 font-mono">~{(minInvestment / ethPrice).toFixed(6)} ETH</p>
-                          <p className="text-[10px] text-muted-foreground">@${ethPrice.toLocaleString()}/ETH</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <Progress value={progressPct} className="h-2" />
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>${remaining.toLocaleString()} remaining</span>
-                    <span>{Math.round(progressPct)}% funded</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Properties grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
-                  <Weight className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-lg font-bold text-[#171414]">{weight}g</p>
-                  <p className="text-[10px] text-muted-foreground">Gold Weight</p>
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Gem className="h-3.5 w-3.5" />
+                  <span>{weight}g · {karat}K Gold</span>
                 </div>
-                <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
-                  <Gem className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-lg font-bold text-[#171414]">{karat}K</p>
-                  <p className="text-[10px] text-muted-foreground">Purity ({props?.purity || 0}‰)</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-emerald-600 font-medium">{roi}%/mo · {roi * duration}% total</span>
                 </div>
-                <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
-                  <TrendingUp className="h-4 w-4 mx-auto text-emerald-500 mb-1" />
-                  <p className="text-lg font-bold text-emerald-600">{roi}%</p>
-                  <p className="text-[10px] text-muted-foreground">ROI / month</p>
-                </div>
-                <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 text-center">
-                  <Clock className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-lg font-bold text-[#171414]">{formatTimeLeft()}</p>
-                  <p className="text-[10px] text-muted-foreground">{durationLabel} duration</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{durationLabel} · {formatTimeLeft()}</span>
                 </div>
               </div>
+              {!isFunded ? (
+                <Button
+                  onClick={() => setShowInvestModal(true)}
+                  className="w-full rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black h-11 mt-4"
+                >
+                  <Wallet className="h-4 w-4" /> Invest in This SAG
+                </Button>
+              ) : (
+                <div className="text-center rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 mt-4">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
+                  <p className="text-xs font-medium text-emerald-700">Target reached</p>
+                </div>
+              )}
+            </div>
 
-              {/* Loan Timeline */}
-              <Card className="border border-[#171414]/10 bg-white/60">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-[10px] font-mono uppercase text-muted-foreground">Loan Timeline</p>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="text-center">
-                      <p className="font-medium text-[#171414]">{originationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                      <p className="text-[10px] text-muted-foreground">Minted</p>
-                    </div>
-                    <div className="flex-1 mx-3">
-                      <div className="relative h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${elapsedPct}%` }} />
-                      </div>
-                      <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
-                        <span>{Math.round(elapsedPct)}% elapsed</span>
-                        <span>{isExpired ? 'Ended' : formatTimeLeft()}</span>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-medium text-[#171414]">{realMaturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                      <p className="text-[10px] text-muted-foreground">Expires</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Investment Progress — spans full width on md+ */}
+            <div className="md:col-span-2 lg:col-span-3 rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
+              <div className="flex items-end justify-between mb-3">
+                <div>
+                  <p className="text-[10px] font-mono uppercase text-muted-foreground">Investment Progress</p>
+                  <p className="text-2xl font-bold text-[#171414]">${investmentFilled.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">/ ${investmentTarget.toLocaleString()}</span></p>
+                </div>
+                <div className="text-right">
+                  {ethPrice > 0 && (
+                    <>
+                      <p className="text-xs text-emerald-600 font-mono">~{(minInvestment / ethPrice).toFixed(6)} ETH</p>
+                      <p className="text-[10px] text-muted-foreground">@${ethPrice.toLocaleString()}/ETH</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Progress value={progressPct} className="h-2.5" />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-2">
+                <span>${remaining.toLocaleString()} remaining</span>
+                <span>{Math.round(progressPct)}% funded</span>
+              </div>
+            </div>
 
-              {/* Prorated Expected Returns */}
-              {!isExpired && (
-                <Card className="border border-emerald-200 bg-emerald-50/40">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-mono uppercase text-emerald-700">Expected Returns (per $1 invested today)</p>
-                      <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[9px]">
-                        {roi}%/mo · {remainingMonths.toFixed(1)}mo remaining
-                      </Badge>
+            {/* Gold Properties — 4 mini cards in 2x2 */}
+            <div className="grid grid-cols-2 gap-3 lg:col-span-2">
+              <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+                <Weight className="h-5 w-5 text-muted-foreground mb-2" />
+                <p className="text-xl font-bold text-[#171414]">{weight}g</p>
+                <p className="text-[10px] text-muted-foreground">Gold Weight</p>
+              </div>
+              <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+                <Gem className="h-5 w-5 text-muted-foreground mb-2" />
+                <p className="text-xl font-bold text-[#171414]">{karat}K</p>
+                <p className="text-[10px] text-muted-foreground">Purity ({props?.purity || 0}‰)</p>
+              </div>
+              <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-emerald-500 mb-2" />
+                <p className="text-xl font-bold text-emerald-600">{roi}%</p>
+                <p className="text-[10px] text-muted-foreground">ROI / month</p>
+              </div>
+              <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground mb-2" />
+                <p className="text-xl font-bold text-[#171414]">{formatTimeLeft()}</p>
+                <p className="text-[10px] text-muted-foreground">{durationLabel} duration</p>
+              </div>
+            </div>
+
+            {/* Loan Timeline — 1 col right side */}
+            <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[10px] font-mono uppercase text-muted-foreground">Loan Timeline</p>
+              </div>
+              <div className="flex items-center justify-between text-xs mb-3">
+                <div className="text-center">
+                  <p className="font-medium text-[#171414]">{originationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p className="text-[10px] text-muted-foreground">Minted</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-[#171414]">{realMaturityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p className="text-[10px] text-muted-foreground">Expires</p>
+                </div>
+              </div>
+              <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${elapsedPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[9px] text-muted-foreground mt-1.5">
+                <span>{Math.round(elapsedPct)}% elapsed</span>
+                <span>{isExpired ? 'Ended' : formatTimeLeft()}</span>
+              </div>
+            </div>
+
+            {/* Expected Returns — full width */}
+            {!isExpired && (
+              <div className="md:col-span-2 lg:col-span-3 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-mono uppercase text-emerald-700">
+                    {myTotalInvested > 0 ? `Expected Returns (your $${myTotalInvested} investment)` : 'Expected Returns (per $1 invested today)'}
+                  </p>
+                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[9px]">
+                    {roi}%/mo · {remainingMonths.toFixed(1)}mo remaining
+                  </Badge>
+                </div>
+                {myTotalInvested > 0 ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-xl bg-white/80 p-4 text-center">
+                        <p className="text-xl font-bold text-[#171414]">${myTotalInvested.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">Your invested</p>
+                      </div>
+                      <div className="rounded-xl bg-white/80 p-4 text-center">
+                        <p className="text-xl font-bold text-emerald-600">+${(myTotalInvested * proratedRoiTotal / 100).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">Expected profit</p>
+                      </div>
+                      <div className="rounded-xl bg-white/80 p-4 text-center">
+                        <p className="text-xl font-bold text-emerald-600">${(myTotalInvested * (1 + proratedRoiTotal / 100)).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">Total return</p>
+                      </div>
                     </div>
+                    <p className="text-[10px] text-emerald-600 mt-2">
+                      {roi}%/mo × {remainingMonths.toFixed(1)} months remaining = {proratedRoiTotal.toFixed(1)}% return on your investment.
+                    </p>
+                  </>
+                ) : (
+                  <>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-white/80 p-3 text-center">
-                        <p className="text-xl font-bold text-emerald-600">{proratedRoiTotal.toFixed(1)}%</p>
+                      <div className="rounded-xl bg-white/80 p-4 text-center">
+                        <p className="text-2xl font-bold text-emerald-600">{proratedRoiTotal.toFixed(1)}%</p>
                         <p className="text-[10px] text-muted-foreground">Total return if invest now</p>
                       </div>
-                      <div className="rounded-lg bg-white/80 p-3 text-center">
-                        <p className="text-xl font-bold text-[#171414]">${(1 + proratedRoiTotal / 100).toFixed(2)}</p>
+                      <div className="rounded-xl bg-white/80 p-4 text-center">
+                        <p className="text-2xl font-bold text-[#171414]">${(1 + proratedRoiTotal / 100).toFixed(2)}</p>
                         <p className="text-[10px] text-muted-foreground">You get back per $1</p>
                       </div>
                     </div>
-                    <div className="rounded-lg bg-white/60 p-2 text-center">
-                      <p className="text-[10px] text-muted-foreground">Example: invest ${minInvestment} → get back <span className="font-bold text-emerald-600">${(minInvestment * (1 + proratedRoiTotal / 100)).toFixed(2)}</span> ({proratedRoiTotal.toFixed(1)}% return)</p>
+                    <div className="rounded-xl bg-white/60 p-3 text-center mt-2">
+                      <p className="text-[11px] text-muted-foreground">Example: invest ${minInvestment} → get back <span className="font-bold text-emerald-600">${(minInvestment * (1 + proratedRoiTotal / 100)).toFixed(2)}</span> ({proratedRoiTotal.toFixed(1)}% return)</p>
                     </div>
-                    <p className="text-[10px] text-emerald-600">
+                    <p className="text-[10px] text-emerald-600 mt-2">
                       {isStarted
                         ? `${elapsedDays.toFixed(0)} days elapsed. Returns scale with your investment amount. Invest early for the full ${roi * duration}% return.`
                         : `Loan hasn't started yet. Investing now locks in the full ${roi * duration}% return.`
                       }
                     </p>
-                  </CardContent>
-                </Card>
-              )}
+                  </>
+                )}
+              </div>
+            )}
 
-              {/* Wallets */}
-              <div className="rounded-xl border border-[#171414]/10 bg-white/60 p-3 space-y-2">
-                <p className="text-[10px] font-mono uppercase text-muted-foreground">On-Chain Details</p>
+            {/* On-Chain Details — compact row */}
+            <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4">
+              <p className="text-[10px] font-mono uppercase text-muted-foreground mb-2">On-Chain Details</p>
+              <div className="space-y-1.5">
                 {props?.borrowerWallet && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Borrower</span>
@@ -577,20 +632,23 @@ export default function SagDetailPage() {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Invest CTA */}
-              {!isFunded ? (
-                <Button
-                  onClick={() => setShowInvestModal(true)}
-                  className="w-full rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black h-12"
-                >
-                  <Wallet className="h-4 w-4" /> Invest in This SAG
-                </Button>
-              ) : (
-                <div className="text-center rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-600 mx-auto mb-1" />
-                  <p className="text-sm font-medium text-emerald-700">Target investment reached</p>
-                </div>
+            {/* Min Investment — compact */}
+            <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+              <p className="text-[10px] font-mono uppercase text-muted-foreground mb-1">Min Investment</p>
+              <p className="text-2xl font-bold text-[#171414]">${minInvestment}</p>
+              {ethPrice > 0 && (
+                <p className="text-[10px] text-muted-foreground">~{(minInvestment / ethPrice).toFixed(6)} ETH</p>
+              )}
+            </div>
+
+            {/* Loan Amount — compact */}
+            <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-4 flex flex-col items-center justify-center">
+              <p className="text-[10px] font-mono uppercase text-muted-foreground mb-1">Loan Amount (70% LTV)</p>
+              <p className="text-2xl font-bold text-[#171414]">${loan.toLocaleString()}</p>
+              {ethPrice > 0 && (
+                <p className="text-[10px] text-muted-foreground">~{(loan / ethPrice).toFixed(6)} ETH</p>
               )}
             </div>
           </div>

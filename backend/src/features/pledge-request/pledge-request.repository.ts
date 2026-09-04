@@ -568,6 +568,22 @@ export async function recordRepayment(data: {
   notes?: string;
 }): Promise<any> {
   const { pool } = await import("@/db/index.js");
+  // If tx_hash provided, check if a record already exists for this pledge request
+  if (data.txHash) {
+    const existing = await pool.query(
+      `SELECT id FROM main.loan_repayment WHERE pledge_request_id = $1 AND tx_hash = $2 LIMIT 1`,
+      [data.pledgeRequestId, data.txHash]
+    );
+    if (existing.rows.length > 0) {
+      // Update existing record with CC3 hash
+      const result = await pool.query(
+        `UPDATE main.loan_repayment SET cc3_tx_hash = COALESCE($1, cc3_tx_hash), notes = COALESCE($2, notes)
+         WHERE id = $3 RETURNING *`,
+        [data.cc3TxHash || null, data.notes || null, existing.rows[0].id]
+      );
+      return result.rows[0];
+    }
+  }
   const result = await pool.query(
     `INSERT INTO main.loan_repayment (pledge_request_id, borrower_id, pawnshop_id, amount_usd, tx_hash, cc3_tx_hash, notes)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
