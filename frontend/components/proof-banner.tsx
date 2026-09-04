@@ -10,6 +10,16 @@ import { useState } from "react"
 const INVEST_STATUS_API = "/investor/deposit/status"
 const REPAY_STATUS_API = "/loan/repay/status"
 
+function friendlyMessage(msg: string): string {
+  if (!msg) return "Processing..."
+  if (msg.includes("user denied") || msg.includes("rejected")) return "Transaction rejected by wallet"
+  if (msg.includes("insufficient funds")) return "Insufficient funds for gas"
+  if (msg.includes("timeout")) return "Proof timed out — try again"
+  if (msg.includes("already settled")) return "Proof already recorded"
+  if (msg.includes("Invalid") && msg.length > 60) return "Invalid proof — transaction may be on a different contract"
+  return msg.length > 80 ? msg.slice(0, 77) + "..." : msg
+}
+
 function ProofJobRow({ job }: { job: ProofJob }) {
   const { updateJob, removeJob } = useProofProgress()
   const isPending = job.status === "queued" || job.status === "proving"
@@ -24,11 +34,13 @@ function ProofJobRow({ job }: { job: ProofJob }) {
         ) : (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#e1bac2]" />
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-[#171414] truncate">
             {job.type === "invest" ? "Investment" : job.type === "settle" ? "Return Settlement" : "Repayment"} — {job.sagName || `SAG #${job.sagTokenId}`}
           </p>
-          <p className="text-[10px] text-[#4A4A4A]/60 truncate">{job.message}</p>
+          <p className="text-[10px] text-[#4A4A4A]/60 line-clamp-2 break-words">
+            {friendlyMessage(job.message)}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -66,7 +78,7 @@ function ProofJobRow({ job }: { job: ProofJob }) {
 }
 
 export function ProofBanner() {
-  const { jobs, updateJob } = useProofProgress()
+  const { jobs, updateJob, removeJob } = useProofProgress()
   const [expanded, setExpanded] = useState(false)
   const jobsRef = useRef(jobs)
   jobsRef.current = jobs
@@ -74,7 +86,21 @@ export function ProofBanner() {
 
   const pendingJobs = jobs.filter((j) => j.status === "queued" || j.status === "proving")
   const completedJobs = jobs.filter((j) => j.status === "completed")
+  const failedJobs = jobs.filter((j) => j.status === "failed")
   const hasActive = pendingJobs.length > 0
+
+  // Auto-clear failed jobs after 5 minutes
+  useEffect(() => {
+    if (failedJobs.length === 0) return
+    const interval = setInterval(() => {
+      const now = Date.now()
+      const FIVE_MIN = 5 * 60 * 1000
+      failedJobs.forEach(j => {
+        if (now - j.createdAt > FIVE_MIN) removeJob(j.id)
+      })
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [failedJobs.length, removeJob])
 
   // Poll all pending jobs
   useEffect(() => {
@@ -180,6 +206,16 @@ export function ProofBanner() {
             {jobs.map((job) => (
               <ProofJobRow key={job.id} job={job} />
             ))}
+            {!hasActive && jobs.length > 0 && (
+              <button
+                onClick={() => {
+                  jobs.forEach(j => removeJob(j.id))
+                }}
+                className="w-full mt-2 py-1.5 text-[10px] text-[#4A4A4A]/50 hover:text-[#4A4A4A] border border-[#171414]/5 rounded-lg hover:bg-[#171414]/5 transition-colors"
+              >
+                Clear all
+              </button>
+            )}
           </CardContent>
         )}
       </Card>

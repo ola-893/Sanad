@@ -110,6 +110,7 @@ export default function SagDetailPage() {
   const [loading, setLoading] = useState(true)
   const [ethPrice, setEthPrice] = useState(0)
   const [myInvestments, setMyInvestments] = useState<Investment[]>([])
+  const [myReturns, setMyReturns] = useState<any[]>([])
   const [currentImage, setCurrentImage] = useState(0)
 
   // Invest modal state
@@ -193,6 +194,18 @@ export default function SagDetailPage() {
     apiInstance.get('/investor/investments').then(res => {
       if (res.data.success) setMyInvestments(res.data.data ?? [])
     }).catch(() => {})
+
+    // Fetch investor returns
+    const ethereum = (window as any).ethereum
+    ethereum?.request({ method: 'eth_accounts' })
+      .then((accounts: string[]) => {
+        if (accounts?.[0]) {
+          apiInstance.get(`/investor/returns/${accounts[0]}`)
+            .then((res) => { if (res.data.success) setMyReturns(res.data.data ?? []) })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
   }
 
   useEffect(() => {
@@ -690,6 +703,51 @@ export default function SagDetailPage() {
                         {inv.cc3_tx_hash && (
                           <a href={`https://creditcoin-testnet.blockscout.com/tx/${inv.cc3_tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-600 hover:underline flex items-center gap-1">
                             CC3: {inv.cc3_tx_hash.slice(0, 10)}...{inv.cc3_tx_hash.slice(-6)} <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* My Returns from this SAG */}
+          {myReturns.filter((r: any) => String(r.sagTokenId) === String(sag?.tokenId)).length > 0 && (
+            <Card className="border-emerald-200 bg-emerald-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  <p className="text-sm font-medium text-[#171414]">Your Returns</p>
+                </div>
+                <div className="space-y-2">
+                  {myReturns
+                    .filter((r: any) => String(r.sagTokenId) === String(sag?.tokenId))
+                    .map((ret: any) => (
+                    <div key={ret.id} className="rounded-xl border border-emerald-200 bg-white/60 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="outline" className={`text-[10px] ${
+                          ret.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border-amber-200'
+                        }`}>
+                          {ret.status === 'completed' ? '✓ Received' : ret.status === 'proving' ? '⏳ Proving' : '⏳ Pending'}
+                        </Badge>
+                        <p className="text-sm font-bold text-emerald-700">${Number(ret.totalReturnUsd || 0).toFixed(2)}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mb-2">
+                        Principal ${Number(ret.principalUsd || 0).toFixed(2)} + Profit ${Number(ret.profitUsd || 0).toFixed(2)}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        {ret.sepoliaTxHash && (
+                          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${ret.sepoliaTxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">
+                            Sepolia ↗
+                          </a>
+                        )}
+                        {ret.cc3TxHash && (
+                          <a href={`https://creditcoin-testnet.blockscout.com/tx/${ret.cc3TxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-600 hover:underline">
+                            CC3 ↗
                           </a>
                         )}
                       </div>

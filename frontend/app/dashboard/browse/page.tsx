@@ -113,7 +113,8 @@ const getProofStageMessage = (progress: number) => {
   return 'Queuing proof verification...'
 }
 
-function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number; onInvest: (e: React.MouseEvent, sag: SagToken) => void }) {
+function SagCard({ sag, ethPrice, onInvest, myReturns }: { sag: SagToken; ethPrice: number; onInvest: (e: React.MouseEvent, sag: SagToken) => void; myReturns?: any[] }) {
+  const myReturn = myReturns?.find((r: any) => String(r.sagTokenId) === String(sag.tokenId))
   const router = useRouter()
   const props = sag.sagProperties
   const weight = props?.weightG || 0
@@ -267,6 +268,22 @@ function SagCard({ sag, ethPrice, onInvest }: { sag: SagToken; ethPrice: number;
             </div>
           </div>
 
+          {/* My Return — compact badge */}
+          {myReturn && (
+            <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-[10px] ${
+              myReturn.status === 'completed'
+                ? 'bg-emerald-50 border border-emerald-200'
+                : 'bg-amber-50 border border-amber-200'
+            }`}>
+              <span className={`font-bold ${myReturn.status === 'completed' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {myReturn.status === 'completed' ? '✓ Return received' : '⏳ Return pending'}
+              </span>
+              <span className={`font-mono font-bold ${myReturn.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                ${Number(myReturn.totalReturnUsd || 0).toFixed(2)}
+              </span>
+            </div>
+          )}
+
           {/* Action */}
           {isFunded ? (
             <div className="text-center pt-1">
@@ -374,6 +391,8 @@ export default function BrowsePage() {
   const [processing, setProcessing] = useState(false)
   const [depositError, setDepositError] = useState('')
 
+  const [myReturns, setMyReturns] = useState<any[]>([])
+
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => {
     if (typeof window === 'undefined') return []
     try {
@@ -461,6 +480,18 @@ export default function BrowsePage() {
         setError('Failed to load SAG tokens')
       })
       .finally(() => setLoading(false))
+
+    // Fetch investor returns
+    const ethereum = (window as any).ethereum
+    ethereum?.request({ method: 'eth_accounts' })
+      .then((accounts: string[]) => {
+        if (accounts?.[0]) {
+          apiInstance.get(`/investor/returns/${accounts[0]}`)
+            .then((res) => { if (res.data.success) setMyReturns(res.data.data ?? []) })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
 
     const fetchEthPrice = () => {
       apiInstance.get('/eth-price')
@@ -628,6 +659,7 @@ export default function BrowsePage() {
                     sag={sag}
                     ethPrice={ethPrice}
                     onInvest={openInvestModal}
+                    myReturns={myReturns}
                   />
                 ))}
               </div>
