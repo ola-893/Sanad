@@ -115,6 +115,18 @@ export const DEPLOYED_ADDRESSES = {
   fs.writeFileSync(configPath, updatedConfig);
   console.log(`\n✅ Updated ${configPath}`);
 
+  // Update backend/.env
+  const backendEnvPath = path.resolve(rootDir, '.env');
+  if (fs.existsSync(backendEnvPath)) {
+    let envContent = fs.readFileSync(backendEnvPath, 'utf8');
+    envContent = envContent.replace(
+      /SANAD_LIQUIDITY_POOL_ADDRESS="0x[0-9a-fA-F]+"/,
+      `SANAD_LIQUIDITY_POOL_ADDRESS="${newPoolAddress}"`
+    );
+    fs.writeFileSync(backendEnvPath, envContent);
+    console.log(`✅ Updated ${backendEnvPath}`);
+  }
+
   // Update frontend fallback in frontend/lib/contracts/sanad-liquidity-pool.ts
   const frontendContractPath = path.resolve(rootDir, '../frontend/lib/contracts/sanad-liquidity-pool.ts');
   if (fs.existsSync(frontendContractPath)) {
@@ -125,6 +137,22 @@ export const DEPLOYED_ADDRESSES = {
     );
     fs.writeFileSync(frontendContractPath, content);
     console.log(`✅ Updated ${frontendContractPath}`);
+  }
+
+  // Update frontend/.env.local
+  const frontendEnvPath = path.resolve(rootDir, '../frontend/.env.local');
+  if (fs.existsSync(frontendEnvPath)) {
+    let fEnvContent = fs.readFileSync(frontendEnvPath, 'utf8');
+    fEnvContent = fEnvContent.replace(
+      /NEXT_PUBLIC_POOL_ADDRESS="0x[0-9a-fA-F]+"/,
+      `NEXT_PUBLIC_POOL_ADDRESS="${newPoolAddress}"`
+    );
+    fEnvContent = fEnvContent.replace(
+      /NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS="0x[0-9a-fA-F]+"/,
+      `NEXT_PUBLIC_SANAD_LIQUIDITY_POOL_ADDRESS="${newPoolAddress}"`
+    );
+    fs.writeFileSync(frontendEnvPath, fEnvContent);
+    console.log(`✅ Updated ${frontendEnvPath}`);
   }
 
   console.log('\n========================================================================');

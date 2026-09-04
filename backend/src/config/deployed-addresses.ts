@@ -15,7 +15,7 @@ export const DEPLOYED_ADDRESSES = {
   // Creditcoin CC3 Testnet (Chain ID: 102031)
   cc3: {
     sagToken: '0x80b9Ae7D0BEfB042a3eb8fDd1af0DCF6E53bEdE9',
-    liquidityPool: '0x93C550aABfD0396f9fb2f8a3404E22Eee648Ee05',
+    liquidityPool: '0x6370114EEda4AC8F43F6c7997cB6C75DF58F4316',
     creditOracle: '0x9B926B432bbEFA5405eC9EBB0F7515496c2095a5',
   },
   // Ethereum Sepolia Testnet (Chain ID: 11155111)
@@ -25,7 +25,7 @@ export const DEPLOYED_ADDRESSES = {
   },
   // Deployment metadata
   meta: {
-    deployedAt: '2026-09-03T11:45:15.555Z',
+    deployedAt: '2026-09-04T11:44:19.280Z',
     commitHash: 'updated-pool',
     deployer: '0xc7b11732DFba02C96DD7805E98db7E190Cbbc6E9',
   },

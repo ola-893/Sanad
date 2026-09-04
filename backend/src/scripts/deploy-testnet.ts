@@ -105,6 +105,13 @@ export async function deployToTestnet() {
   await tx2.wait();
   console.log(`  ✅ Granted MINTER_ROLE to Deployer (Tx: ${tx2.hash})`);
 
+  const relayerAddress = process.env.RELAYER_WALLET_ADDRESS || '0x506e724d7FDdbF91B6607d5Af0700d385D952f8a';
+  if (relayerAddress && ethers.isAddress(relayerAddress)) {
+    const txRelayer = await (sagContract as any).grantRole(MINTER_ROLE, relayerAddress);
+    await txRelayer.wait();
+    console.log(`  ✅ Granted MINTER_ROLE to Relayer (${relayerAddress}) (Tx: ${txRelayer.hash})`);
+  }
+
   // Set Sepolia RepaymentGateway and InvestorVault addresses if configured
   const sepoliaGateway = process.env.SEPOLIA_REPAYMENT_GATEWAY_ADDRESS || DEPLOYED_ADDRESSES.sepolia.repaymentGateway;
   if (sepoliaGateway) {
