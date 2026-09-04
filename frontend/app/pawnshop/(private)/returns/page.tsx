@@ -230,10 +230,10 @@ export default function PawnshopReturnsPage() {
 
   // Open settle modal for a specific investor
   const openSettleModal = async (loan: PledgeRequest, investor: InvestorReturn) => {
-    const roi = 6 // for 3 months
     const months = loan.loanDurationMonths || 3
+    const roi = months <= 1 ? 2 : months <= 3 ? 6 : months <= 6 ? 12 : 24 // total ROI for the duration
     const invested = Number(investor.amountUsd || 0)
-    const profit = Number((invested * (roi / 100) * months).toFixed(2))
+    const profit = Number((invested * (roi / 100)).toFixed(2))
     const total = Number((invested + profit).toFixed(2))
 
     setSettleModal({ loan, investor })
@@ -443,8 +443,8 @@ export default function PawnshopReturnsPage() {
                         </p>
                         {investors.map((inv) => {
                           const invested = Number(inv.amountUsd || 0)
-                          const roi = durationMonths <= 3 ? 6 : 12
-                          const profit = Number((invested * (roi / 100) * durationMonths).toFixed(2))
+                          const roi = durationMonths <= 1 ? 2 : durationMonths <= 3 ? 6 : durationMonths <= 6 ? 12 : 24
+                          const profit = Number((invested * (roi / 100)).toFixed(2))
                           const total = invested + profit
                           const existingReturn = getReturnForInvestor(loan.id, inv.investorWallet)
 
