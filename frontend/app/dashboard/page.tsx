@@ -17,6 +17,7 @@ import {
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 import apiInstance from "@/lib/axios-v1"
+import { io } from "socket.io-client"
 import { SEPOLIA_EXPLORER_URL } from "@/lib/contracts/sepolia-gateways"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
@@ -34,15 +35,49 @@ interface Investment {
 
 export default function DashboardPage() {
   const { walletAddress, balance: walletBalance } = useWalletAuth()
+  const ethereum = typeof window !== 'undefined' ? (window as any).ethereum : null
   const [investments, setInvestments] = useState<Investment[]>([])
   const [investmentsLoading, setInvestmentsLoading] = useState(true)
   const [ethPrice, setEthPrice] = useState(0)
+  const [returns, setReturns] = useState<any[]>([])
+  const [returnsLoading, setReturnsLoading] = useState(true)
 
   useEffect(() => {
     apiInstance.get("/investor/investments")
       .then((res) => { if (res.data.success) setInvestments(res.data.data ?? []) })
       .catch(() => {})
       .finally(() => setInvestmentsLoading(false))
+
+    // Fetch investor returns
+    ethereum?.request({ method: "eth_accounts" })
+      .then((accounts: string[]) => {
+        if (accounts?.[0]) {
+          const wallet = accounts[0]
+          apiInstance.get(`/investor/returns/${wallet}`)
+            .then((res) => { if (res.data.success) setReturns(res.data.data ?? []) })
+            .catch(() => {})
+            .finally(() => setReturnsLoading(false))
+
+          // Listen for real-time return distribution events
+          try {
+            const socket = io(process.env.NEXT_PUBLIC_WS_URL || "http://localhost:5002", {
+              transports: ["websocket", "polling"],
+            })
+            socket.on("loan:return_distributed", (data: any) => {
+              if (data.investorWallet?.toLowerCase() === wallet.toLowerCase()) {
+                // Refresh returns list
+                apiInstance.get(`/investor/returns/${wallet}`)
+                  .then((res) => { if (res.data.success) setReturns(res.data.data ?? []) })
+                  .catch(() => {})
+              }
+            })
+            return () => socket.disconnect()
+          } catch {}
+        } else {
+          setReturnsLoading(false)
+        }
+      })
+      .catch(() => setReturnsLoading(false))
 
     const fetchEthPrice = () => {
       apiInstance.get("/eth-price")
@@ -230,6 +265,67 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {/* My Returns */}
+          {!returnsLoading && returns.length > 0 && (
+            <Card className={`${glass}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    <p className="text-sm font-bold text-[#171414]">My Returns</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-emerald-600 font-bold">
+                      ${returns.filter((r) => r.status === 'completed').reduce((s, r) => s + Number(r.totalReturnUsd || 0), 0).toFixed(2)} received
+                    </span>
+                    <span className="text-[10px] text-amber-600 font-bold">
+                      ${returns.filter((r) => r.status !== 'completed').reduce((s, r) => s + Number(r.totalReturnUsd || 0), 0).toFixed(2)} pending
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {returns.slice(0, 5).map((ret: any) => (
+                    <div key={ret.id} className="flex items-center justify-between rounded-xl border border-[#171414]/5 bg-white/40 p-3 hover:bg-white/60 transition">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${
+                          ret.status === 'completed' ? 'bg-emerald-100' : 'bg-amber-100'
+                        }`}>
+                          <TrendingUp className={`h-4 w-4 ${ret.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-[#171414]">SAG #{String(ret.sagTokenId).slice(0, 8)}</p>
+                            <Badge variant="outline" className={`text-[9px] ${
+                              ret.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              ret.status === 'proving' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                              'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {ret.status === 'completed' ? '✓ Received' : ret.status === 'proving' ? '⏳ Proving' : '⏳ Pending'}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            Principal ${Number(ret.principalUsd || 0).toFixed(2)} + Profit ${Number(ret.profitUsd || 0).toFixed(2)} = ${Number(ret.totalReturnUsd || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {ret.sepoliaTxHash && (
+                          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${ret.sepoliaTxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">
+                            Sepolia ↗
+                          </a>
+                        )}
+                        {ret.cc3TxHash && (
+                          <a href={`https://creditcoin-testnet.blockscout.com/tx/${ret.cc3TxHash}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-600 hover:underline">
+                            CC3 ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
         </div>
       </div>

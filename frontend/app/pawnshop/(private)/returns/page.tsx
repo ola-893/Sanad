@@ -151,7 +151,7 @@ export default function PawnshopReturnsPage() {
   const [settleStep, setSettleStep] = useState<"signing" | "proving" | "done">("signing")
   const [settleResult, setSettleResult] = useState<any>(null)
   const [settleProcessing, setSettleProcessing] = useState(false)
-  const { addJob } = useProofProgress()
+  const { jobs, addJob } = useProofProgress()
 
   // Details modal
   const [detailsLoan, setDetailsLoan] = useState<PledgeRequest | null>(null)
@@ -287,6 +287,8 @@ export default function PawnshopReturnsPage() {
 
       toast.success("Settle confirmed! CC3 proof processing in background.")
       setSettleModal(null)
+      // Refresh returns data so the Settle button updates to show tx links
+      setTimeout(() => fetchAll(), 2000)
     } catch (err: any) {
       const msg = err?.reason || err?.message || "Failed"
       if (msg.includes("user denied") || msg.includes("rejected") || msg.includes("USER_DENIED")) {
@@ -446,12 +448,20 @@ export default function PawnshopReturnsPage() {
                           const roi = durationMonths <= 1 ? 2 : durationMonths <= 3 ? 6 : durationMonths <= 6 ? 12 : 24
                           const profit = Number((invested * (roi / 100)).toFixed(2))
                           const total = invested + profit
+                          const settleProofJobs = jobs.filter(
+                            (j) => j.type === "settle" && j.sagTokenId === loan.sagTokenId && (j.status === "queued" || j.status === "proving")
+                          )
                           const existingReturn = getReturnForInvestor(loan.id, inv.investorWallet)
 
+                          // Check if there's a pending settle proof job for this investor
+                          const hasPendingSettle = settleProofJobs.some(
+                            (j) => j.sourceTxHash && j.sagTokenId === loan.sagTokenId
+                          )
+
                           return (
+                            <div key={inv.id} className="space-y-1">
                             <div
-                              key={inv.id}
-                              className="flex items-center justify-between p-3 rounded-xl border border-[#171414]/5 bg-white"
+                              className={`flex items-center justify-between p-3 rounded-xl border ${hasPendingSettle ? "border-purple-200 bg-purple-50/30" : "border-[#171414]/5 bg-white"}`}
                             >
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
@@ -464,6 +474,10 @@ export default function PawnshopReturnsPage() {
                                     <Badge className="rounded-full bg-emerald-100 text-emerald-700 text-[10px] border-0">
                                       <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Settled
                                     </Badge>
+                                  ) : hasPendingSettle ? (
+                                    <Badge className="rounded-full bg-purple-100 text-purple-700 text-[10px] border-0">
+                                      <Loader2 className="h-2.5 w-2.5 mr-0.5 animate-spin" /> Settling
+                                    </Badge>
                                   ) : (
                                     <Badge className="rounded-full bg-amber-100 text-amber-700 text-[10px] border-0">
                                       <Clock className="h-2.5 w-2.5 mr-0.5" /> Pending
@@ -474,7 +488,6 @@ export default function PawnshopReturnsPage() {
                               </div>
 
                               <div className="flex items-center gap-4">
-                                {/* Amount breakdown */}
                                 <div className="text-right text-xs">
                                   <p className="text-muted-foreground">
                                     Invested: <span className="font-medium text-[#171414]">${invested.toLocaleString()}</span>
@@ -489,9 +502,7 @@ export default function PawnshopReturnsPage() {
                                     </p>
                                   )}
                                 </div>
-
-                                {/* Settle button */}
-                                {!existingReturn ? (
+                                {!existingReturn && !hasPendingSettle ? (
                                   <Button
                                     onClick={() => openSettleModal(loan, inv)}
                                     size="sm"
@@ -499,7 +510,12 @@ export default function PawnshopReturnsPage() {
                                   >
                                     <Send className="h-3.5 w-3.5" /> Settle
                                   </Button>
-                                ) : (
+                                ) : hasPendingSettle ? (
+                                  <div className="flex items-center gap-1 text-xs text-purple-600">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span>Settling...</span>
+                                  </div>
+                                ) : existingReturn ? (
                                   <div className="flex items-center gap-1 text-xs">
                                     <a
                                       href={`${SEPOLIA_EXPLORER_URL}/tx/${existingReturn.sepoliaTxHash}`}
@@ -520,8 +536,39 @@ export default function PawnshopReturnsPage() {
                                       </a>
                                     )}
                                   </div>
-                                )}
+                                ) : null}
                               </div>
+                            </div>
+                            {/* CC3 Proof Progress */}
+                            {settleProofJobs.length > 0 && (
+                              <div className="rounded-lg bg-purple-50 border border-purple-200 p-2.5">
+                                {settleProofJobs.map((job) => (
+                                  <div key={job.id} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5">
+                                        <Loader2 className="h-3 w-3 animate-spin text-purple-500" />
+                                        <span className="text-[10px] font-medium text-purple-700">{job.message}</span>
+                                      </div>
+                                      <span className="text-[10px] font-bold text-purple-600">{job.progress}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 overflow-hidden rounded-full bg-purple-100">
+                                      <div
+                                        className="h-full rounded-full bg-purple-400 transition-all duration-500 ease-out"
+                                        style={{ width: `${job.progress}%` }}
+                                      />
+                                    </div>
+                                    {job.cc3TxHash && (
+                                      <a
+                                        href={`https://creditcoin-testnet.blockscout.com/tx/${job.cc3TxHash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-purple-600 hover:underline font-mono"
+                                      >CC3 ↗</a>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             </div>
                           )
                         })}

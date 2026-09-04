@@ -271,29 +271,30 @@ function ProofProgressSection({ sagTokenId }: { sagTokenId: string }) {
         </p>
       </div>
       {matchingJobs.map((job) => (
-        <div key={job.id} className="flex items-center justify-between py-1.5">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-3 w-3 animate-spin text-[#e1bac2]" />
-            <span className="text-xs text-[#171414]">{job.message}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-1.5 overflow-hidden rounded-full bg-[#171414]/5">
-              <div
-                className="h-full rounded-full bg-[#e1bac2] transition-all duration-500"
-                style={{ width: `${job.progress}%` }}
-              />
+        <div key={job.id} className="space-y-2 py-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin text-[#e1bac2]" />
+              <span className="text-xs text-[#171414]">{job.message}</span>
             </div>
-            {job.cc3TxHash && (
-              <a
-                href={`https://creditcoin-testnet.blockscout.com/tx/${job.cc3TxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-[10px] text-[#e1bac2] hover:underline"
-              >
-                CC3 ↗
-              </a>
-            )}
+            <span className="text-[10px] font-bold text-[#8c5a63]">{job.progress}%</span>
           </div>
+          <div className="w-full h-2 overflow-hidden rounded-full bg-[#171414]/5">
+            <div
+              className="h-full rounded-full bg-[#e1bac2] transition-all duration-500 ease-out"
+              style={{ width: `${job.progress}%` }}
+            />
+          </div>
+          {job.cc3TxHash && (
+            <a
+              href={`https://creditcoin-testnet.blockscout.com/tx/${job.cc3TxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block font-mono text-[10px] text-[#e1bac2] hover:underline"
+            >
+              CC3 ↗
+            </a>
+          )}
         </div>
       ))}
     </div>
@@ -318,9 +319,9 @@ function LoanCard({
   const StatusIcon = cfg.icon
   const loanAmount = Number(loan.paymentAmountUsd || 0)
   const totalRepaid = Number(loan.totalRepaid || 0)
-  const remaining = Math.max(0, loanAmount - totalRepaid)
+  const remaining = loanAmount > 0 ? Math.max(0, loanAmount - totalRepaid) : -1
   const pct = loanAmount > 0 ? Math.min(100, (totalRepaid / loanAmount) * 100) : 0
-  const isFullyRepaid = remaining <= 0
+  const isFullyRepaid = loanAmount > 0 && totalRepaid >= loanAmount
   const isActive = ["sag_minted", "funded", "gold_verified", "accepted", "pending"].includes(loan.status)
 
   // Compute REAL maturity from origination + duration (ignore test-mode loanMaturityDate)
@@ -375,7 +376,11 @@ function LoanCard({
                 <StatusIcon className="mr-1 h-3 w-3" />
                 {cfg.label}
               </Badge>
-              {loan.status === "sag_minted" && !isFullyRepaid && (
+              {isFullyRepaid ? (
+                <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                  ✓ Fully Repaid
+                </span>
+              ) : loan.status === "sag_minted" ? (
                 <Link
                   href="/dashboard/borrower/repay"
                   onClick={(e) => e.stopPropagation()}
@@ -383,7 +388,7 @@ function LoanCard({
                 >
                   Repay
                 </Link>
-              )}
+              ) : null}
               <ArrowRight
                 className={`h-4 w-4 text-[#4A4A4A]/30 transition-transform ${isExpanded ? "rotate-90" : ""}`}
               />

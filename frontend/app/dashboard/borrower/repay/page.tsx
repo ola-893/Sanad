@@ -408,25 +408,35 @@ export default function BorrowerRepayPage() {
                       ⚠ Amount exceeds your wallet balance ({Number(walletBalance).toFixed(4)} ETH)
                     </p>
                   )}
-                  <div className="flex gap-2 mt-2">
-                    {["0.001", "0.005", "0.01", "0.05"].map((eth) => (
-                      <button
-                        key={eth}
-                        type="button"
-                        onClick={() => {
-                          setRepayAmount(eth)
-                          setLockedPrice(ethPrice)
-                        }}
-                        disabled={status === "broadcasting" || status === "proving"}
-                        className="flex-1 rounded-lg border border-[#171414]/10 bg-white/50 px-3 py-2 text-center transition-colors hover:bg-[#e1bac2]/10 hover:border-[#e1bac2]/30 disabled:opacity-50"
-                      >
-                        <p className="font-mono text-xs font-bold text-[#171414]">{eth}</p>
-                        <p className="font-mono text-[9px] text-[#4A4A4A]/40">ETH</p>
-                        {ethPrice > 0 && (
-                          <p className="font-mono text-[9px] text-[#4A4A4A]/50">${(Number(eth) * ethPrice).toFixed(2)}</p>
-                        )}
-                      </button>
-                    ))}
+                  <div className="flex gap-1.5 mt-2">
+                    {[25, 50, 75, 100].map((pct) => {
+                      const loanUsd = selectedLoan.sagProperties.loan
+                      if (!loanUsd || ethPrice <= 0) return null
+                      const portionUsd = loanUsd * (pct / 100)
+                      const portionEth = (portionUsd / ethPrice)
+                      const ethStr = portionEth.toFixed(6)
+                      const isOver = !!(walletBalance && portionEth > Number(walletBalance))
+                      return (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            setRepayAmount(ethStr)
+                            setLockedPrice(ethPrice)
+                          }}
+                          disabled={status === "broadcasting" || status === "proving" || isOver}
+                          className={`flex-1 rounded-lg border px-2 py-2 text-center transition-colors disabled:opacity-50 ${
+                            pct === 100
+                              ? "border-[#e1bac2]/30 bg-[#e1bac2]/5 hover:bg-[#e1bac2]/15"
+                              : "border-[#171414]/10 bg-white/50 hover:bg-[#e1bac2]/10 hover:border-[#e1bac2]/30"
+                          }`}
+                        >
+                          <p className={`font-mono text-[10px] font-bold ${pct === 100 ? "text-[#e1bac2]" : "text-[#171414]"}`}>{pct}%</p>
+                          <p className="font-mono text-[9px] text-[#4A4A4A]/60">${portionUsd.toFixed(2)}</p>
+                          <p className="font-mono text-[9px] text-[#4A4A4A]/40">{ethStr} ETH</p>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 

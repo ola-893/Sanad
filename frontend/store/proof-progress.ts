@@ -27,19 +27,45 @@ interface ProofProgressState {
   clearCompleted: () => void
 }
 
+const PROOF_JOBS_VERSION = 'v2' // Bump to force-clear old localStorage jobs
+
 // Load from localStorage on init
 function loadJobs(): ProofJob[] {
   if (typeof window === 'undefined') return []
   try {
+    const version = localStorage.getItem('sanad-proof-jobs-version')
+    if (version !== PROOF_JOBS_VERSION) {
+      localStorage.removeItem('sanad-proof-jobs')
+      localStorage.setItem('sanad-proof-jobs-version', PROOF_JOBS_VERSION)
+      return []
+    }
     const stored = localStorage.getItem('sanad-proof-jobs')
     if (!stored) return []
     const jobs: ProofJob[] = JSON.parse(stored)
-    // Reset any stuck jobs to queued (they'll be re-polled)
-    return jobs.map(j => ({
-      ...j,
-      status: j.status === 'completed' || j.status === 'failed' ? j.status : 'queued',
-    }))
+    const now = Date.now()
+    const ONE_HOUR = 60 * 60 * 1000
+    return jobs
+      .filter(j => now - j.createdAt < ONE_HOUR)
+      .map(j => ({
+        ...j,
+        status: j.status === 'completed' ? 'completed'
+          : j.status === 'failed' ? 'failed'
+          : 'queued',
+        message: j.status === 'failed' ? friendlyError(j.message) : j.message,
+      }))
   } catch { return [] }
+}
+
+/** Convert raw blockchain errors to user-friendly messages */
+function friendlyError(msg: string): string {
+  if (!msg) return 'Proof failed'
+  if (msg.includes('user denied') || msg.includes('rejected')) return 'Transaction rejected by wallet'
+  if (msg.includes('insufficient funds')) return 'Insufficient funds for gas'
+  if (msg.includes('timeout')) return 'Proof timed out — try again'
+  if (msg.includes('already settled')) return 'Proof already recorded'
+  if (msg.includes('Invalid') && msg.length > 80) return 'Invalid proof — the transaction may have been on a different contract'
+  // Truncate long errors
+  return msg.length > 80 ? msg.slice(0, 77) + '...' : msg
 }
 
 function saveJobs(jobs: ProofJob[]) {

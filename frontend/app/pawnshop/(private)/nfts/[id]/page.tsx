@@ -62,17 +62,17 @@ interface TokenInfo {
 
 interface Investor {
   id: string
-  user_id: string
-  amount_usd: string
-  eth_amount: string | null
-  source_tx_hash: string | null
-  cc3_tx_hash: string | null
+  userId: string
+  amountUsd: string
+  ethAmount: string | null
+  sourceTxHash: string | null
+  cc3TxHash: string | null
   status: string
-  created_at: string
-  user_first_name: string | null
-  user_last_name: string | null
+  createdAt: string
+  investorFirstName: string | null
+  investorLastName: string | null
   user_email: string | null
-  account_id: string | null
+  investorWallet: string | null
 }
 
 function formatDuration(months: number): string {
@@ -169,7 +169,7 @@ export default function PawnshopNFTDetailPage() {
   const investmentTarget = props?.investmentTargetUsd || 0
   const investmentFilled = props?.investmentFilledUsd || 0
   const investmentPercent = investmentTarget > 0 ? (investmentFilled / investmentTarget) * 100 : 0
-  const totalInvestmentUsd = investors.reduce((sum, inv) => sum + Number(inv.amount_usd), 0)
+  const totalInvestmentUsd = investors.reduce((sum, inv) => sum + Number(inv.amountUsd || 0), 0)
   const totalInterestEarned = totalInvestmentUsd * (roi / 100) * Math.max(0, (realMaturityDate ? Math.min(elapsedDays / 30, durationMonths) : 0))
 
   if (isLoading) {
@@ -590,8 +590,8 @@ export default function PawnshopNFTDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {investors.map((inv) => {
-                    const name = [inv.user_first_name, inv.user_last_name].filter(Boolean).join(' ')
-                    const displayId = inv.account_id || inv.user_id
+                    const name = [inv.investorFirstName, inv.investorLastName].filter(Boolean).join(' ')
+                    const displayId = inv.investorWallet || inv.userId
                     return (
                       <TableRow key={inv.id}>
                         <TableCell>
@@ -603,13 +603,13 @@ export default function PawnshopNFTDetailPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="font-bold">${Number(inv.amount_usd).toFixed(2)}</span>
+                          <span className="font-bold">${Number(inv.amountUsd || 0).toFixed(2)}</span>
                         </TableCell>
                         <TableCell className="text-xs font-mono text-muted-foreground">
-                          {inv.eth_amount ? `~${Number(inv.eth_amount).toFixed(6)}` : '—'}
+                          {inv.ethAmount ? `~${Number(inv.ethAmount).toFixed(6)}` : '—'}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {new Date(inv.created_at).toLocaleDateString()}
+                          {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}
                         </TableCell>
                         <TableCell>
                           <Badge className={`text-[10px] ${inv.status === 'completed'
@@ -620,26 +620,26 @@ export default function PawnshopNFTDetailPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {inv.source_tx_hash ? (
+                          {inv.sourceTxHash ? (
                             <a
-                              href={`${SEPOLIA_EXPLORER}/tx/${inv.source_tx_hash}`}
+                              href={`${SEPOLIA_EXPLORER}/tx/${inv.sourceTxHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-accent hover:underline font-mono flex items-center gap-1"
                             >
-                              {inv.source_tx_hash.slice(0, 8)}... <ExternalLink className="h-3 w-3" />
+                              {inv.sourceTxHash.slice(0, 8)}... <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : '—'}
                         </TableCell>
                         <TableCell>
-                          {inv.cc3_tx_hash ? (
+                          {inv.cc3TxHash ? (
                             <a
-                              href={`https://creditcoin-testnet.blockscout.com/tx/${inv.cc3_tx_hash}`}
+                              href={`https://creditcoin-testnet.blockscout.com/tx/${inv.cc3TxHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-accent hover:underline font-mono flex items-center gap-1"
                             >
-                              {inv.cc3_tx_hash.slice(0, 8)}... <ExternalLink className="h-3 w-3" />
+                              {inv.cc3TxHash.slice(0, 8)}... <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
                             <span className="text-xs text-muted-foreground">Pending</span>
