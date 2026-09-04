@@ -275,9 +275,9 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Verifies an Attestcoin inclusion proof on-chain for a Sepolia investor deposit and credits LP share.
+     * @notice Verifies an Attestcoin inclusion proof on-chain for a Sepolia investor deposit / loan funding and credits LP share.
      * @dev Decodes chunks[0] for target contract binding (to == investorVaultAddress),
-     *      function selector (0xb6b55f25 = deposit(uint256)), and extracts sender + amount.
+     *      function selector (0xb6b55f25 = deposit(uint256) or 0xfdc6f341 = fundLoan(uint256,address,uint256)), and extracts sender + amount.
      *      Decodes chunks[last] for receiptStatus == 1 (revert protection).
      *      Enforces replay protection against sourceTxHash.
      */
@@ -309,32 +309,53 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
             address from,
             bool toIsNull,
             address to,
-            /* uint256 value */,
+            uint256 value,
             bytes memory data
         ) = abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
 
         require(!toIsNull, "Target contract cannot be null");
         require(investorVaultAddress != address(0), "InvestorVault address not configured");
         require(to == investorVaultAddress, "Target contract does not match InvestorVault");
-        require(data.length >= 36, "Invalid calldata length for deposit(uint256)");
+        require(data.length >= 4, "Invalid calldata length");
 
-        // 4. Validate Function Selector (deposit(uint256) = 0xb6b55f25)
+        // 4. Validate Function Selector (deposit(uint256) = 0xb6b55f25, fundLoan(uint256,address,uint256) = 0xfdc6f341, or 0x4de3337a)
         bytes4 selector;
         assembly {
             selector := mload(add(data, 32))
         }
-        require(selector == 0xb6b55f25, "Invalid function selector for deposit(uint256)");
 
-        // 5. Decode Calldata Parameters (amount)
-        uint256 calldataAmount;
-        assembly {
-            calldataAmount := mload(add(data, 36))
+        // 5. Decode Calldata / Value Parameters (amount)
+        uint256 depositVolume;
+        if (selector == 0xb6b55f25) {
+            // deposit(uint256)
+            require(data.length >= 36, "Invalid calldata length for deposit(uint256)");
+            uint256 calldataAmount;
+            assembly {
+                calldataAmount := mload(add(data, 36))
+            }
+            depositVolume = calldataAmount > 0 ? calldataAmount : value;
+        } else if (
+            selector == 0xfdc6f341 ||
+            selector == 0x4de3337a ||
+            selector == bytes4(keccak256("fundLoan(uint256,address,uint256)"))
+        ) {
+            // fundLoan(uint256,address,uint256)
+            require(data.length >= 36, "Invalid calldata length for fundLoan");
+            depositVolume = value;
+            if (depositVolume == 0 && data.length >= 100) {
+                assembly {
+                    depositVolume := mload(add(data, 100))
+                }
+            }
+        } else {
+            revert("Invalid function selector for deposit or fundLoan");
         }
-        require(calldataAmount > 0, "Deposit amount must be greater than zero");
+
+        require(depositVolume > 0, "Deposit amount must be greater than zero");
         if (claimedAmount > 0) {
-            require(calldataAmount >= claimedAmount, "Decoded calldata amount is less than claimedAmount");
+            require(depositVolume >= claimedAmount, "Decoded amount is less than claimedAmount");
         }
-        uint256 effectiveDepositAmount = claimedAmount > 0 ? claimedAmount : calldataAmount;
+        uint256 effectiveDepositAmount = claimedAmount > 0 ? claimedAmount : depositVolume;
 
         // 6. Decode Receipt Chunk (chunks[chunks.length - 1]) and check receiptStatus == 1
         uint8 receiptStatus = abi.decode(chunks[chunks.length - 1], (uint8));
