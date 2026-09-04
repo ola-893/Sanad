@@ -82,7 +82,7 @@ interface ReturnCalc {
 }
 
 function formatDuration(months: number): string {
-  if (months === 0.03) return "1 day"
+  if (months <= 0) return "1 day"
   if (months === 1) return "1 month"
   if (months === 12) return "1 year"
   return `${months} months`
@@ -542,7 +542,6 @@ export default function PawnshopRepaymentsPage() {
                   onChange={(e) => setSagModalDuration(Number(e.target.value))}
                   className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value={0.03}>1 day (testing)</option>
                   <option value={1}>1 month</option>
                   <option value={2}>2 months</option>
                   <option value={3}>3 months</option>

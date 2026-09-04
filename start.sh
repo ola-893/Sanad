@@ -77,9 +77,14 @@ cd "$BACKEND_DIR"
 [ ! -f .env ] && cp .env.example .env
 grep -q 'POSTGRES_PORT="5432"' .env && sed -i '' 's/POSTGRES_PORT="5432"/POSTGRES_PORT="15432"/' .env && sed -i '' 's|localhost:5432|localhost:15432|' .env
 
-npm install --silent 2>&1 | tail -1
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
+  echo -e "  ${CYAN}→ Installing backend dependencies...${NC}"
+  timeout 60 npm install --prefer-offline 2>&1 | tail -3 || echo -e "  ${YELLOW}⚠ npm install timed out or failed — using existing node_modules${NC}"
+else
+  echo -e "  ${GREEN}✓ node_modules exists, skipping install${NC}"
+fi
 echo -e "  ${CYAN}→ Seeding database...${NC}"
-npm run seed 2>&1 | grep -E "✓|COMPLETED|ERROR" || true
+timeout 30 npm run seed 2>&1 | grep -E "✓|COMPLETED|ERROR" || true
 
 echo -e "  ${CYAN}→ Starting backend on port 5002...${NC}"
 tmux new-session -d -s sanad-backend \
@@ -124,7 +129,12 @@ else
   npm install -g pnpm > /dev/null 2>&1
   PNPM="pnpm"
 fi
-$PNPM install --silent 2>&1 | tail -1
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
+  echo -e "  ${CYAN}→ Installing frontend dependencies...${NC}"
+  timeout 60 $PNPM install --prefer-offline 2>&1 | tail -3 || echo -e "  ${YELLOW}⚠ pnpm install timed out or failed — using existing node_modules${NC}"
+else
+  echo -e "  ${GREEN}✓ node_modules exists, skipping install${NC}"
+fi
 
 echo -e "  ${CYAN}→ Starting frontend on port 3000...${NC}"
 tmux new-session -d -s sanad-frontend \
@@ -149,7 +159,8 @@ echo ""
 echo -e "${CYAN}================================================================${NC}"
 echo -e "${GREEN}  ALL SERVICES STARTED!${NC}"
 echo -e "${CYAN}================================================================${NC}"
-echo ""  echo -e "  ${CYAN}Services:${NC}"
+echo ""
+echo -e "  ${CYAN}Services:${NC}"
 echo -e "    PostgreSQL  → localhost:15432"
 echo -e "    Redis       → localhost:6379"
 echo -e "    Backend API → http://localhost:5002"

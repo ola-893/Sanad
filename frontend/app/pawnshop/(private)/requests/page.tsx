@@ -40,8 +40,7 @@ const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 sh
 // Convert loan duration (in months) to test-mode minutes
 // Real: 1 day=1d, 1mo=30d, etc. Test: scaled down for quick testing
 function getTestDurationMinutes(months: number): number {
-  if (months <= 0) return 1 // < 1 month (e.g. 1 day) → 1 min
-  if (months < 1) return 1 // fraction (e.g. 0.03 = 1 day) → 1 min
+  if (months <= 0) return 1
   return Math.round(months * 5) // 1mo=5min, 2mo=10min, 3mo=15min, 6mo=30min, 12mo=60min
 }
 
@@ -1017,7 +1016,6 @@ export default function PawnshopRequestsPage() {
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value="">Select duration...</option>
-                    <option value="0.03">1 day</option>
                     <option value="1">1 month</option>
                     <option value="2">2 months</option>
                     <option value="3">3 months</option>
@@ -1026,7 +1024,7 @@ export default function PawnshopRequestsPage() {
                   </select>
                   {verifyDuration && (
                     <p className="text-xs text-muted-foreground">
-                      Repayment due: {new Date(Date.now() + getTestDurationMinutes(Number(verifyDuration)) * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (in {getTestDurationMinutes(Number(verifyDuration))} min for testing)
+                      Duration: {formatDuration(Number(verifyDuration))} · Repayment due: {new Date(Date.now() + Number(verifyDuration) * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   )}
                 </div>
@@ -1219,7 +1217,6 @@ export default function PawnshopRequestsPage() {
                   onChange={(e) => setSagModalDuration(Number(e.target.value))}
                   className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value={0.03}>1 day (testing)</option>
                   <option value={1}>1 month</option>
                   <option value={2}>2 months</option>
                   <option value={3}>3 months</option>

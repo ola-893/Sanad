@@ -63,6 +63,200 @@ export class CreditOracleController {
     }
   }
 
+  // In-memory progress tracker for auto-prove jobs
+  private autoProveJobs = new Map<string, {
+    address: string;
+    status: 'discovering' | 'proving' | 'completed' | 'error';
+    eventsFound: number;
+    eventsProven: number;
+    eventsFailed: number;
+    total: number;
+    current: number;
+    results: any[];
+    startedAt: number;
+    completedAt?: number;
+    error?: string;
+  }>();
+
+  /**
+   * POST /api/credit-oracle/auto-prove-all
+   * Discovers all DeFi events and starts proving in background.
+   * Returns immediately with a jobId. Frontend polls GET /auto-prove-status/:address.
+   */
+  public async autoProveAll(req: Request, res: Response): Promise<void> {
+    try {
+      const { address } = req.body;
+      if (!address || typeof address !== 'string' || !address.startsWith('0x')) {
+        res.status(400).json({ success: false, message: 'Valid wallet address required' });
+        return;
+      }
+
+      // If already running, return current status
+      const existing = this.autoProveJobs.get(address.toLowerCase());
+      if (existing && (existing.status === 'discovering' || existing.status === 'proving')) {
+        res.status(200).json({
+          success: true,
+          data: { address, status: existing.status, eventsFound: existing.eventsFound, eventsProven: existing.eventsProven, eventsFailed: existing.eventsFailed, total: existing.total, current: existing.current },
+        });
+        return;
+      }
+
+      // Create job entry
+      const job = {
+        address: address.toLowerCase(),
+        status: 'discovering' as const,
+        eventsFound: 0,
+        eventsProven: 0,
+        eventsFailed: 0,
+        total: 0,
+        current: 0,
+        results: [] as any[],
+        startedAt: Date.now(),
+      };
+      this.autoProveJobs.set(address.toLowerCase(), job);
+
+      // Return immediately — proving happens in background
+      res.status(200).json({
+        success: true,
+        data: { address, status: 'discovering', eventsFound: 0, eventsProven: 0, eventsFailed: 0, total: 0, current: 0 },
+      });
+
+      // Start background proving
+      this.runAutoProveJob(address, job).catch(err => {
+        console.error(`[CreditOracle] Auto-prove background error for ${address}:`, err.message);
+        job.status = 'error';
+        job.error = err.message;
+        job.completedAt = Date.now();
+      });
+    } catch (err: any) {
+      console.error('[CreditOracleController] autoProveAll error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Failed to start auto-prove' });
+    }
+  }
+
+  private async runAutoProveJob(address: string, job: any): Promise<void> {
+    console.log(`[CreditOracle] Auto-proving all DeFi events for ${address}`);
+
+    // 1. Discover events
+    const discovery = await this.discoveryService.discoverWalletEvents(address);
+    if (!discovery.events || discovery.events.length === 0) {
+      job.status = 'completed';
+      job.eventsFound = 0;
+      job.completedAt = Date.now();
+      console.log(`[CreditOracle] No DeFi events found for ${address}`);
+      return;
+    }
+    job.eventsFound = discovery.events.length;
+
+    // 2. Get already-proven events to skip
+    let alreadyProven = new Set<string>();
+    try {
+      const profile = await this.relayerService.getOnChainCreditProfile(address);
+      if (profile.provenEvents) {
+        for (const pe of profile.provenEvents) {
+          if (pe.sourceTxHash) alreadyProven.add(pe.sourceTxHash.toLowerCase());
+        }
+      }
+    } catch {}
+
+    // Also check DB
+    try {
+      const { ProvenEvents } = await import('@/db/schema.js');
+      const { db } = await import('@/db/index.js');
+      const { eq } = await import('drizzle-orm');
+      const dbEvents = await db.select().from(ProvenEvents).where(eq(ProvenEvents.borrowerAddress, address));
+      for (const de of dbEvents) {
+        if (de.sourceTxHash) alreadyProven.add(de.sourceTxHash.toLowerCase());
+      }
+    } catch {}
+
+    // 3. Filter to unproven events only
+    const unprovenEvents = discovery.events.filter((e: any) => !alreadyProven.has((e.sourceTxHash || '').toLowerCase()));
+
+    if (unprovenEvents.length === 0) {
+      job.status = 'completed';
+      job.completedAt = Date.now();
+      console.log(`[CreditOracle] All ${discovery.events.length} events already proven for ${address}`);
+      return;
+    }
+
+    console.log(`[CreditOracle] Found ${unprovenEvents.length} unproven events out of ${discovery.events.length} total`);
+    job.status = 'proving';
+    job.total = unprovenEvents.length;
+
+    // 4. Prove each event sequentially
+    for (const event of unprovenEvents) {
+      job.current++;
+      try {
+        console.log(`[CreditOracle] Proving event ${job.current}/${job.total}: ${event.eventType} on ${event.protocol} (${event.sourceTxHash?.slice(0, 14)}...)`);
+        const result = await this.relayerService.proveAndRecordEvent(address, event);
+        job.results.push({
+          sourceTxHash: event.sourceTxHash,
+          protocol: event.protocol,
+          eventType: event.eventType,
+          success: result.success,
+          cc3TxHash: result.transactionHash || null,
+          error: result.error || null,
+        });
+        if (result.success) {
+          job.eventsProven++;
+          console.log(`[CreditOracle] ✓ Proved ${event.eventType} — CC3: ${result.transactionHash?.slice(0, 14)}`);
+        } else {
+          job.eventsFailed++;
+          console.warn(`[CreditOracle] ✗ Failed ${event.eventType}: ${result.error}`);
+        }
+      } catch (err: any) {
+        job.eventsFailed++;
+        job.results.push({
+          sourceTxHash: event.sourceTxHash,
+          protocol: event.protocol,
+          eventType: event.eventType,
+          success: false,
+          error: err.message,
+        });
+        console.warn(`[CreditOracle] ✗ Exception proving ${event.eventType}: ${err.message}`);
+      }
+    }
+
+    job.status = 'completed';
+    job.completedAt = Date.now();
+    console.log(`[CreditOracle] Auto-prove complete for ${address}: ${job.eventsProven}/${job.total} proven, ${job.eventsFailed} failed`);
+  }
+
+  /**
+   * GET /api/credit-oracle/auto-prove-status/:address
+   * Poll auto-prove job progress
+   */
+  public async getAutoProveStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const address = req.params.address?.toLowerCase();
+      if (!address || !address.startsWith('0x')) {
+        res.status(400).json({ success: false, message: 'Valid wallet address required' });
+        return;
+      }
+      const job = this.autoProveJobs.get(address);
+      if (!job) {
+        res.status(200).json({ success: true, data: { status: 'idle', eventsFound: 0, eventsProven: 0, eventsFailed: 0, total: 0, current: 0 } });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        data: {
+          status: job.status,
+          eventsFound: job.eventsFound,
+          eventsProven: job.eventsProven,
+          eventsFailed: job.eventsFailed,
+          total: job.total,
+          current: job.current,
+          elapsed: job.completedAt ? job.completedAt - job.startedAt : Date.now() - job.startedAt,
+          error: job.error,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
+
   /**
    * POST /api/credit-oracle/fetch-proof
    * Fetches Attestcoin proof for an Ethereum Mainnet tx WITHOUT submitting to CC3.

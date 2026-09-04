@@ -259,7 +259,7 @@ export default function KycVerificationPage() {
     const topEvent = discoveredEvents[0]
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
     try {
-      // Step 1: Request EIP-191 packed hash wallet signature
+      // Step 1: Request MetaMask signature
       setProofStep(1)
       let signature = "0x"
       let signatureValid = false
@@ -302,14 +302,13 @@ export default function KycVerificationPage() {
       }
 
       if (!signatureValid) {
-        // No valid signature — cannot prove on-chain. User must sign to proceed.
         console.log("[KYC] No valid signature — proof requires MetaMask authorization")
         setErrorMessage("Wallet signature is required to generate an on-chain credit proof. Please click 'Sign & Prove' and approve the MetaMask request.")
         setIsProvingOnCC3(false)
         return
       }
 
-      // Step 2: Submit proof to backend (generates Merkle proof + submits to CC3)
+      // Step 2: Submit proof to backend
       setProofStep(2)
       const progressTimer = setInterval(() => {
         setProofStep((prev) => (prev < 4 ? prev + 1 : prev))
@@ -346,7 +345,6 @@ export default function KycVerificationPage() {
       setCreditVerified(true)
     } catch (err: any) {
       console.warn("[KYC] Proof submission failed:", err.message)
-      // Do NOT mark as verified — user must retry proof submission
       setErrorMessage(`Proof submission failed: ${err.message}. Please click 'Sign & Prove' to retry.`)
       setCreditVerified(false)
     } finally {

@@ -281,10 +281,14 @@ export default function SagDetailPage() {
 
   const handleInvest = async () => {
     if (!sag || !investAmount || ethPrice <= 0) return
+    const usdAmount = Number(investAmount)
+    if (usdAmount < minInvestment) {
+      setDepositError(`Minimum investment is $${minInvestment}. You entered $${usdAmount}.`)
+      return
+    }
     setProcessing(true)
     setDepositError('')
     try {
-      const usdAmount = Number(investAmount)
       const ethAmount = usdAmount / ethPrice
       const weiAmount = ethers.parseEther(ethAmount.toFixed(18))
 
@@ -800,7 +804,7 @@ export default function SagDetailPage() {
                 <Button variant="outline" onClick={() => { setShowInvestModal(false); setInvestAmount(''); setDepositError(''); }} disabled={processing}>Cancel</Button>
                 <Button
                   onClick={handleInvest}
-                  disabled={processing || !investAmount || ethPrice <= 0}
+                  disabled={processing || !investAmount || ethPrice <= 0 || Number(investAmount) < minInvestment}
                   className="rounded-xl gap-2 bg-[#171414] text-[#E1BAC2] hover:bg-black"
                 >
                   {processing ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</> : <><Send className="h-4 w-4" /> Invest</>}
