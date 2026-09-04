@@ -44,7 +44,7 @@ const sidebarItems = [
   },
   {
     title: "Pawnshops",
-    href: "/admin/kyc",
+    href: "/admin/pawnshops",
     icon: Store,
   },
   {
