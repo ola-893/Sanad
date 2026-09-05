@@ -25,10 +25,6 @@ import {
   XCircle,
   ExternalLink,
 } from "lucide-react"
-import {
-  SANAD_CREDIT_ORACLE_ADDRESS,
-  SUPPORTED_ETHEREUM_PROTOCOLS,
-} from "@/core/credit-bureau/sanad-credit-oracle"
 import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset, AddressSecurityInfo } from "@/core/credit-bureau/types"
 
 interface KYCVerificationProps {
@@ -42,6 +38,16 @@ const idTypes = {
 } as const
 
 type IdType = keyof typeof idTypes
+
+type AutoProveStatus = {
+  status?: "discovering" | "proving" | "completed" | "error" | "idle"
+  eventsFound?: number
+  eventsProven?: number
+  eventsFailed?: number
+  total?: number
+  current?: number
+  error?: string
+}
 
 const PRESETS: BorrowerPreset[] = [
   {
@@ -106,6 +112,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
   const [proofError, setProofError] = useState<string | null>(null)
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [onChainProfile, setOnChainProfile] = useState<OnChainCreditProfile | null>(null)
+  const [autoProveStatus, setAutoProveStatus] = useState<AutoProveStatus | null>(null)
 
   useEffect(() => {
     if (localStorage.getItem("--step-1-completed") === "true") {
@@ -130,6 +137,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
     setProofError(null)
     setCreditVerified(false)
     setOnChainProfile(null)
+    setAutoProveStatus(null)
     setSecurityInfo(null)
     setScanMessage(null)
 
@@ -163,57 +171,82 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
     if (discoveredEvents.length === 0) return
     setIsProvingOnCC3(true)
     setProofError(null)
-
-    const topEvent = discoveredEvents[0]
+    setAutoProveStatus({
+      status: "discovering",
+      eventsFound: discoveredEvents.length,
+      total: discoveredEvents.length,
+      current: 0,
+      eventsProven: 0,
+      eventsFailed: 0,
+    })
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 
     try {
-      const res = await fetch(`${apiUrl}/api/v1/credit-oracle/prove-event`, {
+      const startResponse = await fetch(`${apiUrl}/api/v1/credit-oracle/auto-prove-all`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: walletAddress,
-          event: topEvent,
-        }),
+        body: JSON.stringify({ address: walletAddress }),
       })
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null)
-        const errMsg = errJson?.message || errJson?.error || `Oracle proof submission failed (HTTP ${res.status})`
-        setProofError(errMsg)
-        setCreditVerified(false)
-        return
+      if (!startResponse.ok) {
+        const errJson = await startResponse.json().catch(() => null)
+        throw new Error(errJson?.message || errJson?.error || `Could not start automatic proof (HTTP ${startResponse.status})`)
       }
 
-      const json = await res.json()
-      if (!json.success || !json.data) {
-        setProofError(json.message || json.error || "Oracle returned an unsuccessful proof response")
-        setCreditVerified(false)
-        return
+      const MAX_POLL_ATTEMPTS = 120
+      const POLL_INTERVAL_MS = 3000
+      let completedStatus: AutoProveStatus | null = null
+
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, POLL_INTERVAL_MS))
+
+        const statusResponse = await fetch(
+          `${apiUrl}/api/v1/credit-oracle/auto-prove-status/${walletAddress}`,
+          { cache: "no-store" },
+        )
+        if (!statusResponse.ok) {
+          const errJson = await statusResponse.json().catch(() => null)
+          throw new Error(errJson?.message || errJson?.error || `Could not read automatic-proof status (HTTP ${statusResponse.status})`)
+        }
+
+        const statusJson = await statusResponse.json()
+        const status = (statusJson?.data || {}) as AutoProveStatus
+        setAutoProveStatus(status)
+
+        if (status.status === "error") {
+          throw new Error(status.error || "Automatic proof failed")
+        }
+        if (status.status === "idle") {
+          throw new Error("The automatic proof job is no longer available. Please try again.")
+        }
+        if (status.status === "completed") {
+          completedStatus = status
+          break
+        }
       }
 
-      const data = json.data
-      // Strict validation of real on-chain returned profile metrics (no hardcoded literal fallbacks)
-      if (typeof data.score !== "number" || !data.tier) {
-        setProofError("Creditcoin Oracle returned incomplete profile metrics")
-        setCreditVerified(false)
-        return
+      if (!completedStatus) {
+        throw new Error("Automatic proof timed out. Please try again.")
+      }
+      if ((completedStatus.eventsFailed || 0) > 0 && (completedStatus.eventsProven || 0) === 0) {
+        throw new Error(completedStatus.error || "No newly discovered DeFi events could be proven.")
       }
 
-      setOnChainProfile({
-        borrower: walletAddress,
-        score: data.score,
-        tier: data.tier,
-        totalRepaidUSD: data.totalRepaidUSD != null ? String(data.totalRepaidUSD) : "0",
-        totalLiquidatedUSD: data.totalLiquidatedUSD != null ? String(data.totalLiquidatedUSD) : "0",
-        totalDefaultedUSD: data.totalDefaultedUSD != null ? String(data.totalDefaultedUSD) : "0",
-        cleanRepaymentCount: Number(data.cleanRepaymentCount ?? 1),
-        liquidationCount: Number(data.liquidationCount ?? 0),
-        defaultCount: Number(data.defaultCount ?? 0),
-        provenEventsCount: Number(data.provenEventsCount ?? 1),
-        lastEvaluatedTimestamp: Math.floor(Date.now() / 1000),
-        provenEvents: [topEvent],
+      const profileResponse = await fetch(`${apiUrl}/api/v1/credit-oracle/profile/${walletAddress}`, {
+        cache: "no-store",
       })
+      if (!profileResponse.ok) {
+        const errJson = await profileResponse.json().catch(() => null)
+        throw new Error(errJson?.message || errJson?.error || "Proof completed, but the updated credit profile could not be read.")
+      }
+
+      const profileJson = await profileResponse.json()
+      const profile = profileJson?.data as OnChainCreditProfile | undefined
+      // Only use the profile returned by the oracle; do not manufacture client-side credit values.
+      if (!profile || typeof profile.score !== "number" || !profile.tier) {
+        throw new Error("Creditcoin Oracle returned incomplete profile metrics")
+      }
+
+      setOnChainProfile(profile)
       setCreditVerified(true)
     } catch (err: any) {
       console.error("Proof error:", err)
@@ -361,6 +394,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
                       setWalletAddress(p.address)
                       setCreditVerified(false)
                       setProofError(null)
+                      setAutoProveStatus(null)
                       handleScanDeFi(p.address)
                     }}
                     className={`p-3 rounded-xl text-left border transition-all ${
@@ -385,6 +419,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
                 setWalletAddress(e.target.value)
                 setCreditVerified(false)
                 setProofError(null)
+                setAutoProveStatus(null)
               }}
               placeholder="0x..."
               className="font-mono text-xs"
@@ -488,24 +523,32 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
 
           {/* Verification CTA / Result */}
           {!creditVerified ? (
-            <Button
-              type="button"
-              onClick={handleProveCredit}
-              disabled={isProvingOnCC3 || discoveredEvents.length === 0 || !!securityInfo?.isFlagged}
-              className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black py-5 disabled:opacity-40"
-            >
-              {isProvingOnCC3 ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting Attestcoin Proof to Creditcoin CC3...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  {securityInfo?.isFlagged ? "Verification Blocked for Flagged Address" : "Verify On-Chain Credit Profile on Creditcoin"}
-                </span>
+            <div className="space-y-2">
+              <Button
+                type="button"
+                onClick={handleProveCredit}
+                disabled={isProvingOnCC3 || discoveredEvents.length === 0 || !!securityInfo?.isFlagged}
+                className="w-full rounded-full bg-[#171414] font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#E1BAC2] hover:bg-black py-5 disabled:opacity-40"
+              >
+                {isProvingOnCC3 ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Auto-proving {autoProveStatus?.eventsProven || 0}/{autoProveStatus?.total || autoProveStatus?.eventsFound || discoveredEvents.length} events on Creditcoin CC3...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    {securityInfo?.isFlagged ? "Verification Blocked for Flagged Address" : "Auto-Prove All DeFi Events on Creditcoin"}
+                  </span>
+                )}
+              </Button>
+              {isProvingOnCC3 && autoProveStatus && (
+                <p className="text-center text-[10px] font-mono text-muted-foreground" aria-live="polite">
+                  {autoProveStatus.status === "discovering" ? "Preparing the batch…" : "Waiting for the CC3 batch transaction…"}
+                  {` ${autoProveStatus.eventsProven || 0} proven · ${autoProveStatus.eventsFailed || 0} failed`}
+                </p>
               )}
-            </Button>
+            </div>
           ) : (
             <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-1.5 text-xs animate-in fade-in duration-200">
               <div className="flex items-center justify-between font-bold text-emerald-800">

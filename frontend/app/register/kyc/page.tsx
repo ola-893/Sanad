@@ -33,14 +33,8 @@ import {
 } from "lucide-react"
 import apiInstance from "@/lib/axios-v1"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
-import {
-  SANAD_CREDIT_ORACLE_ADDRESS,
-  ATTESTCOIN_PRECOMPILES,
-  SUPPORTED_ETHEREUM_PROTOCOLS,
-  CREDITCOIN_EXPLORER_URL,
-} from "@/core/credit-bureau/sanad-credit-oracle"
+import { CREDITCOIN_EXPLORER_URL } from "@/core/credit-bureau/sanad-credit-oracle"
 import { DeFiEvent, DiscoverySummary, OnChainCreditProfile, BorrowerPreset } from "@/core/credit-bureau/types"
-import { ethers } from "ethers"
 
 const glass = "glass-panel rounded-3xl border border-[#171414]/15 bg-white/60 shadow-soft-editorial"
 
@@ -51,6 +45,16 @@ const idTypes = {
 } as const
 
 type IdType = keyof typeof idTypes
+
+type AutoProveStatus = {
+  status?: "discovering" | "proving" | "completed" | "error" | "idle"
+  eventsFound?: number
+  eventsProven?: number
+  eventsFailed?: number
+  total?: number
+  current?: number
+  error?: string
+}
 
 const PRESET_KYC_PROFILES: BorrowerPreset[] = [
   {
@@ -127,6 +131,7 @@ export default function KycVerificationPage() {
   const [onChainProfile, setOnChainProfile] = useState<OnChainCreditProfile | null>(null)
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [proofTxHash, setProofTxHash] = useState<string | null>(null)
+  const [autoProveStatus, setAutoProveStatus] = useState<AutoProveStatus | null>(null)
   const [noHistoryMessage, setNoHistoryMessage] = useState<string | null>(null)
   const [provingAttempted, setProvingAttempted] = useState<boolean>(false)
 
@@ -174,6 +179,7 @@ export default function KycVerificationPage() {
     setCreditVerified(false)
     setOnChainProfile(null)
     setProofTxHash(null)
+    setAutoProveStatus(null)
     setProvingAttempted(false)
     handleScanDeFiHistory(preset.address)
   }
@@ -256,96 +262,88 @@ export default function KycVerificationPage() {
     setIsProvingOnCC3(true)
     setErrorMessage(null)
     setProofStep(1)
-    const topEvent = discoveredEvents[0]
+    setAutoProveStatus({
+      status: "discovering",
+      eventsFound: discoveredEvents.length,
+      total: discoveredEvents.length,
+      current: 0,
+      eventsProven: 0,
+      eventsFailed: 0,
+    })
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
     try {
-      // Step 1: Request MetaMask signature
-      setProofStep(1)
-      let signature = "0x"
-      let signatureValid = false
-      if (typeof window !== "undefined" && (window as any).ethereum) {
-        try {
-          const accounts = await (window as any).ethereum.request({ method: "eth_accounts" })
-          if (accounts && accounts.length > 0 && accounts[0].toLowerCase() === walletAddress.toLowerCase()) {
-            const cc3RpcUrl = process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || "https://rpc.cc3-testnet.creditcoin.network"
-            const cc3Provider = new ethers.JsonRpcProvider(cc3RpcUrl, 102031, {
-              staticNetwork: ethers.Network.from(102031),
-            })
-            const oracleContract = new ethers.Contract(
-              SANAD_CREDIT_ORACLE_ADDRESS,
-              ["function nonces(address) external view returns (uint256)"],
-              cc3Provider
-            )
-            let currentNonce = BigInt(0)
-            try {
-              currentNonce = await oracleContract.nonces(walletAddress)
-            } catch (nonceErr) {
-              console.warn("[KYC] Could not read on-chain nonce, defaulting to 0:", nonceErr)
-            }
-
-            const innerHash = ethers.solidityPackedKeccak256(
-              ["address", "address", "uint256", "uint256"],
-              [walletAddress, SANAD_CREDIT_ORACLE_ADDRESS, 102031, currentNonce]
-            )
-
-            const browserProvider = new ethers.BrowserProvider((window as any).ethereum)
-            const signer = await browserProvider.getSigner()
-            signature = await signer.signMessage(ethers.getBytes(innerHash))
-            signatureValid = signature.length === 132
-            if (!signatureValid) console.warn("[KYC] Invalid signature length:", signature.length)
-          } else {
-            console.warn("[KYC] No matching MetaMask account for", walletAddress)
-          }
-        } catch (sigErr: any) {
-          console.warn("[KYC] Signature rejected or skipped:", sigErr.message)
-        }
-      }
-
-      if (!signatureValid) {
-        console.log("[KYC] No valid signature — proof requires MetaMask authorization")
-        setErrorMessage("Wallet signature is required to generate an on-chain credit proof. Please click 'Sign & Prove' and approve the MetaMask request.")
-        setIsProvingOnCC3(false)
-        return
-      }
-
-      // Step 2: Submit proof to backend
-      setProofStep(2)
-      const progressTimer = setInterval(() => {
-        setProofStep((prev) => (prev < 4 ? prev + 1 : prev))
-      }, 5000)
-
-      const res = await fetch(`${apiUrl}/api/v1/credit-oracle/prove-event`, {
+      const startResponse = await fetch(`${apiUrl}/api/v1/credit-oracle/auto-prove-all`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: walletAddress, event: topEvent, signature }),
+        body: JSON.stringify({ address: walletAddress }),
       })
-      clearInterval(progressTimer)
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}))
-        throw new Error(errJson.message || `Proof submission failed (${res.status})`)
+      if (!startResponse.ok) {
+        const errJson = await startResponse.json().catch(() => ({}))
+        throw new Error(errJson.message || `Could not start automatic proof (${startResponse.status})`)
       }
-      const json = await res.json()
-      setProofTxHash(json.data.transactionHash)
 
-      // Step 3: Fetch on-chain profile
-      setProofStep(4)
+      const MAX_POLL_ATTEMPTS = 120
+      const POLL_INTERVAL_MS = 3000
+      let completedStatus: AutoProveStatus | null = null
+
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, POLL_INTERVAL_MS))
+
+        const statusResponse = await fetch(
+          `${apiUrl}/api/v1/credit-oracle/auto-prove-status/${walletAddress}`,
+          { cache: "no-store" },
+        )
+        if (!statusResponse.ok) {
+          const errJson = await statusResponse.json().catch(() => ({}))
+          throw new Error(errJson.message || `Could not read proof status (${statusResponse.status})`)
+        }
+
+        const statusJson = await statusResponse.json()
+        const status = (statusJson?.data || {}) as AutoProveStatus
+        setAutoProveStatus(status)
+
+        if (status.status === "error") {
+          throw new Error(status.error || "Automatic proof failed")
+        }
+        if (status.status === "idle") {
+          throw new Error("The automatic proof job is no longer available. Please try again.")
+        }
+        if (status.status === "completed") {
+          completedStatus = status
+          break
+        }
+
+        setProofStep(status.status === "proving" ? 2 : 1)
+      }
+
+      if (!completedStatus) {
+        throw new Error("Automatic proof timed out. Please try again.")
+      }
+      if ((completedStatus.eventsFailed || 0) > 0 && (completedStatus.eventsProven || 0) === 0) {
+        throw new Error(completedStatus.error || "No newly discovered DeFi events could be proven.")
+      }
+
+      // The batch transaction has completed; read the authoritative on-chain profile once.
+      setProofStep(3)
       const profileRes = await fetch(`${apiUrl}/api/v1/credit-oracle/profile/${walletAddress}`)
       if (profileRes.ok) {
         const profileJson = await profileRes.json()
-        setOnChainProfile(profileJson.data)
+        const profile = profileJson.data as OnChainCreditProfile
+        setOnChainProfile(profile)
+        const discoveredHashes = new Set(discoveredEvents.map((event) => event.sourceTxHash.toLowerCase()))
+        const batchTxHash = profile.provenEvents?.find((event: any) =>
+          discoveredHashes.has(String(event.sourceTxHash || "").toLowerCase()) && event.cc3TxHash,
+        )?.cc3TxHash
+        setProofTxHash(batchTxHash || null)
+        setProofStep(4)
       } else {
-        setOnChainProfile({
-          borrower: walletAddress, score: json.data.score || 845, tier: json.data.tier || "Gold",
-          totalRepaidUSD: json.data.totalRepaidUSD || "37500", totalLiquidatedUSD: "0", totalDefaultedUSD: "0",
-          cleanRepaymentCount: 2, liquidationCount: 0, defaultCount: 0, provenEventsCount: 1,
-          lastEvaluatedTimestamp: Math.floor(Date.now() / 1000), provenEvents: [topEvent],
-        })
+        const errJson = await profileRes.json().catch(() => ({}))
+        throw new Error(errJson.message || "Proof completed, but the updated credit profile could not be read.")
       }
       setCreditVerified(true)
     } catch (err: any) {
-      console.warn("[KYC] Proof submission failed:", err.message)
-      setErrorMessage(`Proof submission failed: ${err.message}. Please click 'Sign & Prove' to retry.`)
+      console.warn("[KYC] Automatic proof failed:", err.message)
+      setErrorMessage(`Automatic proof failed: ${err.message}. Please try again.`)
       setCreditVerified(false)
     } finally {
       setIsProvingOnCC3(false)
@@ -828,15 +826,19 @@ export default function KycVerificationPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
                       <div>
-                        <p className="text-sm font-medium text-[#171414]">Generating Attestcoin proof...</p>
-                        <p className="text-xs text-muted-foreground">Cryptographic verification on Creditcoin CC3</p>
+                        <p className="text-sm font-medium text-[#171414]">Auto-proving DeFi history...</p>
+                        <p className="text-xs text-muted-foreground">
+                          {autoProveStatus
+                            ? `${autoProveStatus.eventsProven || 0} proven · ${autoProveStatus.eventsFailed || 0} failed · ${autoProveStatus.current || 0}/${autoProveStatus.total || autoProveStatus.eventsFound || discoveredEvents.length} processed`
+                            : "Cryptographic verification on Creditcoin CC3"}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-2.5">
                       {[
-                        "Requesting EIP-191 wallet signature",
-                        "Generating Merkle inclusion proof via Attestcoin",
-                        "Executing BlockProver precompile (0xFD2) on CC3",
+                        "Discovering and filtering unproven DeFi events",
+                        "Generating a shared Attestcoin batch proof",
+                        "Submitting the batch to the BlockProver precompile on CC3",
                         "Reading on-chain credit profile from SanadCreditOracle",
                       ].map((msg, i) => {
                         const isDone = proofStep > i + 1
@@ -857,7 +859,7 @@ export default function KycVerificationPage() {
                   </div>
                 )}
 
-                {/* Discovered records + Sign & Prove button */}
+                {/* Discovered records + automatic batch-proof button */}
                 {!isScanningDeFi && discoveredEvents.length > 0 && !creditVerified && (
                   <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4 space-y-3">
                     <div className="flex items-center justify-between mb-2">
@@ -891,9 +893,9 @@ export default function KycVerificationPage() {
                       className="w-full rounded-xl bg-[#171414] text-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-black"
                     >
                       {isProvingOnCC3 ? (
-                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Proving on CC3...</>
+                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Auto-proving on CC3...</>
                       ) : (
-                        <><Shield className="h-3.5 w-3.5 mr-1.5" /> Sign & Prove on CC3</>
+                        <><Shield className="h-3.5 w-3.5 mr-1.5" /> Auto-Prove All on CC3</>
                       )}
                     </Button>
                   </div>

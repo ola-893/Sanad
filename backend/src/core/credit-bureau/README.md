@@ -14,14 +14,19 @@ The **Sanad On-Chain Credit Bureau** is the primary core component for vetting b
    - Requests Merkle inclusion proofs and continuity proofs for Ethereum Mainnet transactions (`chainKey: 3`).
    - Packages proof tuples and submits them to the `SanadCreditOracle` smart contract on Creditcoin CC3.
 
-3. **On-Chain Credit Oracle (`SanadCreditOracle.sol` at `0x74357E5FED91D6dDdd39847304b8651634693A00`):**
+3. **On-Chain Credit Oracle (addressed by `DEPLOYED_ADDRESSES.cc3.creditOracle`):**
    - Cryptographically verifies external Ethereum transactions using CC3 native `BlockProver` precompile (`0x0000000000000000000000000000000000000FD2`) and queries `ChainInfo` precompile (`0x0000000000000000000000000000000000000fD3`).
    - Maintains on-chain credit profiles, trust scores (0-1000), and credit tiers (Gold, Silver, Bronze, HighRisk).
    - Provides replay protection (`provenTxHashes`) to prevent double-counting historical events.
-   - Enforces borrower authorization via EIP-191 signatures.
+   - Uses EIP-191 borrower authorization for direct relayer submissions. The KYC
+     `auto-prove-all` path instead uses the configured oracle-owner signer and
+     `submitBatchProof`, so it submits one shared proof batch without requesting
+     a borrower MetaMask signature.
 
 4. **REST API (`credit-oracle.controller.ts`, `credit-oracle.routes.ts`):**
    - `POST /api/v1/credit-oracle/discover`: Scans Ethereum DeFi history for any address.
    - `POST /api/v1/credit-oracle/prove-event`: Generates Attestcoin proof and writes credit record to CC3.
+   - `POST /api/v1/credit-oracle/auto-prove-all`: Discovers unproven history and
+     submits each source-chain group as an owner-authorized batch (up to 10 events).
    - `GET /api/v1/credit-oracle/profile/:address`: Reads on-chain credit profile from CC3.
    - `GET /api/v1/credit-oracle/info`: Returns precompile addresses and oracle metadata.
