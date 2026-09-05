@@ -26,6 +26,7 @@ export interface OracleSubmissionResult {
 export const SANAD_CREDIT_ORACLE_ABI = [
   'function submitSingleProof(uint64 chainKey, uint64 height, bytes calldata encodedTransaction, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings) calldata merkleProof, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) calldata continuityProof, address borrower, tuple(bytes32 sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp) calldata eventData, bytes calldata borrowerSignature) external returns (bool)',
   'function submitBatchProof(uint64 chainKey, uint64[] calldata heights, bytes[] calldata encodedTransactions, tuple(bytes32 root, tuple(bytes32 hash, bool isLeft)[] siblings)[] calldata merkleProofs, tuple(bytes32 lowerEndpointDigest, bytes32[] roots) calldata sharedContinuityProof, address borrower, tuple(bytes32 sourceTxHash, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp)[] calldata eventsData, bytes calldata borrowerSignature) external returns (bool)',
+  'function owner() external view returns (address)',
   'function getCreditProfile(address borrower) external view returns (tuple(address borrower, uint256 score, uint8 tier, uint256 totalRepaidUSD, uint256 totalLiquidatedUSD, uint256 totalDefaultedUSD, uint256 totalBorrowedUSD, uint32 cleanRepaymentCount, uint32 liquidationCount, uint32 defaultCount, uint32 activeBorrowCount, uint32 collateralSupplyCount, uint64 lastEvaluatedTimestamp, uint32 provenEventsCount))',
   'function getProvenEvents(address borrower) external view returns (tuple(bytes32 sourceTxHash, uint64 blockHeight, uint8 protocol, uint8 eventType, uint256 volumeUSD, uint64 timestamp)[])',
   'function isTxProven(bytes32 txHash) external view returns (bool)',
@@ -59,16 +60,23 @@ export class AttestcoinOracleRelayerService {
       staticNetwork: ethers.Network.from(102031),
     });
 
-    const privateKey = process.env.PRIVATE_KEY || process.env.CREDITCOIN_PRIVATE_KEY;
+    const privateKey =
+      process.env.PRIVATE_KEY ||
+      process.env.CREDITCOIN_PRIVATE_KEY ||
+      process.env.CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY ||
+      process.env.SANAD_CREDIT_ORACLE_OWNER_PRIVATE_KEY;
     if (!privateKey) {
-      throw new Error('PRIVATE_KEY or CREDITCOIN_PRIVATE_KEY environment variable is required');
+      throw new Error('A Creditcoin relayer or oracle-owner private key environment variable is required');
     }
     this.signer = new ethers.Wallet(privateKey, this.cc3Provider);
 
     // Deployed SanadCreditOracle address
     this.oracleContractAddress = process.env.SANAD_CREDIT_ORACLE_ADDRESS || CREDITCOIN_CONFIG.contracts.creditOracleAddress || DEPLOYED_ADDRESSES.cc3.creditOracle;
     this.proofApiUrl = process.env.CREDITCOIN_PROOF_BUILDER_URL || CREDITCOIN_CONFIG.proofBuilderUrl || 'https://prover.cc3-testnet.creditcoin.network';
-    this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || 1; // 1 = Sepolia, 3 = Mainnet (default Sepolia for testnet demo)
+    // The credit-history discovery service indexes Ethereum Mainnet DeFi activity.
+    // Keep SOURCE_CHAIN_KEY configurable for isolated testnet demos, but default to
+    // the configured mainnet key instead of silently using the Sepolia key.
+    this.sourceChainKey = Number(process.env.SOURCE_CHAIN_KEY) || CREDITCOIN_CONFIG.sourceChainKey;
   }
 
   public getOracleAddress(): string {
@@ -124,6 +132,51 @@ export class AttestcoinOracleRelayerService {
 
   private getContract(): ethers.Contract {
     return new ethers.Contract(this.oracleContractAddress, SANAD_CREDIT_ORACLE_ABI, this.signer);
+  }
+
+  /**
+   * Resolves the signing wallet reserved for owner-authorized credit-history batches.
+   *
+   * This is deliberately separate from the generic relayer signer: the deployed
+   * oracle accepts an empty borrower signature only when msg.sender is owner().
+   * The on-chain owner check below prevents a misconfigured relayer key from
+   * turning an authorization problem into an opaque contract revert.
+   */
+  private getOracleOwnerSigner(): ethers.Wallet {
+    const ownerPrivateKey =
+      process.env.CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY ||
+      process.env.SANAD_CREDIT_ORACLE_OWNER_PRIVATE_KEY ||
+      process.env.CREDITCOIN_DEPLOYER_PRIVATE_KEY ||
+      process.env.CREDITCOIN_ADMIN_PRIVATE_KEY ||
+      process.env.CREDITCOIN_PRIVATE_KEY ||
+      process.env.PRIVATE_KEY;
+
+    if (!ownerPrivateKey) {
+      throw new Error(
+        'CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY is required to auto-prove DeFi history. ' +
+        'Configure the private key for the SanadCreditOracle owner, not the relayer wallet.'
+      );
+    }
+
+    return new ethers.Wallet(ownerPrivateKey, this.cc3Provider);
+  }
+
+  private async getOwnerAuthorizedOracleContract(): Promise<ethers.Contract> {
+    const ownerSigner = this.getOracleOwnerSigner();
+    const contract = new ethers.Contract(this.oracleContractAddress, SANAD_CREDIT_ORACLE_ABI, ownerSigner);
+    const [configuredOwner, signerAddress] = await Promise.all([
+      contract.owner(),
+      ownerSigner.getAddress(),
+    ]);
+
+    if (configuredOwner.toLowerCase() !== signerAddress.toLowerCase()) {
+      throw new Error(
+        `Configured credit-oracle batch signer ${signerAddress} is not SanadCreditOracle owner ${configuredOwner}. ` +
+        'Set CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY to the deployed oracle owner key.'
+      );
+    }
+
+    return contract;
   }
 
   private async resolveSourceBlockHeight(sourceTxHash: string, chainKey: number): Promise<number | undefined> {
@@ -306,6 +359,183 @@ export class AttestcoinOracleRelayerService {
       return {
         success: false,
         error: err.message || 'Failed to submit Attestcoin proof to Creditcoin',
+      };
+    }
+  }
+
+  /**
+   * Prove up to ten discovered DeFi events in one owner-authorized CC3 transaction.
+   *
+   * The ProofBuilder batch endpoint produces the one shared continuity proof that
+   * SanadCreditOracle.submitBatchProof expects. The contract owner bypasses the
+   * borrower-signature requirement, so the KYC flow never needs to request a
+   * MetaMask signature for historical, already-indexed activity.
+   */
+  public async proveAndRecordEventsBatch(
+    borrowerAddress: string,
+    events: DiscoveredDeFiEvent[],
+    sourceChainKey: number = this.sourceChainKey,
+  ): Promise<OracleSubmissionResult> {
+    try {
+      if (!ethers.isAddress(borrowerAddress)) {
+        throw new Error('A valid borrower address is required for batch proof submission');
+      }
+      if (events.length === 0) {
+        throw new Error('At least one DeFi event is required for batch proof submission');
+      }
+      if (events.length > 10) {
+        throw new Error('SanadCreditOracle supports at most 10 DeFi events per batch');
+      }
+      if (events.some((event) => event.sourceChainKey !== undefined && event.sourceChainKey !== sourceChainKey)) {
+        throw new Error('A batch proof can only contain events from one Attestcoin source chain');
+      }
+
+      const requestedHashes = events.map((event) => ethers.hexlify(event.sourceTxHash));
+      if (new Set(requestedHashes.map((hash) => hash.toLowerCase())).size !== requestedHashes.length) {
+        throw new Error('Batch proof events must have unique source transaction hashes');
+      }
+
+      // Fail fast on a key/configuration mistake before spending time asking the
+      // proof service to construct a batch that cannot be submitted.
+      const ownerContract = await this.getOwnerAuthorizedOracleContract();
+      const proofBuilder = new proofProvider.service.ProofBuilder(sourceChainKey, this.proofApiUrl);
+      console.log(`[AttestcoinRelayer] Requesting one shared Attestcoin proof for ${events.length} DeFi events on chain ${sourceChainKey}...`);
+
+      // Historical events are normally already indexed, so avoid an unnecessary
+      // wait. If the first request is not ready, wait only once for the highest
+      // required block and retry the batch as a whole.
+      let proofResult = await proofBuilder.getBatchProof(requestedHashes);
+      if (!proofResult.success || !proofResult.data) {
+        const resolvedHeights = await Promise.all(events.map(async (event) => {
+          if (Number.isSafeInteger(event.blockHeight) && event.blockHeight > 0) {
+            return event.blockHeight;
+          }
+          return this.resolveSourceBlockHeight(event.sourceTxHash, sourceChainKey);
+        }));
+        const highestHeight = Math.max(...resolvedHeights.filter((height): height is number => typeof height === 'number' && height > 0));
+
+        if (!Number.isFinite(highestHeight)) {
+          throw new Error(`Batch proof is not indexed yet: ${proofResult.error || 'source block heights are unavailable'}`);
+        }
+
+        console.log(`[AttestcoinRelayer] Batch proof not ready; waiting up to 60 seconds for block #${highestHeight}...`);
+        await proofBuilder.waitUntilHeightAttested(sourceChainKey, highestHeight, 5000, 60000, 2000);
+        proofResult = await proofBuilder.getBatchProof(requestedHashes);
+      }
+
+      if (!proofResult.success || !proofResult.data) {
+        throw new Error(`Failed to generate Attestcoin batch proof: ${proofResult.error || 'Proof not available'}`);
+      }
+
+      const proofData = proofResult.data;
+      if (Number(proofData.chainKey) !== sourceChainKey) {
+        throw new Error(`Proof builder returned chain key ${proofData.chainKey}, expected ${sourceChainKey}`);
+      }
+
+      // The SDK returns a height -> tx-index -> proof map. Flatten it in that
+      // order (as required by its batch verifier), then attach each matching
+      // event payload by hash so all calldata arrays remain perfectly aligned.
+      const eventsByHash = new Map(events.map((event) => [ethers.hexlify(event.sourceTxHash).toLowerCase(), event]));
+      const orderedProofs: Array<{
+        event: DiscoveredDeFiEvent;
+        sourceTxHash: string;
+        proof: {
+          height: number;
+          txBytes: string;
+          merkleProof: { root: string; siblings: { hash: string; isLeft: boolean }[] };
+        };
+      }> = [];
+      for (const [height, proofsAtHeight] of proofData.merkleProofs.entries()) {
+        for (const proofEntry of proofsAtHeight.values()) {
+          const sourceTxHash = ethers.hexlify(proofEntry.txHash);
+          const event = eventsByHash.get(sourceTxHash.toLowerCase());
+          if (!event) {
+            throw new Error(`Batch proof response contains an unexpected source transaction ${sourceTxHash}`);
+          }
+          orderedProofs.push({
+            event,
+            sourceTxHash,
+            proof: {
+              height,
+              txBytes: proofEntry.txBytes,
+              merkleProof: proofEntry.merkleProof,
+            },
+          });
+        }
+      }
+
+      const returnedHashes = new Set(orderedProofs.map(({ sourceTxHash }) => sourceTxHash.toLowerCase()));
+      if (orderedProofs.length !== events.length || returnedHashes.size !== events.length) {
+        const missingHash = requestedHashes.find((hash) => !returnedHashes.has(hash.toLowerCase()));
+        throw new Error(`Batch proof response is missing source transaction ${missingHash || 'data'}`);
+      }
+
+      const eventsData = orderedProofs.map(({ event, sourceTxHash }) => ({
+        sourceTxHash,
+        protocol: event.protocol,
+        eventType: event.eventType,
+        volumeUSD: ethers.parseUnits(event.volumeUSD.toString(), 6),
+        timestamp: event.timestamp,
+      }));
+
+      console.log(`[AttestcoinRelayer] Submitting ${events.length}-event owner-authorized batch to SanadCreditOracle (${this.oracleContractAddress})...`);
+      const tx = await ownerContract.submitBatchProof(
+        proofData.chainKey,
+        orderedProofs.map(({ proof }) => proof.height),
+        orderedProofs.map(({ proof }) => proof.txBytes),
+        orderedProofs.map(({ proof }) => proof.merkleProof),
+        proofData.continuityProof,
+        borrowerAddress,
+        eventsData,
+        '0x', // owner() caller bypasses borrower signature validation on the deployed oracle
+      );
+
+      console.log(`[AttestcoinRelayer] Broadcast batch proof ${tx.hash}. Awaiting confirmation...`);
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error(`Batch proof transaction ${tx.hash} was not confirmed`);
+      }
+
+      // Keep the local source-tx -> CC3-tx index in sync. All events in a batch
+      // intentionally point to the same CC3 transaction hash.
+      try {
+        await Promise.all(orderedProofs.map(async ({ event, sourceTxHash, proof }) => {
+          await db.insert(ProvenEvents).values({
+            id: sourceTxHash,
+            borrowerAddress,
+            sourceTxHash,
+            cc3TxHash: receipt.hash,
+            blockHeight: proof.height,
+            protocol: event.protocol,
+            eventType: event.eventType,
+            volumeUsd: event.volumeUSD.toString(),
+            timestamp: event.timestamp || 0,
+            chainKey: sourceChainKey,
+          }).onConflictDoNothing();
+        }));
+      } catch (dbErr: any) {
+        // The chain proof remains authoritative even when the optional index is
+        // temporarily unavailable; on-chain queries can rebuild it later.
+        console.warn('[AttestcoinRelayer] Failed to store one or more batch proof records in DB:', dbErr.message);
+      }
+
+      const profile = await ownerContract.getCreditProfile(borrowerAddress);
+      const tiers = ['Unscored', 'Bronze', 'Silver', 'Gold', 'HighRisk'];
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        explorerUrl: `https://creditcoin-testnet.blockscout.com/tx/${receipt.hash}`,
+        score: Number(profile.score),
+        tier: tiers[Number(profile.tier)] || 'Unscored',
+        provenEventsCount: Number(profile.provenEventsCount),
+        totalRepaidUSD: ethers.formatUnits(profile.totalRepaidUSD, 6),
+      };
+    } catch (err: any) {
+      console.error('[AttestcoinRelayer] Error in proveAndRecordEventsBatch:', err);
+      return {
+        success: false,
+        error: err.message || 'Failed to submit Attestcoin batch proof to Creditcoin',
       };
     }
   }
@@ -662,7 +892,7 @@ export class AttestcoinOracleRelayerService {
         this.signer
       );
 
-      const txBytes = proofData.txBytes || proofData.encodedTransaction;
+      const txBytes = proofData.txBytes;
 
       console.log(`[AttestcoinRelayer] Calling verifyAndFundLoanCrossChain for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndFundLoanCrossChain(
@@ -738,7 +968,7 @@ export class AttestcoinOracleRelayerService {
         this.signer
       );
 
-      const txBytes = proofData.txBytes || proofData.encodedTransaction;
+      const txBytes = proofData.txBytes;
 
       console.log(`[AttestcoinRelayer] Calling verifyAndRecordReturnDistribution for Token #${tokenId} on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndRecordReturnDistribution(

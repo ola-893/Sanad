@@ -48,6 +48,8 @@ export const EVENT_TYPE_NAMES: Record<EventType, string> = {
 
 export interface DiscoveredDeFiEvent {
   sourceTxHash: string;
+  /** Attestcoin source-chain key: 3 for Ethereum Mainnet, 1 for Sepolia. */
+  sourceChainKey?: number;
   blockHeight: number;
   protocol: Protocol;
   protocolName: string;
@@ -693,11 +695,12 @@ export class DefiDiscoveryService {
 
     // 1. Fetch wallet transactions via Blockscout API v2 (Mainnet + Sepolia)
     const CHAIN_CONFIGS = [
-      { name: 'Mainnet', blockscout: 'https://eth.blockscout.com', etherscanBase: 'https://etherscan.io', etherscanTxBase: 'https://etherscan.io/tx/' },
-      { name: 'Sepolia', blockscout: 'https://eth-sepolia.blockscout.com', etherscanBase: 'https://sepolia.etherscan.io', etherscanTxBase: 'https://sepolia.etherscan.io/tx/' },
+      { name: 'Mainnet', sourceChainKey: 3, blockscout: 'https://eth.blockscout.com', etherscanBase: 'https://etherscan.io', etherscanTxBase: 'https://etherscan.io/tx/' },
+      { name: 'Sepolia', sourceChainKey: 1, blockscout: 'https://eth-sepolia.blockscout.com', etherscanBase: 'https://sepolia.etherscan.io', etherscanTxBase: 'https://sepolia.etherscan.io/tx/' },
     ];
 
     for (const chain of CHAIN_CONFIGS) {
+    const eventStartIndex = discovered.length;
     try {
       const res = await axios.get(`${chain.blockscout}/api/v2/addresses/${walletAddress}/transactions`, { timeout: 6000 });
       const items = res.data?.items || [];
@@ -1278,6 +1281,12 @@ export class DefiDiscoveryService {
       }
     } catch (err: any) {
       console.warn(`[DefiDiscovery] Blockscout query notice for ${chain.name}: ${err.message}`);
+    }
+    // Every event generated during this iteration belongs to the same source
+    // chain. Preserve that fact for the proof layer, where a shared continuity
+    // proof and submitBatchProof can only cover one chain at a time.
+    for (let i = eventStartIndex; i < discovered.length; i++) {
+      discovered[i].sourceChainKey = chain.sourceChainKey;
     }
     } // end for chain
 

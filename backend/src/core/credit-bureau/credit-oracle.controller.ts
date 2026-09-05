@@ -1,7 +1,21 @@
 import { Request, Response } from 'express';
-import { DefiDiscoveryService } from './defi-discovery.service.js';
+import { DefiDiscoveryService, type DiscoveredDeFiEvent } from './defi-discovery.service.js';
 import { AttestcoinOracleRelayerService } from './attestcoin-oracle-relayer.service.js';
 import { CREDITCOIN_CONFIG } from '@/features/creditcoin/creditcoin.config.js';
+
+type AutoProveJob = {
+  address: string;
+  status: 'discovering' | 'proving' | 'completed' | 'error';
+  eventsFound: number;
+  eventsProven: number;
+  eventsFailed: number;
+  total: number;
+  current: number;
+  results: any[];
+  startedAt: number;
+  completedAt?: number;
+  error?: string;
+};
 
 export class CreditOracleController {
   private discoveryService: DefiDiscoveryService;
@@ -64,19 +78,7 @@ export class CreditOracleController {
   }
 
   // In-memory progress tracker for auto-prove jobs
-  private autoProveJobs = new Map<string, {
-    address: string;
-    status: 'discovering' | 'proving' | 'completed' | 'error';
-    eventsFound: number;
-    eventsProven: number;
-    eventsFailed: number;
-    total: number;
-    current: number;
-    results: any[];
-    startedAt: number;
-    completedAt?: number;
-    error?: string;
-  }>();
+  private autoProveJobs = new Map<string, AutoProveJob>();
 
   /**
    * POST /api/credit-oracle/auto-prove-all
@@ -102,7 +104,7 @@ export class CreditOracleController {
       }
 
       // Create job entry
-      const job = {
+      const job: AutoProveJob = {
         address: address.toLowerCase(),
         status: 'discovering' as const,
         eventsFound: 0,
@@ -134,7 +136,7 @@ export class CreditOracleController {
     }
   }
 
-  private async runAutoProveJob(address: string, job: any): Promise<void> {
+  private async runAutoProveJob(address: string, job: AutoProveJob): Promise<void> {
     console.log(`[CreditOracle] Auto-proving all DeFi events for ${address}`);
 
     // 1. Discover events
@@ -161,7 +163,7 @@ export class CreditOracleController {
 
     // Also check DB
     try {
-      const { ProvenEvents } = await import('@/db/schema.js');
+      const { ProvenEvents } = await import('@/features/credit-bureau/proven-events.model.js');
       const { db } = await import('@/db/index.js');
       const { eq } = await import('drizzle-orm');
       const dbEvents = await db.select().from(ProvenEvents).where(eq(ProvenEvents.borrowerAddress, address));
@@ -184,37 +186,56 @@ export class CreditOracleController {
     job.status = 'proving';
     job.total = unprovenEvents.length;
 
-    // 4. Prove each event sequentially
+    // 4. Submit shared Attestcoin proofs in source-chain batches. A single
+    // submitBatchProof call can contain up to ten events, but cannot combine
+    // Mainnet and Sepolia because its continuity proof has one chain key.
+    const eventsByChain = new Map<number, DiscoveredDeFiEvent[]>();
     for (const event of unprovenEvents) {
-      job.current++;
+      const sourceChainKey = Number(event.sourceChainKey ?? this.relayerService.sourceChainKey);
+      const chainEvents = eventsByChain.get(sourceChainKey) || [];
+      chainEvents.push(event);
+      eventsByChain.set(sourceChainKey, chainEvents);
+    }
+
+    for (const [sourceChainKey, chainEvents] of eventsByChain) {
       try {
-        console.log(`[CreditOracle] Proving event ${job.current}/${job.total}: ${event.eventType} on ${event.protocol} (${event.sourceTxHash?.slice(0, 14)}...)`);
-        const result = await this.relayerService.proveAndRecordEvent(address, event);
-        job.results.push({
-          sourceTxHash: event.sourceTxHash,
-          protocol: event.protocol,
-          eventType: event.eventType,
-          success: result.success,
-          cc3TxHash: result.transactionHash || null,
-          error: result.error || null,
-        });
+        console.log(`[CreditOracle] Batch-proving ${chainEvents.length} event(s) from source chain ${sourceChainKey} for ${address}...`);
+        const result = await this.relayerService.proveAndRecordEventsBatch(address, chainEvents, sourceChainKey);
+        job.current += chainEvents.length;
+
+        for (const event of chainEvents) {
+          job.results.push({
+            sourceTxHash: event.sourceTxHash,
+            protocol: event.protocol,
+            eventType: event.eventType,
+            success: result.success,
+            cc3TxHash: result.transactionHash || null,
+            error: result.error || null,
+          });
+        }
+
         if (result.success) {
-          job.eventsProven++;
-          console.log(`[CreditOracle] ✓ Proved ${event.eventType} — CC3: ${result.transactionHash?.slice(0, 14)}`);
+          job.eventsProven += chainEvents.length;
+          console.log(`[CreditOracle] ✓ Batch-proved ${chainEvents.length} event(s) — CC3: ${result.transactionHash?.slice(0, 14)}`);
         } else {
-          job.eventsFailed++;
-          console.warn(`[CreditOracle] ✗ Failed ${event.eventType}: ${result.error}`);
+          job.eventsFailed += chainEvents.length;
+          job.error = result.error;
+          console.warn(`[CreditOracle] ✗ Batch proof failed for source chain ${sourceChainKey}: ${result.error}`);
         }
       } catch (err: any) {
-        job.eventsFailed++;
-        job.results.push({
-          sourceTxHash: event.sourceTxHash,
-          protocol: event.protocol,
-          eventType: event.eventType,
-          success: false,
-          error: err.message,
-        });
-        console.warn(`[CreditOracle] ✗ Exception proving ${event.eventType}: ${err.message}`);
+        job.current += chainEvents.length;
+        job.eventsFailed += chainEvents.length;
+        job.error = err.message;
+        for (const event of chainEvents) {
+          job.results.push({
+            sourceTxHash: event.sourceTxHash,
+            protocol: event.protocol,
+            eventType: event.eventType,
+            success: false,
+            error: err.message,
+          });
+        }
+        console.warn(`[CreditOracle] ✗ Batch proof exception for source chain ${sourceChainKey}: ${err.message}`);
       }
     }
 
@@ -229,7 +250,8 @@ export class CreditOracleController {
    */
   public async getAutoProveStatus(req: Request, res: Response): Promise<void> {
     try {
-      const address = req.params.address?.toLowerCase();
+      const addressParam = req.params.address;
+      const address = typeof addressParam === 'string' ? addressParam.toLowerCase() : undefined;
       if (!address || !address.startsWith('0x')) {
         res.status(400).json({ success: false, message: 'Valid wallet address required' });
         return;
@@ -250,6 +272,7 @@ export class CreditOracleController {
           current: job.current,
           elapsed: job.completedAt ? job.completedAt - job.startedAt : Date.now() - job.startedAt,
           error: job.error,
+          results: job.results,
         },
       });
     } catch (err: any) {
