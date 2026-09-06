@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
+import { EncodingVersion } from '@gluwa/usc-sdk/src/proof-provider/raw';
 import dotenv from 'dotenv';
 import { CREDITCOIN_CONFIG, DEMO_ETH_TO_CTC_RATE } from '@/features/creditcoin/creditcoin.config.js';
 import { DEPLOYED_ADDRESSES } from '@/config/deployed-addresses.js';
@@ -294,7 +295,11 @@ export class AttestcoinOracleRelayerService {
       }
 
       const proofData = proofResult.data;
-      const contract = this.getContract();
+      // Use the owner-authorized contract when no borrower signature is provided.
+      // The deployed oracle accepts an empty signature only when msg.sender is owner().
+      const contract = borrowerSignature && borrowerSignature.length === 132
+        ? this.getContract()
+        : await this.getOwnerAuthorizedOracleContract();
 
       const eventPayload = {
         sourceTxHash: event.sourceTxHash,
@@ -321,12 +326,15 @@ export class AttestcoinOracleRelayerService {
       console.log(`[AttestcoinRelayer] Broadcast Tx: ${tx.hash}. Awaiting confirmation...`);
       const receipt = await tx.wait();
 
-      // Store CC3 tx hash in database
+      // Store CC3 tx hash in database — update if already exists so re-proofing
+      // always refreshes the CC3 tx hash (onConflictDoNothing would leave stale rows
+      // without a cc3TxHash if a prior insert skipped the on-chain submission).
       try {
         const sourceTxHash = ethers.hexlify(event.sourceTxHash);
+        const normalizedBorrower = borrowerAddress.toLowerCase();
         await db.insert(ProvenEvents).values({
           id: sourceTxHash,
-          borrowerAddress,
+          borrowerAddress: normalizedBorrower,
           sourceTxHash,
           cc3TxHash: receipt.hash,
           blockHeight: event.blockHeight || 0,
@@ -335,7 +343,19 @@ export class AttestcoinOracleRelayerService {
           volumeUsd: event.volumeUSD.toString(),
           timestamp: event.timestamp || 0,
           chainKey: this.sourceChainKey,
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: ProvenEvents.id,
+          set: {
+            cc3TxHash: receipt.hash,
+            borrowerAddress: normalizedBorrower,
+            blockHeight: event.blockHeight || 0,
+            protocol: event.protocol,
+            eventType: event.eventType,
+            volumeUsd: event.volumeUSD.toString(),
+            timestamp: event.timestamp || 0,
+            chainKey: this.sourceChainKey,
+          },
+        });
         console.log(`[AttestcoinRelayer] Stored CC3 proof tx ${receipt.hash.slice(0, 18)}... for source ${sourceTxHash.slice(0, 18)}...`);
       } catch (dbErr: any) {
         console.warn('[AttestcoinRelayer] Failed to store CC3 tx hash in DB:', dbErr.message);
@@ -361,6 +381,83 @@ export class AttestcoinOracleRelayerService {
         error: err.message || 'Failed to submit Attestcoin proof to Creditcoin',
       };
     }
+  }
+
+  /**
+   * Creates a BlockProvider that works with public RPCs that don't support
+   * eth_getBlockReceipts. Falls back to fetching receipts individually via
+   * eth_getTransactionReceipt when the batch call returns null.
+   */
+  private createFallbackBlockProvider(rpc: ethers.JsonRpcProvider): proofProvider.raw.blockProvider.BlockProvider {
+    const simple = new proofProvider.raw.blockProvider.SimpleBlockProvider(rpc);
+    return {
+      getBlockNumber: () => simple.getBlockNumber(),
+      getTransaction: (hash: string) => simple.getTransaction(hash),
+      getBlockWithReceipts: async (blockNumber: number) => {
+        // Try the standard path first (eth_getBlockReceipts)
+        try {
+          const result = await simple.getBlockWithReceipts(blockNumber);
+          if (result) return result;
+        } catch (e) {
+          console.warn(`[AttestcoinRelayer] SimpleBlockProvider.getBlockWithReceipts threw for block ${blockNumber}: ${(e as Error).message}`);
+        }
+        // Fallback: fetch block data + receipts individually via standard RPC methods
+        console.log(`[AttestcoinRelayer] Fetching block ${blockNumber} data and receipts individually...`);
+        try {
+          const blockDataRaw: any = await rpc.send('eth_getBlockByNumber', [`0x${blockNumber.toString(16)}`, true]);
+          if (!blockDataRaw) {
+            console.error(`[AttestcoinRelayer] eth_getBlockByNumber returned null for block ${blockNumber}`);
+            return null;
+          }
+
+          const network = await rpc.getNetwork();
+          const { RawTransactionResponse, TransactionWithRaw } = await import('@gluwa/usc-sdk/src/encoding/common.js');
+
+          const transactions: any[] = [];
+          for (const tx of blockDataRaw.transactions || []) {
+            try {
+              const formattedTx = (rpc as any)._wrapTransactionResponse(tx, network);
+              const mappendList = tx.authorizationList?.map((auth: any) => ({ yParity: Number(auth.yParity) })) || null;
+              const rawTx = new RawTransactionResponse(mappendList);
+              transactions.push(new TransactionWithRaw(formattedTx, rawTx));
+            } catch (txErr) {
+              console.warn(`[AttestcoinRelayer] Failed to wrap transaction ${tx.hash} in block ${blockNumber}: ${(txErr as Error).message}`);
+            }
+          }
+
+          const block = (rpc as any)._wrapBlock(blockDataRaw, true);
+
+          // Fetch receipts individually since eth_getBlockReceipts is not supported
+          const receipts: ethers.TransactionReceipt[] = [];
+          for (const tx of blockDataRaw.transactions || []) {
+            try {
+              await new Promise((r) => setTimeout(r, 150));
+              const receipt = await rpc.getTransactionReceipt(tx.hash || tx.transactionHash);
+              if (receipt) {
+                receipts.push(receipt);
+              } else {
+                console.warn(`[AttestcoinRelayer] Receipt null for tx ${tx.hash} in block ${blockNumber}`);
+              }
+            } catch (rcptErr) {
+              console.warn(`[AttestcoinRelayer] Failed to fetch receipt for tx ${tx.hash}: ${(rcptErr as Error).message}`);
+            }
+          }
+
+          if (receipts.length === 0) {
+            console.error(`[AttestcoinRelayer] No receipts fetched for block ${blockNumber} (${transactions.length} txs)`);
+            return null;
+          }
+          if (receipts.length < transactions.length) {
+            console.warn(`[AttestcoinRelayer] Got ${receipts.length}/${transactions.length} receipts for block ${blockNumber}`);
+          }
+
+          return { block, transactions, receipts };
+        } catch (fallbackErr) {
+          console.error(`[AttestcoinRelayer] Fallback getBlockWithReceipts failed for block ${blockNumber}: ${(fallbackErr as Error).message}`);
+          return null;
+        }
+      },
+    };
   }
 
   /**
@@ -398,33 +495,65 @@ export class AttestcoinOracleRelayerService {
       // Fail fast on a key/configuration mistake before spending time asking the
       // proof service to construct a batch that cannot be submitted.
       const ownerContract = await this.getOwnerAuthorizedOracleContract();
-      const proofBuilder = new proofProvider.service.ProofBuilder(sourceChainKey, this.proofApiUrl);
-      console.log(`[AttestcoinRelayer] Requesting one shared Attestcoin proof for ${events.length} DeFi events on chain ${sourceChainKey}...`);
-
-      // Historical events are normally already indexed, so avoid an unnecessary
-      // wait. If the first request is not ready, wait only once for the highest
-      // required block and retry the batch as a whole.
-      let proofResult = await proofBuilder.getBatchProof(requestedHashes);
-      if (!proofResult.success || !proofResult.data) {
-        const resolvedHeights = await Promise.all(events.map(async (event) => {
-          if (Number.isSafeInteger(event.blockHeight) && event.blockHeight > 0) {
-            return event.blockHeight;
-          }
-          return this.resolveSourceBlockHeight(event.sourceTxHash, sourceChainKey);
-        }));
-        const highestHeight = Math.max(...resolvedHeights.filter((height): height is number => typeof height === 'number' && height > 0));
-
-        if (!Number.isFinite(highestHeight)) {
-          throw new Error(`Batch proof is not indexed yet: ${proofResult.error || 'source block heights are unavailable'}`);
-        }
-
-        console.log(`[AttestcoinRelayer] Batch proof not ready; waiting up to 60 seconds for block #${highestHeight}...`);
-        await proofBuilder.waitUntilHeightAttested(sourceChainKey, highestHeight, 5000, 60000, 2000);
-        proofResult = await proofBuilder.getBatchProof(requestedHashes);
+      
+      // Use RawProofBuilder to generate proofs locally from the source chain RPC.
+      // The remote Prover API does not index arbitrary DeFi protocol transactions
+      // (Aave, Compound, etc.) — only Creditcoin-ecosystem contracts. RawProofBuilder
+      // fetches tx data from the source chain RPC and builds Merkle proofs locally.
+      //
+      // SimpleBlockProvider uses eth_getBlockReceipts which public RPCs don't support,
+      // so we use a custom provider that fetches receipts individually.
+      const sourceRpcUrl =
+        sourceChainKey === 1
+          ? process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com'
+          : process.env.ETHEREUM_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
+      const sourceProvider = new ethers.JsonRpcProvider(sourceRpcUrl);
+      const cc3Provider = this.cc3Provider;
+      const blockProvider = this.createFallbackBlockProvider(sourceProvider);
+      const chainInfoProvider = new chainInfo.PrecompileChainInfoProvider(cc3Provider);
+      const rawBuilder = new proofProvider.raw.RawProofBuilder(
+        sourceChainKey,
+        blockProvider,
+        chainInfoProvider,
+        EncodingVersion.V1,
+      );
+      console.log(`[AttestcoinRelayer] Generating raw proofs locally for ${events.length} DeFi events on chain ${sourceChainKey}...`);
+      for (const ev of events) {
+        console.log(`  - ${ev.protocolName} ${ev.eventTypeName} $${ev.volumeUSD} | tx=${ev.sourceTxHash.slice(0, 14)}... blockHeight=${ev.blockHeight}`);
       }
 
+      // Resolve block heights for all events. The RawProofBuilder needs each
+      // transaction's block height to build the Merkle proofs.
+      // If the event already has a valid blockHeight from discovery, use it;
+      // otherwise resolve from the source chain RPC.
+      const heights = await Promise.all(events.map(async (event) => {
+        if (event.blockHeight && event.blockHeight > 0) return event.blockHeight;
+        const height = await this.resolveSourceBlockHeight(event.sourceTxHash, sourceChainKey);
+        if (!height) throw new Error(`Cannot resolve block height for ${event.sourceTxHash}`);
+        return height;
+      }));
+      console.log(`[AttestcoinRelayer] Resolved block heights: [${heights.join(', ')}]`);
+
+      // Wait for the highest block to be attested using the service ProofBuilder
+      const maxHeight = Math.max(...heights);
+      if (maxHeight > 0) {
+        const proofBuilder = new proofProvider.service.ProofBuilder(sourceChainKey, this.proofApiUrl);
+        try {
+          console.log(`[AttestcoinRelayer] Waiting for block #${maxHeight} to be attested...`);
+          await proofBuilder.waitUntilHeightAttested(sourceChainKey, maxHeight, 10000, 600000, 3000);
+          console.log(`[AttestcoinRelayer] Block #${maxHeight} attested!`);
+        } catch (waitErr: any) {
+          console.warn(`[AttestcoinRelayer] waitUntilHeightAttested notice:`, waitErr.message);
+          throw new Error(`Block #${maxHeight} not yet attested. Please try again shortly.`);
+        }
+      }
+
+      console.log(`[AttestcoinRelayer] Calling rawBuilder.getBatchProof for ${requestedHashes.length} hashes...`);
+      let proofResult = await rawBuilder.getBatchProof(requestedHashes);
+      console.log(`[AttestcoinRelayer] getBatchProof result: success=${proofResult.success} error=${proofResult.error || 'none'}`);
+
       if (!proofResult.success || !proofResult.data) {
-        throw new Error(`Failed to generate Attestcoin batch proof: ${proofResult.error || 'Proof not available'}`);
+        throw new Error(`Failed to generate batch proof locally: ${proofResult.error || 'Proof generation failed'}. The source chain RPC may not support the required methods. Check backend logs for details.`);
       }
 
       const proofData = proofResult.data;
@@ -499,10 +628,11 @@ export class AttestcoinOracleRelayerService {
       // Keep the local source-tx -> CC3-tx index in sync. All events in a batch
       // intentionally point to the same CC3 transaction hash.
       try {
+        const normalizedBorrower = borrowerAddress.toLowerCase();
         await Promise.all(orderedProofs.map(async ({ event, sourceTxHash, proof }) => {
           await db.insert(ProvenEvents).values({
             id: sourceTxHash,
-            borrowerAddress,
+            borrowerAddress: normalizedBorrower,
             sourceTxHash,
             cc3TxHash: receipt.hash,
             blockHeight: proof.height,
@@ -511,7 +641,19 @@ export class AttestcoinOracleRelayerService {
             volumeUsd: event.volumeUSD.toString(),
             timestamp: event.timestamp || 0,
             chainKey: sourceChainKey,
-          }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: ProvenEvents.id,
+          set: {
+            cc3TxHash: receipt.hash,
+            borrowerAddress: normalizedBorrower,
+            blockHeight: event.blockHeight || 0,
+            protocol: event.protocol,
+            eventType: event.eventType,
+            volumeUsd: event.volumeUSD.toString(),
+            timestamp: event.timestamp || 0,
+            chainKey: this.sourceChainKey,
+          },
+        });
         }));
       } catch (dbErr: any) {
         // The chain proof remains authoritative even when the optional index is
@@ -545,6 +687,7 @@ export class AttestcoinOracleRelayerService {
    */
   public async getOnChainCreditProfile(borrowerAddress: string): Promise<any> {
     try {
+      const normalizedBorrower = borrowerAddress.toLowerCase();
       const contract = this.getContract();
       const profile = await contract.getCreditProfile(borrowerAddress);
       const provenEvents = await contract.getProvenEvents(borrowerAddress);
@@ -569,19 +712,23 @@ export class AttestcoinOracleRelayerService {
       // 1. Try database first
       try {
         const dbEvents = await db.select().from(ProvenEvents)
-          .where(eq(ProvenEvents.borrowerAddress, borrowerAddress));
+          .where(eq(ProvenEvents.borrowerAddress, normalizedBorrower));
         for (const row of dbEvents) {
           if (row.sourceTxHash && row.cc3TxHash) {
             cc3TxHashes[row.sourceTxHash.toLowerCase()] = row.cc3TxHash;
           }
         }
-        console.log(`[AttestcoinRelayer] Found ${dbEvents.length} CC3 tx hashes in database for ${borrowerAddress}`);
+        console.log(`[AttestcoinRelayer] Found ${dbEvents.length} CC3 tx hashes in database for ${normalizedBorrower}`);
       } catch (dbErr: any) {
         console.warn('[AttestcoinRelayer] Failed to read CC3 tx hashes from DB:', dbErr.message);
       }
       
-      // 2. Fallback to Blockscout if database has no results
-      if (Object.keys(cc3TxHashes).length === 0) {
+      // 2. Fallback to Blockscout if some on-chain events are missing cc3TxHash
+      const missingOnChainEvents = provenEvents.filter((e: any) => {
+        const srcHash = ethers.hexlify(e.sourceTxHash);
+        return !cc3TxHashes[srcHash.toLowerCase()];
+      });
+      if (missingOnChainEvents.length > 0 && Object.keys(cc3TxHashes).length < provenEvents.length) {
         try {
           const blockscoutUrl = 'https://creditcoin-testnet.blockscout.com';
           const res = await fetch(`${blockscoutUrl}/api/v2/addresses/${this.oracleContractAddress}/logs`);
@@ -589,12 +736,12 @@ export class AttestcoinOracleRelayerService {
             const data = await res.json();
             const items = data?.items || [];
             const eventProvenTopic = ethers.id('EventProven(address,bytes32,uint8,uint8,uint256,uint64)');
-            console.log(`[AttestcoinRelayer] Querying Blockscout logs for ${borrowerAddress}... Found ${items.length} total logs`);
+            console.log(`[AttestcoinRelayer] Querying Blockscout logs for ${normalizedBorrower} (missing ${missingOnChainEvents.length} cc3 tx hashes)... Found ${items.length} total logs`);
             
             for (const log of items) {
               const topics = log.topics || [];
               if (topics[0]?.toLowerCase() === eventProvenTopic.toLowerCase() &&
-                  topics[1]?.toLowerCase() === ethers.zeroPadValue(borrowerAddress, 32).toLowerCase()) {
+                  topics[1]?.toLowerCase() === ethers.zeroPadValue(normalizedBorrower, 32).toLowerCase()) {
                 const sourceTxHash = topics[2];
                 if (sourceTxHash) {
                   cc3TxHashes[sourceTxHash.toLowerCase()] = log.transaction_hash;
@@ -602,10 +749,13 @@ export class AttestcoinOracleRelayerService {
                   try {
                     await db.insert(ProvenEvents).values({
                       id: sourceTxHash,
-                      borrowerAddress,
+                      borrowerAddress: normalizedBorrower,
                       sourceTxHash,
                       cc3TxHash: log.transaction_hash,
-                    }).onConflictDoNothing();
+                    }).onConflictDoUpdate({
+                      target: ProvenEvents.id,
+                      set: { cc3TxHash: log.transaction_hash },
+                    });
                   } catch {}
                 }
               }
@@ -1205,7 +1355,10 @@ export class AttestcoinOracleRelayerService {
           volumeUsd: Math.round(volumeUSD).toString(),
           timestamp: Math.floor(Date.now() / 1000),
           chainKey,
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: ProvenEvents.id,
+          set: { cc3TxHash: receipt.hash },
+        });
       } catch (dbErr: any) {
         console.warn('[AttestcoinRelayer] Failed to store pawnshop payment proof in DB:', dbErr.message);
       }

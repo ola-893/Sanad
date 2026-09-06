@@ -150,25 +150,30 @@ export class CreditOracleController {
     }
     job.eventsFound = discovery.events.length;
 
-    // 2. Get already-proven events to skip
+    // 2. Get already-proven events to skip (only those with a real CC3 tx hash)
     let alreadyProven = new Set<string>();
     try {
       const profile = await this.relayerService.getOnChainCreditProfile(address);
       if (profile.provenEvents) {
         for (const pe of profile.provenEvents) {
-          if (pe.sourceTxHash) alreadyProven.add(pe.sourceTxHash.toLowerCase());
+          if (pe.sourceTxHash && pe.cc3TxHash) alreadyProven.add(pe.sourceTxHash.toLowerCase());
         }
       }
     } catch {}
 
-    // Also check DB
+    // Also check DB — but only skip events that actually have a CC3 tx hash
+    // (a DB row without cc3TxHash means a prior insert ran but the on-chain
+    // submission never completed, so it must be retried).
     try {
       const { ProvenEvents } = await import('@/features/credit-bureau/proven-events.model.js');
       const { db } = await import('@/db/index.js');
-      const { eq } = await import('drizzle-orm');
-      const dbEvents = await db.select().from(ProvenEvents).where(eq(ProvenEvents.borrowerAddress, address));
+      const { eq, isNotNull } = await import('drizzle-orm');
+      const normalizedAddress = address.toLowerCase();
+      const dbEvents = await db.select().from(ProvenEvents).where(eq(ProvenEvents.borrowerAddress, normalizedAddress));
       for (const de of dbEvents) {
-        if (de.sourceTxHash) alreadyProven.add(de.sourceTxHash.toLowerCase());
+        if (de.sourceTxHash && de.cc3TxHash) {
+          alreadyProven.add(de.sourceTxHash.toLowerCase());
+        }
       }
     } catch {}
 
@@ -198,44 +203,63 @@ export class CreditOracleController {
     }
 
     for (const [sourceChainKey, chainEvents] of eventsByChain) {
-      try {
-        console.log(`[CreditOracle] Batch-proving ${chainEvents.length} event(s) from source chain ${sourceChainKey} for ${address}...`);
-        const result = await this.relayerService.proveAndRecordEventsBatch(address, chainEvents, sourceChainKey);
-        job.current += chainEvents.length;
-
-        for (const event of chainEvents) {
-          job.results.push({
-            sourceTxHash: event.sourceTxHash,
-            protocol: event.protocol,
-            eventType: event.eventType,
-            success: result.success,
-            cc3TxHash: result.transactionHash || null,
-            error: result.error || null,
-          });
-        }
-
+      // Use individual proofs via the CC3 prover API (one CC3 tx per event).
+      // The local RawProofBuilder batch approach requires fetching every tx in
+      // each block from the source chain RPC, which overwhelms public RPC rate
+      // limits. The CC3 prover API (proofProvider.service.ProofBuilder) has its
+      // own indexed data and can generate proofs without that overhead.
+      console.log(`[CreditOracle] Proving ${chainEvents.length} event(s) individually via CC3 prover API for source chain ${sourceChainKey}...`);
+      for (const event of chainEvents) {
+        let retries = 0;
+        const maxRetries = 3;
+        const result = await this.relayerService.proveAndRecordEvent(address, event);
+        job.results.push({
+          sourceTxHash: event.sourceTxHash,
+          protocol: event.protocol,
+          eventType: event.eventType,
+          success: result.success,
+          cc3TxHash: result.transactionHash || null,
+          error: result.error || null,
+        });
         if (result.success) {
-          job.eventsProven += chainEvents.length;
-          console.log(`[CreditOracle] ✓ Batch-proved ${chainEvents.length} event(s) — CC3: ${result.transactionHash?.slice(0, 14)}`);
+          job.eventsProven++;
+          console.log(`[CreditOracle] ✓ Proved ${event.sourceTxHash.slice(0, 10)}... — CC3: ${result.transactionHash?.slice(0, 14)}`);
         } else {
-          job.eventsFailed += chainEvents.length;
-          job.error = result.error;
-          console.warn(`[CreditOracle] ✗ Batch proof failed for source chain ${sourceChainKey}: ${result.error}`);
+          // Retry failed proofs — the Attestcoin Prover may not have indexed
+          // the block yet. Wait 30s between retries, up to 3 attempts.
+          while (retries < maxRetries) {
+            retries++;
+            console.warn(`[CreditOracle] ✗ Proof failed for ${event.sourceTxHash.slice(0, 10)}... (attempt ${retries}/${maxRetries}): ${result.error}`);
+            await new Promise(r => setTimeout(r, 30000));
+            const retryResult = await this.relayerService.proveAndRecordEvent(address, event);
+            if (retryResult.success) {
+              result.transactionHash = retryResult.transactionHash;
+              result.success = true;
+              result.error = undefined;
+              // Update the result we already pushed
+              const existingIdx = job.results.findIndex(r => r.sourceTxHash === event.sourceTxHash);
+              if (existingIdx >= 0) {
+                job.results[existingIdx] = {
+                  sourceTxHash: event.sourceTxHash,
+                  protocol: event.protocol,
+                  eventType: event.eventType,
+                  success: true,
+                  cc3TxHash: retryResult.transactionHash || null,
+                  error: null,
+                };
+              }
+              job.eventsProven++;
+              job.eventsFailed--;
+              console.log(`[CreditOracle] ✓ Proved (retry ${retries}) ${event.sourceTxHash.slice(0, 10)}... — CC3: ${retryResult.transactionHash?.slice(0, 14)}`);
+              break;
+            }
+            console.warn(`[CreditOracle] ✗ Retry ${retries} also failed for ${event.sourceTxHash.slice(0, 10)}...: ${retryResult.error}`);
+          }
+          if (!result.success) {
+            job.eventsFailed++;
+            job.error = result.error;
+          }
         }
-      } catch (err: any) {
-        job.current += chainEvents.length;
-        job.eventsFailed += chainEvents.length;
-        job.error = err.message;
-        for (const event of chainEvents) {
-          job.results.push({
-            sourceTxHash: event.sourceTxHash,
-            protocol: event.protocol,
-            eventType: event.eventType,
-            success: false,
-            error: err.message,
-          });
-        }
-        console.warn(`[CreditOracle] ✗ Batch proof exception for source chain ${sourceChainKey}: ${err.message}`);
       }
     }
 

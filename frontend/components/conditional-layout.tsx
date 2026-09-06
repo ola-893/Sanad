@@ -15,16 +15,26 @@ interface ConditionalLayoutProps {
 /**
  * Routes that have their own layout with header/sidebar — no global header/footer.
  */
-const fullLayoutRoutes = ['/pawnshop', '/admin', '/login']
+const fullLayoutRoutes = ['/pawnshop', '/admin', '/login', '/register', '/register/kyc']
 
 /**
  * Public pages that always show the external (marketing) header + footer,
  * regardless of auth state.
  */
-const publicPages = ['/', '/about', '/how-it-works', '/ar-rahnu-industry', '/faq', '/contact', '/register', '/forgot-password']
+const publicPages = ['/', '/about', '/how-it-works', '/ar-rahnu-industry', '/faq', '/contact', '/forgot-password']
+
+/**
+ * Routes that show the external header but NO footer.
+ * Register/onboarding flows should not duplicate the footer.
+ */
+const noFooterRoutes = ['/register', '/register/kyc']
 
 function isPublicPage(pathname: string) {
   return publicPages.some(p => pathname === p || pathname === p + '/')
+}
+
+function hasNoFooter(pathname: string) {
+  return noFooterRoutes.some(p => pathname === p || pathname === p + '/')
 }
 
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
@@ -53,13 +63,12 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
 
   // Still loading auth state — show branded loader briefly
   if (authed === null) {
-    // On public pages, don't flash the loader — just render without header decisions
     if (isPublicPage(pathname)) {
       return (
         <div className="flex flex-col min-h-screen">
           <ExternalHeader />
           <main className="flex-1">{children}</main>
-          <Footer />
+          {!hasNoFooter(pathname) && <Footer />}
         </div>
       )
     }
@@ -72,14 +81,13 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
       <div className="flex flex-col min-h-screen">
         <ExternalHeader />
         <main className="flex-1">{children}</main>
-        <Footer />
+        {!hasNoFooter(pathname) && <Footer />}
       </div>
     )
   }
 
   // Authenticated users on other pages — internal header, no footer
   if (authed) {
-    // Use BorrowerHeader for borrower-specific routes
     const isBorrowerRoute = pathname.startsWith('/dashboard/borrower')
     return (
       <div className="flex flex-col min-h-screen">
@@ -89,12 +97,12 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
     )
   }
 
-  // Unauthenticated users on other pages — external header + footer
+  // Unauthenticated users on other pages — external header, footer only if not excluded
   return (
     <div className="flex flex-col min-h-screen">
       <ExternalHeader />
       <main className="flex-1">{children}</main>
-      <Footer />
+      {!hasNoFooter(pathname) && <Footer />}
     </div>
   )
 }
