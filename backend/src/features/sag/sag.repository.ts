@@ -140,3 +140,26 @@ export const overrideFailureSag = async (validatedData: { sag_id: string; risk_l
         }
     }).where(eq(SagModel.sagId, validatedData.sag_id)).returning();
 }
+
+export const deleteSag = async (sagId: string, tx?: PgTransaction<NodePgQueryResultHKT, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>>) => {
+    if (!sagId) {
+        throw new Error('SAG ID is required');
+    }
+
+    const existingSag = await db.select().from(SagModel).where(eq(SagModel.sagId, sagId)).limit(1);
+    if (!existingSag || existingSag.length === 0) {
+        throw new Error('SAG not found');
+    }
+
+    if (tx) {
+        return await tx.delete(SagModel).where(eq(SagModel.sagId, sagId)).returning();
+    }
+    return await db.delete(SagModel).where(eq(SagModel.sagId, sagId)).returning();
+}
+
+export const getSagsOrderedByCreation = async (limit: number, offset: number = 0) => {
+    return await db.select().from(SagModel)
+        .orderBy(SagModel.createdAt)
+        .limit(limit)
+        .offset(offset);
+}

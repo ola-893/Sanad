@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createSag, getSag, updateSag, overrideFailureSag } from './sag.repository.js';
+import { createSag, getSag, updateSag, overrideFailureSag, deleteSag, getSagsOrderedByCreation } from './sag.repository.js';
 import { SagModel, SagModelInsertType, SagModelType, SagSchema, GoldEvaluatorOutputSchema, SagOverrideFailureSchema } from './sag.model.js';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/index.js';
@@ -279,5 +279,71 @@ export const overrideFailureSagController = async (req: Request, res: Response) 
         res.status(200).json({ success: true, message: 'SAG failure overridden', data: sag });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Failed to override SAG failure' });
+    }
+};
+
+export const deleteSagController = async (req: Request, res: Response) => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'SAG ID is required' });
+        }
+
+        const deletedSag = await deleteSag(id);
+        
+        if (!deletedSag || deletedSag.length === 0) {
+            return res.status(404).json({ success: false, error: 'SAG not found' });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'SAG deleted successfully',
+            data: deletedSag[0]
+        });
+    } catch (error) {
+        console.error('Error deleting SAG:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to delete SAG',
+            details: errorMessage
+        });
+    }
+};
+
+export const deleteSagByNumberController = async (req: Request, res: Response) => {
+    try {
+        const numberParam = Array.isArray(req.params.number) ? req.params.number[0] : req.params.number;
+        const sagNumber = parseInt(numberParam, 10);
+        if (isNaN(sagNumber) || sagNumber < 1) {
+            return res.status(400).json({ success: false, error: 'Invalid SAG number. Must be a positive integer.' });
+        }
+
+        // Fetch the SAG at the specified position (1-indexed)
+        const sags = await getSagsOrderedByCreation(1, sagNumber - 1);
+        
+        if (!sags || sags.length === 0) {
+            return res.status(404).json({ success: false, error: `SAG #${sagNumber} not found` });
+        }
+
+        const sagToDelete = sags[0];
+        const deletedSag = await deleteSag(sagToDelete.sagId);
+
+        res.status(200).json({ 
+            success: true, 
+            message: `SAG #${sagNumber} deleted successfully`,
+            data: {
+                ...deletedSag[0],
+                originalPosition: sagNumber
+            }
+        });
+    } catch (error) {
+        console.error(`Error deleting SAG by number:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to delete SAG by number',
+            details: errorMessage
+        });
     }
 };
