@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import {
   Camera,
   Check,
+  CheckCircle2,
+  Clock,
   FileText,
   Loader2,
   ScanFace,
@@ -24,12 +26,13 @@ import {
   RefreshCw,
   Award,
   AlertTriangle,
+  AlertCircle,
   Cpu,
   Layers,
   Activity,
   Database,
   ExternalLink,
-  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import apiInstance from "@/lib/axios-v1"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
@@ -132,6 +135,7 @@ export default function KycVerificationPage() {
   const [creditVerified, setCreditVerified] = useState<boolean>(false)
   const [proofTxHash, setProofTxHash] = useState<string | null>(null)
   const [autoProveStatus, setAutoProveStatus] = useState<AutoProveStatus | null>(null)
+  const [eventProofResults, setEventProofResults] = useState<Record<string, { status: 'pending' | 'proving' | 'proven' | 'failed'; cc3TxHash?: string; error?: string }>>({})
   const [noHistoryMessage, setNoHistoryMessage] = useState<string | null>(null)
   const [provingAttempted, setProvingAttempted] = useState<boolean>(false)
 
@@ -300,6 +304,43 @@ export default function KycVerificationPage() {
 
         const statusJson = await statusResponse.json()
         const status = (statusJson?.data || {}) as AutoProveStatus
+
+        // Build per-event proof results from the status results array
+        const results = statusJson?.data?.results || []
+        const newResults: Record<string, { status: 'pending' | 'proving' | 'proven' | 'failed'; cc3TxHash?: string; error?: string }> = {}
+        for (const ev of discoveredEvents) {
+          const hash = ev.sourceTxHash.toLowerCase()
+          const existing = eventProofResults[hash]
+          if (existing?.status === 'proven' || existing?.status === 'failed') {
+            // Keep finalized results
+            newResults[hash] = existing
+          } else {
+            // Look up in current status results
+            const result = results.find((r: any) => r.sourceTxHash?.toLowerCase() === hash)
+            if (result) {
+              newResults[hash] = {
+                status: result.success ? 'proven' : 'failed',
+                cc3TxHash: result.cc3TxHash || undefined,
+                error: result.error || undefined,
+              }
+            } else {
+              // Not yet processed — determine status based on job progress
+              const total = status.total || discoveredEvents.length
+              const current = status.current || 0
+              const proven = status.eventsProven || 0
+              const found = status.eventsFound || discoveredEvents.length
+              if (current >= found) {
+                // All processed but this event not in results = failed
+                newResults[hash] = { status: 'failed', error: 'Not found in proof results' }
+              } else if (proven >= found) {
+                newResults[hash] = { status: 'proven' }
+              } else {
+                newResults[hash] = { status: 'pending' }
+              }
+            }
+          }
+        }
+        setEventProofResults(newResults)
         setAutoProveStatus(status)
 
         if (status.status === "error") {
@@ -820,47 +861,132 @@ export default function KycVerificationPage() {
                   </div>
                 )}
 
-                {/* Proof generation in progress */}
-                {isProvingOnCC3 && (
-                  <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-5">
-                    <div className="flex items-center gap-3 mb-4">
+                {/* Live proof status per event */}
+                {isProvingOnCC3 && discoveredEvents.length > 0 && (
+                  <div className="rounded-2xl border border-[#171414]/10 bg-white/60 p-5 space-y-4">
+                    <div className="flex items-center gap-3">
                       <Loader2 className="h-5 w-5 animate-spin text-[#171414]" />
                       <div>
-                        <p className="text-sm font-medium text-[#171414]">Auto-proving DeFi history...</p>
+                        <p className="text-sm font-medium text-[#171414]">Auto-proving DeFi history on CC3...</p>
                         <p className="text-xs text-muted-foreground">
                           {autoProveStatus
-                            ? `${autoProveStatus.eventsProven || 0} proven · ${autoProveStatus.eventsFailed || 0} failed · ${autoProveStatus.current || 0}/${autoProveStatus.total || autoProveStatus.eventsFound || discoveredEvents.length} processed`
-                            : "Cryptographic verification on Creditcoin CC3"}
+                            ? `${autoProveStatus.eventsProven || 0} proven · ${autoProveStatus.eventsFailed || 0} failed · ${autoProveStatus.current || 0}/${autoProveStatus.eventsFound || discoveredEvents.length} verified`
+                            : "Cryptographic verification in progress"}
                         </p>
                       </div>
                     </div>
-                    <div className="space-y-2.5">
-                      {[
-                        "Discovering and filtering unproven DeFi events",
-                        "Generating a shared Attestcoin batch proof",
-                        "Submitting the batch to the BlockProver precompile on CC3",
-                        "Reading on-chain credit profile from SanadCreditOracle",
-                      ].map((msg, i) => {
-                        const isDone = proofStep > i + 1
-                        const isActive = proofStep === i + 1
+
+                    {/* Per-event real-time proof status */}
+                    <div className="space-y-2">
+                      {discoveredEvents.map((ev) => {
+                        const hash = ev.sourceTxHash.toLowerCase()
+                        const result = eventProofResults[hash]
+                        const isProven = result?.status === 'proven'
+                        const isFailed = result?.status === 'failed'
+                        const isPending = result?.status === 'pending' || !result
+                        const isProving = result?.status === 'proving'
+                        const proofUrl = result?.cc3TxHash
+                          ? `${CREDITCOIN_EXPLORER_URL}/tx/${result.cc3TxHash}`
+                          : null
+
                         return (
-                          <div key={i} className="flex items-center gap-2.5 text-xs">
-                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all ${
-                              isDone ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
-                              : isActive ? "bg-[#171414]/10 text-[#171414] border border-[#171414]/20"
-                              : "bg-[#F5F5F3] text-muted-foreground/50 border border-[#171414]/10"
+                          <div
+                            key={hash}
+                            className={`flex items-center justify-between rounded-xl p-3 text-xs border transition-all ${
+                              isProven
+                                ? "border-emerald-200 bg-emerald-50/60"
+                                : isFailed
+                                  ? "border-red-200 bg-red-50/60"
+                                  : "border-[#171414]/10 bg-white/40"
                             }`}
-                            >{isDone ? <Check className="h-3 w-3" /> : i + 1}</div>
-                            <span className={isDone ? "text-emerald-600" : isActive ? "text-[#171414] font-medium" : "text-muted-foreground/50"}>{msg}</span>
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* Proof status icon */}
+                              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${
+                                isProven
+                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                                  : isFailed
+                                    ? "border-red-300 bg-red-100 text-red-700"
+                                    : isProving
+                                      ? "border-[#171414]/20 bg-[#171414]/5 text-[#171414] animate-pulse"
+                                      : "border-[#171414]/15 bg-[#F5F5F3] text-muted-foreground"
+                              }`}
+                              >
+                                {isProven ? <CheckCircle2 className="h-4 w-4" /> :
+                                 isFailed ? <XCircle className="h-4 w-4" /> :
+                                 isProving ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                                 <Clock className="h-4 w-4" />}
+                              </div>
+
+                              {/* Event details */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <Badge variant="outline" className={`text-[7px] font-mono ${
+                                    ev.eventType === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : ev.eventType === 1 || ev.eventType === 2 ? "border-red-200 bg-red-50 text-red-700"
+                                    : ev.eventType === 4 ? "border-blue-200 bg-blue-50 text-blue-700"
+                                    : "border-[#171414]/20 bg-[#171414]/5 text-[#171414]"
+                                  }`}>
+                                    {ev.eventTypeName}
+                                  </Badge>
+                                  <span className="text-[#171414] font-medium truncate">{ev.protocolName}</span>
+                                </div>
+                                <div className="font-mono text-[10px] text-muted-foreground truncate mt-0.5">
+                                  {ev.sourceTxHash}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Amount + status text */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono font-bold text-[#171414]">
+                                ${ev.volumeUSD.toLocaleString()}
+                              </span>
+                              <div className={`flex items-center gap-1 text-[10px] font-mono ${
+                                isProven ? "text-emerald-700"
+                                : isFailed ? "text-red-700"
+                                : isProving ? "text-[#171414]"
+                                : "text-muted-foreground"
+                              }`}>
+                                {isProven && <><Check className="h-3 w-3" /> Proven</>}
+                                {isFailed && <><XCircle className="h-3 w-3" /> Failed</>}
+                                {isProving && <><Loader2 className="h-3 w-3 animate-spin" /> Proving</>}
+                                {isPending && <><Clock className="h-3 w-3" /> Waiting</>}
+                              </div>
+                            </div>
+
+                            {/* CC3 tx link */}
+                            {proofUrl && (
+                              <a
+                                href={proofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="shrink-0 text-[9px] font-mono text-emerald-700 hover:text-emerald-900 underline"
+                              >
+                                View on CC3
+                              </a>
+                            )}
                           </div>
                         )
                       })}
                     </div>
+
+                    {/* Failed events summary */}
+                    {Object.values(eventProofResults).some(r => r.status === 'failed') && (
+                      <div className="flex items-start gap-2 text-[10px] text-red-800 bg-red-50/50 rounded-xl p-2.5 border border-red-200/30">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        <span className="font-mono">
+                          {Object.entries(eventProofResults).filter(([, r]) => r.status === 'failed').length} event(s) failed to prove. {Object.entries(eventProofResults).filter(([, r]) => r.status === 'proven').length > 0
+                            ? 'Some events were proven successfully.'
+                            : 'The CC3 prover may not have indexed these blocks yet. Please try again.'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Discovered records + automatic batch-proof button */}
-                {!isScanningDeFi && discoveredEvents.length > 0 && !creditVerified && (
+                {/* Discovered records (shown when not yet proving) */}
+                {!isScanningDeFi && !isProvingOnCC3 && discoveredEvents.length > 0 && !creditVerified && (
                   <div className="rounded-2xl border border-[#171414]/10 bg-[#FAFAF8] p-4 space-y-3">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-medium text-[#171414]">Found {discoveredEvents.length} lending record{discoveredEvents.length !== 1 ? 's' : ''}</p>
@@ -872,7 +998,7 @@ export default function KycVerificationPage() {
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      {discoveredEvents.slice(0, 3).map((ev, idx) => (
+                      {discoveredEvents.map((ev, idx) => (
                         <div key={idx} className="flex items-center justify-between rounded-xl bg-white p-2.5 text-xs">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={`text-[8px] font-mono ${
@@ -892,11 +1018,7 @@ export default function KycVerificationPage() {
                       disabled={isProvingOnCC3}
                       className="w-full rounded-xl bg-[#171414] text-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-black"
                     >
-                      {isProvingOnCC3 ? (
-                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Auto-proving on CC3...</>
-                      ) : (
-                        <><Shield className="h-3.5 w-3.5 mr-1.5" /> Auto-Prove All on CC3</>
-                      )}
+                      <Shield className="h-3.5 w-3.5 mr-1.5" /> Auto-Prove All on CC3
                     </Button>
                   </div>
                 )}
@@ -928,55 +1050,135 @@ export default function KycVerificationPage() {
                   </div>
                 )}
 
-                {/* Verified result */}
+                {/* Verified result — SANAD branded */}
                 {creditVerified && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-4">
+                  <div className="rounded-2xl border border-[#E1BAC2]/30 bg-gradient-to-br from-[#E1BAC2]/5 via-white to-[#E1BAC2]/5 p-6 space-y-5">
+                    {/* Header row */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
-                        <ShieldCheck className="h-5 w-5" />
-                        {(onChainProfile?.provenEventsCount ?? discoveredEvents.length) > 0
-                          ? "Credit Verified"
-                          : "Identity Verified • Unscored Baseline (500 pts)"}
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E1BAC2] to-[#171414] text-[#E1BAC2]">
+                          <ShieldCheck className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#171414] text-sm">
+                            {(onChainProfile?.provenEventsCount ?? discoveredEvents.length) > 0
+                              ? "Credit Verified"
+                              : "Identity Verified"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {(onChainProfile?.provenEventsCount ?? discoveredEvents.length) > 0
+                              ? "Cryptographic proof recorded on Creditcoin 3"
+                              : "Unscored baseline — complete KYC to unlock terms"}
+                          </p>
+                        </div>
                       </div>
-                      <Badge variant="outline" className={`${tierStyle.bg} ${tierStyle.color} ${tierStyle.border} text-xs font-mono`}>
-                        {onChainProfile?.score ?? (discoveredEvents.length === 0 ? 500 : 845)} / 1000 ({tier})
+                      <Badge className="rounded-full font-mono text-[11px] font-bold" style={{
+                        background: tier === "Gold" ? '#F59E0B15' : tier === "Silver" ? '#94A3B815' : tier === "HighRisk" ? '#EF444415' : tier === "Unscored" ? '#F59E0B15' : '#F59E0B15',
+                        color: tier === "Gold" ? '#D97706' : tier === "Silver" ? '#64748B' : tier === "HighRisk" ? '#DC2626' : tier === "Unscored" ? '#D97706' : '#D97706',
+                        border: tier === "Gold" ? '#F59E0B30' : tier === "Silver" ? '#94A3B830' : tier === "HighRisk" ? '#EF444430' : tier === "Unscored" ? '#F59E0B30' : '#F59E0B30',
+                      }}>
+                        {onChainProfile?.score ?? (discoveredEvents.length === 0 ? 500 : 845)} / 1000
+                        <span className="ml-1">({tier})</span>
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Repaid</p>
-                        <p className="text-sm font-bold tabular-nums text-[#171414]">${Number(onChainProfile?.totalRepaidUSD || 0).toLocaleString()}</p>
+                    {/* Stat grid — SANAD cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Repaid */}
+                      <div className="rounded-xl border border-[#E1BAC2]/20 bg-white p-3 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Repaid</span>
+                          <Zap className="h-3 w-3 text-[#E1BAC2]" />
+                        </div>
+                        <p className="text-lg font-bold tabular-nums text-[#171414]">
+                          ${Number(onChainProfile?.totalRepaidUSD || 0).toLocaleString()}
+                        </p>
                       </div>
-                      <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Clean Repayments</p>
-                        <p className="text-sm font-bold tabular-nums text-emerald-600">{onChainProfile?.cleanRepaymentCount ?? 0}</p>
+
+                      {/* Clean Repayments */}
+                      <div className="rounded-xl border border-emerald-200/40 bg-emerald-50/40 p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Clean Repayments</span>
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        </div>
+                        <p className="text-lg font-bold tabular-nums text-emerald-700">
+                          {onChainProfile?.cleanRepaymentCount ?? 0}
+                        </p>
                       </div>
-                      <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Liquidations</p>
-                        <p className={`text-sm font-bold tabular-nums ${(onChainProfile?.liquidationCount ?? 0) > 0 ? "text-red-600" : "text-emerald-600"}`}>{onChainProfile?.liquidationCount ?? 0}</p>
+
+                      {/* Liquidations */}
+                      <div className={`rounded-xl border p-3 shadow-sm transition-all ${
+                        (onChainProfile?.liquidationCount ?? 0) > 0
+                          ? "border-red-200/40 bg-red-50/40"
+                          : "border-emerald-200/40 bg-emerald-50/40"
+                      }`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Liquidations</span>
+                          {(onChainProfile?.liquidationCount ?? 0) > 0
+                            ? <AlertTriangle className="h-3 w-3 text-red-500" />
+                            : <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          }
+                        </div>
+                        <p className={`text-lg font-bold tabular-nums ${
+                          (onChainProfile?.liquidationCount ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700'
+                        }`}>
+                          {onChainProfile?.liquidationCount ?? 0}
+                        </p>
                       </div>
-                      <div className="rounded-xl border border-[#171414]/8 bg-white p-2.5 text-center">
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">Proven Events</p>
-                        <p className="text-sm font-bold tabular-nums text-[#171414]">{onChainProfile?.provenEventsCount ?? 0}</p>
+
+                      {/* Proven Events */}
+                      <div className="rounded-xl border border-[#E1BAC2]/20 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Proven Events</span>
+                          <Shield className="h-3 w-3 text-[#E1BAC2]" />
+                        </div>
+                        <p className="text-lg font-bold tabular-nums text-[#171414]">
+                          {onChainProfile?.provenEventsCount ?? 0}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-[#E1BAC2]/30 bg-[#E1BAC2]/5 p-3">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#171414] mb-2 flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3" /> Unlocked Terms
+                    {/* Unlocked Terms — SANAD pink accent */}
+                    <div className="rounded-xl border border-[#E1BAC2]/20 bg-gradient-to-r from-[#E1BAC2]/10 to-white p-4">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#171414] mb-3 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-[#E1BAC2]" />
+                        Unlocked Terms
                       </p>
-                      <div className="grid grid-cols-3 gap-2 text-[11px]">
-                        <div><span className="text-muted-foreground">LTV:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : tier === "Unscored" ? "40%" : "50%"}</span></div>
-                        <div><span className="text-muted-foreground">Ujrah:</span> <span className="font-bold text-[#171414]">{tier === "Gold" ? "0.60%" : tier === "Silver" ? "0.85%" : tier === "Unscored" ? "1.50%" : "1.25%"}</span></div>
-                        <div><span className="text-muted-foreground">Approval:</span> <span className="font-bold text-[#171414]">{tier === "Unscored" ? "Manual Review" : "Automated"}</span></div>
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-[10px] font-mono">LTV</span>
+                          <p className="font-bold text-[#171414] mt-0.5">
+                            {tier === "Gold" ? "85%" : tier === "Silver" ? "75%" : tier === "Unscored" ? "40%" : "50%"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-[10px] font-mono">Ujrah</span>
+                          <p className="font-bold text-[#171414] mt-0.5">
+                            {tier === "Gold" ? "0.60%" : tier === "Silver" ? "0.85%" : tier === "Unscored" ? "1.50%" : "1.25%"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-[10px] font-mono">Approval</span>
+                          <p className="font-bold text-[#171414] mt-0.5">
+                            {tier === "Unscored" ? "Manual Review" : "Automated"}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
+                    {/* View proof link */}
                     {proofTxHash && (
-                      <a href={`${CREDITCOIN_EXPLORER_URL}/tx/${proofTxHash}`} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline">
-                        View proof on Blockscout <ExternalLink className="h-3 w-3" />
+                      <a
+                        href={`${CREDITCOIN_EXPLORER_URL}/tx/${proofTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group flex items-center gap-2 rounded-xl border border-[#E1BAC2]/20 bg-[#E1BAC2]/5 px-4 py-2.5 text-[11px] font-mono font-bold text-[#171414] hover:bg-[#E1BAC2]/10 hover:border-[#E1BAC2]/40 transition-all"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#E1BAC2] group-hover:scale-110 transition-transform" />
+                        View proof on Blockscout
+                        <span className="ml-auto text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                          {proofTxHash}
+                        </span>
                       </a>
                     )}
                   </div>

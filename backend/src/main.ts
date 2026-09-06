@@ -82,6 +82,35 @@ try {
   console.warn('[Indexer] Could not start indexer at boot:', indexerErr);
 }
 
+// Prevent CC3 RPC filter expiration errors from crashing the process.
+// The CC3 public RPC expires eth_newFilter filters quickly; ethers.js
+// polls them internally and throws on expired filters. Catch uncaught
+// rejections so the server stays up for KYC/auto-prove traffic.
+process.on('unhandledRejection', (reason, promise) => {
+  const msg = typeof reason === 'object' && reason?.message ? reason.message : String(reason);
+  if (typeof msg === 'string' && (
+    msg.includes('Filter id') ||
+    msg.includes('filter not found') ||
+    msg.includes('does not exist')
+  )) {
+    return;
+  }
+  console.error('[unhandledRejection] Unhandled promise rejection:', msg);
+});
+
+process.on('uncaughtException', (error) => {
+  const msg = error?.message ? String(error.message) : String(error);
+  if (typeof msg === 'string' && (
+    msg.includes('Filter id') ||
+    msg.includes('filter not found') ||
+    msg.includes('does not exist')
+  )) {
+    return;
+  }
+  console.error('[uncaughtException] Uncaught exception:', msg);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log(`\n================================================================`);
   console.log(`Sanad Protocol CC3 Backend is live on port ${PORT}`);

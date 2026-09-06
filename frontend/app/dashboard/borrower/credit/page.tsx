@@ -180,6 +180,8 @@ export default function BorrowerCreditPage() {
       return data?.data?.provenEvents || []
     },
     enabled: !!walletAddress,
+    staleTime: 0,
+    gcTime: 0,
   })
 
   /* ─── Discover DeFi history ─── */
@@ -264,48 +266,69 @@ export default function BorrowerCreditPage() {
     try {
       if (!window.ethereum) throw new Error("MetaMask not found")
 
-      const cc3RpcUrl = process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL || "https://rpc.cc3-testnet.creditcoin.network"
-      const cc3Provider = new ethers.JsonRpcProvider(cc3RpcUrl, 102031, {
-        staticNetwork: ethers.Network.from(102031),
-      })
-      const oracleContract = new ethers.Contract(
-        SANAD_CREDIT_ORACLE_ADDRESS,
-        ["function nonces(address) external view returns (uint256)"],
-        cc3Provider
-      )
-      let currentNonce = BigInt(0)
-      try {
-        currentNonce = await oracleContract.nonces(discoverAddress)
-      } catch {}
+      // The backend owner-authorized relayer submits the proof on-chain.
+      // No MetaMask signature is required from the user — the SanadCreditOracle
+      // accepts empty signatures from the configured owner.
+      const borrowerAddress = walletAddress || discoverAddress
+      if (!borrowerAddress || !borrowerAddress.startsWith('0x')) {
+        throw new Error('No borrower address available')
+      }
 
-      const innerHash = ethers.solidityPackedKeccak256(
-        ["address", "address", "uint256", "uint256"],
-        [discoverAddress, SANAD_CREDIT_ORACLE_ADDRESS, 102031, currentNonce]
-      )
-      const browserProvider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await browserProvider.getSigner()
-      const signature = await signer.signMessage(ethers.getBytes(innerHash))
-      if (!signature || signature.length !== 132) throw new Error("Invalid signature")
+      // The Attestcoin Prover may not have indexed the block yet — retry on failure
+      // with backoff. Up to 5 attempts, 15s apart.
+      let lastError = ''
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+          // Map API-returned human-readable fields back to numeric values the
+      // backend expects. The profile API returns protocol/eventType as strings
+      // and volumeUSD as a formatted decimal string.
+      const PROTOCOL_MAP: Record<string, number> = {
+        'Aave v3': 0, 'Compound v3': 1, 'Morpho Blue': 2, 'Spark Protocol': 3,
+        'MakerDAO': 4, 'Euler v2': 5, 'Fluid': 6, 'Maple Finance': 7,
+        'Goldfinch': 8, 'Fraxlend': 9,
+      }
+      const EVENT_TYPE_MAP: Record<string, number> = {
+        'Clean Repayment': 0, 'Liquidation': 1, 'Default': 2,
+        'Collateral Supply': 3, 'Active Borrow': 4,
+      }
+      const protocolNum = typeof event.protocol === 'number' ? event.protocol : PROTOCOL_MAP[event.protocol] ?? 0
+      const eventTypeNum = typeof event.eventType === 'number' ? event.eventType : EVENT_TYPE_MAP[event.eventType] ?? 0
+      // volumeUSD from API may be "50.0" (1 decimal) or "50.000000" (6 decimals) —
+      // parseUnits handles both, but normalise to 6-decimal string first.
+      const volRaw = typeof event.volumeUSD === 'number' ? String(event.volumeUSD) : event.volumeUSD
+      const volumeUSDNorm = volRaw.includes('.') ? volRaw.padEnd(volRaw.indexOf('.') + 7, '0').slice(0, volRaw.indexOf('.') + 7) : volRaw + '.000000'
 
       const { data } = await apiInstance.post("/credit-oracle/prove-event", {
-        address: discoverAddress,
+        address: borrowerAddress,
         event: {
           sourceTxHash: event.sourceTxHash,
           blockHeight: event.blockHeight,
-          protocol: event.protocol,
-          eventType: event.eventType,
-          volumeUSD: event.volumeUSD,
+          protocol: protocolNum,
+          eventType: eventTypeNum,
+          volumeUSD: volumeUSDNorm,
           timestamp: event.timestamp,
         },
-        signature,
       })
 
-      const result = data?.data || data
-      setProofModal((prev) => ({ ...prev, step: "done", proofData: { ...prev.proofData, submitResult: result } }))
-      if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["credit-profile", walletAddress] })
-        queryClient.invalidateQueries({ queryKey: ["proven-events", walletAddress] })
+          const result = data?.data || data
+          setProofModal((prev) => ({ ...prev, step: "done", proofData: { ...prev.proofData, submitResult: result } }))
+          if (result.success) {
+            queryClient.invalidateQueries({ queryKey: ["credit-profile", walletAddress] })
+            queryClient.invalidateQueries({ queryKey: ["proven-events", walletAddress], refetchType: 'all' })
+            queryClient.refetchQueries({ queryKey: ["proven-events", walletAddress] })
+            queryClient.refetchQueries({ queryKey: ["credit-profile", walletAddress] })
+          }
+          return
+        } catch (err: any) {
+          lastError = err.response?.data?.message || err.message || `Attempt ${attempt} failed`
+          console.warn(`[Credit] prove-event attempt ${attempt} failed:`, lastError)
+          if (attempt < 5) {
+            setProofModal((prev) => ({ ...prev, error: `Retrying... (${attempt}/5)` }))
+            await new Promise(r => setTimeout(r, 15000))
+          }
+        }
       }
+      setProofModal((prev) => ({ ...prev, step: "fetched", error: lastError }))
     } catch (err: any) {
       setProofModal((prev) => ({ ...prev, step: "fetched", error: err.message }))
     }
@@ -534,10 +557,15 @@ export default function BorrowerCreditPage() {
                               <span className="text-[#171414]/40">Source Tx Hash</span>
                               <p className="font-mono text-[#171414] truncate">{event.sourceTxHash}</p>
                             </div>
-                            {event.cc3TxHash && (
-                              <div className="rounded-lg bg-[#171414]/3 p-2">
-                                <span className="text-[#171414]/40">CC3 Proof Tx</span>
+                            {event.cc3TxHash ? (
+                              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2">
+                                <span className="text-emerald-600/80">CC3 Proof Tx</span>
                                 <p className="font-mono text-[#171414] truncate">{event.cc3TxHash}</p>
+                              </div>
+                            ) : (
+                              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2">
+                                <span className="text-amber-600/60">CC3 Proof</span>
+                                <p className="font-mono text-amber-600 text-[10px] mt-0.5">Not yet submitted</p>
                               </div>
                             )}
                             <div className="rounded-lg bg-[#171414]/3 p-2">
@@ -563,7 +591,7 @@ export default function BorrowerCreditPage() {
                             Source Tx
                             <ExternalLink className="h-3 w-3" />
                           </a>
-                          {event.cc3ExplorerUrl && (
+                          {event.cc3ExplorerUrl ? (
                             <a
                               href={event.cc3ExplorerUrl}
                               target="_blank"
@@ -574,6 +602,14 @@ export default function BorrowerCreditPage() {
                               Proof on CC3
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          ) : (
+                            <button
+                              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold text-amber-600 hover:bg-amber-500/20 transition-colors"
+                              onClick={() => handleFetchProof(event)}
+                            >
+                              <Clock className="h-3 w-3" />
+                              Prove on CC3
+                            </button>
                           )}
                         </div>
                       </div>
@@ -798,7 +834,7 @@ export default function BorrowerCreditPage() {
                 {
                   step: "submitting",
                   title: "Submit to CC3",
-                  desc: proofModal.step === "submitting" ? "Submitting to SanadCreditOracle..." : proofModal.step === "done" ? "Proof recorded on-chain ✓" : proofModal.step === "fetched" ? "Ready — requires MetaMask signature" : "Pending",
+                  desc: proofModal.step === "submitting" ? "Submitting to SanadCreditOracle..." : proofModal.step === "done" ? "Proof recorded on-chain ✓" : proofModal.step === "fetched" ? "Ready — relayer will submit on-chain" : "Pending",
                   done: proofModal.step === "done",
                   active: proofModal.step === "submitting",
                 },
@@ -879,9 +915,7 @@ export default function BorrowerCreditPage() {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Footer */}
+            </div>              {/* Footer */}
             <div className="px-6 py-4 border-t border-white/10 flex justify-end gap-3">
               <Button
                 variant="ghost"
@@ -897,7 +931,7 @@ export default function BorrowerCreditPage() {
                   className="rounded-full bg-[#E1BAC2] font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#171414] hover:bg-[#d4a6af] px-4"
                   onClick={handleSubmitToCC3}
                 >
-                  <Shield className="h-3 w-3 mr-1.5" /> Sign & Submit
+                  <Shield className="h-3 w-3 mr-1.5" /> Submit to CC3
                 </Button>
               )}
               {proofModal.step === "submitting" && (

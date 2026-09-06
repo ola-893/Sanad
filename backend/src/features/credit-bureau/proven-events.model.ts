@@ -10,7 +10,7 @@ export const ProvenEvents = MainSchema.table('proven_events', {
   id: varchar('id', { length: 66 }).primaryKey(), // sourceTxHash as primary key
   borrowerAddress: varchar('borrower_address', { length: 46 }).notNull(),
   sourceTxHash: varchar('source_tx_hash', { length: 66 }).notNull(),
-  cc3TxHash: varchar('cc3_tx_hash', { length: 66 }).notNull(),
+  cc3TxHash: varchar('cc3_tx_hash', { length: 66 }).notNull().default(''),
   blockHeight: integer('block_height'),
   protocol: integer('protocol'), // Protocol enum value
   eventType: integer('event_type'), // EventType enum value
