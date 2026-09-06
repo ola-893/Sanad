@@ -7,7 +7,9 @@ import {
     getAllSagsController, 
     approveSagController, 
     rejectSagController ,
-    overrideFailureSagController
+    overrideFailureSagController,
+    deleteSagController,
+    deleteSagByNumberController
 } from './sag.controller';
 
 const router = Router();
@@ -20,5 +22,7 @@ router.post('/approval/reject', rejectSagController);
 router.post('/override-failure', overrideFailureSagController);
 router.get('/', getAllSagsController);
 router.get('/:id', getSagController);
+router.delete('/number/:number', deleteSagByNumberController);
+router.delete('/:id', deleteSagController);
 
 export default router;

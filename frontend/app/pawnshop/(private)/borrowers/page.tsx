@@ -163,7 +163,7 @@ export default function BorrowersPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {borrowerList.map((b) => {
               const repaymentStatus = getRepaymentStatus(b)
               const gold = b.goldDetails || {}
