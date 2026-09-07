@@ -312,6 +312,19 @@ Tests cover:
 
 ---
 
+## 📚 Documentation
+
+All project documentation is organized in the [`docs/`](./docs/) folder:
+
+- **[Deployment Guides](./docs/deployment/)** - Deploy backend, database, and services
+- **[Architecture](./docs/architecture/)** - System design, database schema, and API docs
+- **[Development](./docs/development/)** - Setup guides and development workflows
+- **[User Guides](./docs/guides/)** - Quickstart, demos, and tutorials
+
+See the [Documentation Index](./docs/README.md) for the complete documentation map.
+
+---
+
 ## License
 
 Private -- Sanad Protocol. All rights reserved.
