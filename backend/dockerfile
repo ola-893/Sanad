@@ -8,6 +8,7 @@ RUN npm install -g pnpm
 
 # Copy package files first for better caching
 COPY backend/package.json ./package.json
+COPY backend/package-lock.json* ./package-lock.json
 
 # Copy lock file if it exists, otherwise install without it
 COPY backend/pnpm-lock.yaml* ./pnpm-lock.yaml
@@ -16,25 +17,21 @@ COPY backend/pnpm-lock.yaml* ./pnpm-lock.yaml
 RUN corepack enable && \
     if [ -f "pnpm-lock.yaml" ]; then \
         pnpm install --frozen-lockfile; \
+    elif [ -f "package-lock.json" ]; then \
+        npm ci; \
     else \
         pnpm install; \
     fi
 
-# Copy source and build
+# Copy source (no build needed, we'll use tsx)
 COPY backend/ .
 COPY backend/postgres ./postgres
 
 # Copy agent directory for Python gold evaluator
 COPY agent ./agent
 
-# Note: Don't generate migrations during build - run them at container startup
-# CMD ["./start.sh"]
-# RUN sh ./start.sh
-
-# RUN pnpm run migrate
-
-# Build the application
-RUN pnpm build
+# Run migrations during build
+RUN pnpm run migrate || echo "Migrations will run on startup"
 
 
 # ─── Stage 2: Runtime with Chromium for puppeteer-core ────────
@@ -53,12 +50,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 
-# Copy only necessary files
-COPY --from=builder /app/dist ./dist
+# Copy source files and dependencies (tsx will run TypeScript directly)
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/postgres ./postgres
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/tsconfig.json* ./tsconfig.json
 
 # Copy agent directory for Python gold evaluator
 COPY --from=builder /app/agent ./agent
@@ -81,9 +79,7 @@ ENV PYTHON_EXECUTABLE="$PYTHON_VENV_PATH/bin/python"
 
 EXPOSE 9487
 
-# CMD ["pnpm", "run", "dev"]
-
-CMD ["node", "dist/main.js"]
+CMD ["npx", "tsx", "src/main.ts"]
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
   CMD wget --quiet --spider http://localhost:9487/api/v1/health || exit 1

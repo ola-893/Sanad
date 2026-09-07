@@ -1,0 +1,15 @@
+frontend/
+docs/
+agent/
+.git/
+.vscode/
+.idea/
+*.md
+!README.md
+architecture-diagram.png
+process-flow.png
+render.yaml
+docker-compose.yml
+local-dev-start.sh
+local-dev-stop.sh
+deploy-railway.sh
