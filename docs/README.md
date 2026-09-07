@@ -7,7 +7,8 @@ Welcome to the Sanad Protocol documentation. This directory contains all project
 ### 🚀 [Deployment](./deployment/)
 Documentation for deploying Sanad to various platforms.
 
-- **[Render Deployment Guide](./deployment/render-deployment.md)** - Complete guide for deploying backend and database to Render
+- **[Railway Deployment Guide](./deployment/railway-deployment.md)** - Deploy to Railway (FREE tier, recommended)
+- **[Render Deployment Guide](./deployment/render-deployment.md)** - Alternative: Deploy to Render
 
 ### 🏗️ [Architecture](./architecture/)
 System architecture, design documents, and technical specifications.
