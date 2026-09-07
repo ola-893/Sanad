@@ -157,7 +157,7 @@ class SocketServiceImpl implements SocketService {
   constructor(server: HTTPServer | HTTPSServer) {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+        origin: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://127.0.0.1:3000'],
         methods: ['GET', 'POST'],
         credentials: true,
       },

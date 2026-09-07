@@ -10,6 +10,8 @@ export class CreditcoinClient {
     // 1. Creditcoin CC3 Testnet Provider
     this.creditcoinProvider = new ethers.JsonRpcProvider(CREDITCOIN_CONFIG.rpcUrl, CREDITCOIN_CONFIG.chainId, {
       staticNetwork: ethers.Network.from(CREDITCOIN_CONFIG.chainId),
+      // CC3's load-balanced RPC does not retain server-side filter IDs.
+      polling: true,
     });
 
     // 2. Admin Signer for CC3 state-changing transactions

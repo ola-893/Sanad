@@ -10,6 +10,9 @@
 node_modules
 **/node_modules
 **/__pycache__
+**/.venv
+**/.env
+**/.env.*
 
 # Build outputs  
 dist
@@ -22,4 +25,3 @@ README.md
 # Frontend (not needed for backend build)
 frontend
 Shoraka Suyula
-

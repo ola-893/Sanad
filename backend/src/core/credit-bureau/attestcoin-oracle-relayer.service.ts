@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
-import { EncodingVersion } from '@gluwa/usc-sdk/src/proof-provider/raw';
+import { EncodingVersion } from '@gluwa/usc-sdk/dist/proof-provider/raw/index.js';
 import dotenv from 'dotenv';
 import { CREDITCOIN_CONFIG, DEMO_ETH_TO_CTC_RATE } from '@/features/creditcoin/creditcoin.config.js';
 import { DEPLOYED_ADDRESSES } from '@/config/deployed-addresses.js';
@@ -411,7 +411,7 @@ export class AttestcoinOracleRelayerService {
           }
 
           const network = await rpc.getNetwork();
-          const { RawTransactionResponse, TransactionWithRaw } = await import('@gluwa/usc-sdk/src/encoding/common.js');
+          const { RawTransactionResponse, TransactionWithRaw } = await import('@gluwa/usc-sdk/dist/encoding/common.js');
 
           const transactions: any[] = [];
           for (const tx of blockDataRaw.transactions || []) {

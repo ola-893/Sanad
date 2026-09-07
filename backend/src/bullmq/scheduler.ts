@@ -4,7 +4,15 @@ import { processGoldPriceJob, GoldPriceJobData } from '../services/async-gold-pr
 import { processCrossChainProofJob, CrossChainProofJobData } from '../services/async-cross-chain-proof.service.js';
 
 // Redis connection configuration
-const redisConnection = {
+const redisUrl = process.env.REDIS_URL ? new URL(process.env.REDIS_URL) : undefined;
+const redisConnection = redisUrl ? {
+  host: redisUrl.hostname,
+  port: Number(redisUrl.port || 6379),
+  username: redisUrl.username ? decodeURIComponent(redisUrl.username) : undefined,
+  password: redisUrl.password ? decodeURIComponent(redisUrl.password) : undefined,
+  db: Number(redisUrl.pathname.slice(1) || 0),
+  ...(redisUrl.protocol === 'rediss:' ? { tls: {} } : {}),
+} : {
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,

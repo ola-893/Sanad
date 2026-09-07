@@ -1,8 +1,11 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "dockerfile"
+dockerfilePath = "backend/dockerfile"
 
 [deploy]
+preDeployCommand = ["node scripts/bootstrap-database.mjs"]
 startCommand = "node dist/main.js"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

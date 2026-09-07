@@ -1,9 +1,10 @@
 [build]
-builder = "NIXPACKS"
-watchPatterns = ["backend/**"]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/dockerfile"
+watchPatterns = ["backend/**", "agent/**", "railway.toml"]
 
 [deploy]
-rootDirectory = "backend"
+preDeployCommand = ["node scripts/bootstrap-database.mjs"]
 startCommand = "node dist/main.js"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 100

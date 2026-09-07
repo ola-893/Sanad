@@ -115,7 +115,7 @@ class SocketService {
         return
       }
 
-      const serverUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+      const serverUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
       this.socket = io(serverUrl, {
         transports: ['websocket', 'polling'],
         timeout: 20000,
