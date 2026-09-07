@@ -3,7 +3,8 @@ builder = "NIXPACKS"
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "cd backend && npx tsx src/main.ts"
+rootDirectory = "backend"
+startCommand = "node dist/main.js"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
