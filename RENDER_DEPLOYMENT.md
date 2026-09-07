@@ -34,16 +34,19 @@ This guide will help you deploy the Sanad backend API, PostgreSQL database, and 
 4. **Add Secret Environment Variables**
    Before deploying, you need to add these secret values manually:
    
-   Go to **sanad-backend** service → **Environment** tab and add:
+   Go to **sanad-backend** service → **Environment** tab and verify these are set:
    
    ```
    CREDITCOIN_PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
    PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
+   CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
    PINATA_API_KEY=08501330fb59b3a26c40
    PINATA_SECRET_API_KEY=99a278901f1eb9f4355050fcc459bba9aa493406bf3e305e06a0e99de4a0dd5a
    PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJiNDYwYjQ5YS0wOTA3LTRlYjYtOGZmNS1lZjlhODUwNTJhNmEiLCJlbWFpbCI6Im1oYXJ2ZWhsbEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiMDg1MDEzMzBmYjU5YjNhMjZjNDAiLCJzY29wZWRLZXlTZWNyZXQiOiI5OWEyNzg5MDFmMWViOWY0MzU1MDUwZmNjNDU5YmJhOWFhNDkzNDA2YmYzZTMwNWUwNmEwZTk5ZGU0YTBkZDVhIiwiZXhwIjoxODE4NjMxMzA2fQ.3OVYdKb6t1Tt_xYfYbgPixUerNQ9Ft4pVjDG6uFoijY
    GEMINI_API_KEY=AIzaSyB3vp-m6q68dNO-UcyZoiNPtS0oD6qMWd0
    ```
+   
+   **Note**: These are already set in render.yaml, but verify they appear correctly.
 
 5. **Deploy**
    - Click **"Apply"** or **"Create Blueprint"**
@@ -127,6 +130,7 @@ SANAD_CREDIT_ORACLE_ADDRESS=0x9B926B432bbEFA5405eC9EBB0F7515496c2095a5
 # Private Keys (REQUIRED)
 CREDITCOIN_PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
 PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
+CREDITCOIN_ORACLE_OWNER_PRIVATE_KEY=0x9b03237620808ee0fd539300ca7d23894d67e82e903441ef3ea02ea52e5fb4b6
 
 # IPFS & AI
 IPFS_GATEWAY_URL=https://gateway.pinata.cloud/ipfs
