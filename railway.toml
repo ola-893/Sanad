@@ -1,9 +1,8 @@
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "backend/dockerfile"
+builder = "NIXPACKS"
 
 [deploy]
-startCommand = "node dist/main.js"
+startCommand = "cd backend && npx tsx src/main.ts"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
