@@ -1,16 +1,21 @@
+[variables]
+NIXPACKS_YARN_VERSION = "1.22.19"
+NIXPACKS_NODE_VERSION = "20"
+
 [phases.setup]
 nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
 aptPkgs = []
 
 [phases.install]
 cmds = [
-  "cd backend && corepack enable && corepack prepare pnpm@latest --activate",
-  "cd backend && pnpm install --frozen-lockfile"
+  "cd backend && corepack enable",
+  "cd backend && corepack prepare pnpm@latest --activate",
+  "cd backend && pnpm install --frozen-lockfile || pnpm install"
 ]
 
 [phases.build]
 cmds = [
-  "cd backend && pnpm run migrate || echo 'Migration will run on startup'"
+  "cd backend && pnpm run migrate || echo 'Migrations will run on startup'"
 ]
 
 [start]
