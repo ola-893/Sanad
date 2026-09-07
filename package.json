@@ -6,7 +6,7 @@
     "backend"
   ],
   "scripts": {
-    "install": "corepack enable && corepack prepare pnpm@latest --activate && cd backend && pnpm install",
+    "install": "corepack enable && corepack prepare pnpm@latest --activate && cd backend && pnpm install --ignore-scripts=false || pnpm install",
     "build": "cd backend && pnpm run migrate || echo 'Migrations will run on startup'",
     "start": "cd backend && npx tsx src/main.ts"
   },
