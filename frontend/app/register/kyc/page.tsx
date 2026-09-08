@@ -198,7 +198,7 @@ export default function KycVerificationPage() {
     const MIN_SCAN_DURATION = 6000 // Minimum 6 seconds for UX feel
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
       // Simulate progress steps while waiting for backend
       const progressTimer = setInterval(() => {
         setScanStep((prev) => (prev < 4 ? prev + 1 : prev))
@@ -274,7 +274,7 @@ export default function KycVerificationPage() {
       eventsProven: 0,
       eventsFailed: 0,
     })
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
     try {
       const startResponse = await fetch(`${apiUrl}/api/v1/credit-oracle/auto-prove-all`, {
         method: "POST",
@@ -438,7 +438,7 @@ export default function KycVerificationPage() {
       setIsLoading(true)
       setErrorMessage(null)
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
         const docTypeMap: Record<string, "NIN" | "Passport" | "DriverLicense"> = { nin: "NIN", passport: "Passport", license: "DriverLicense" }
         
         // 1. Register or login the user via wallet auth

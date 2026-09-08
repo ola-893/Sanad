@@ -8,6 +8,10 @@ dotenv.config();
 const privateKey = process.env.JWT_PRIVATE_KEY?.replace(/\\n/g, '\n') || process.env.JWT_SECRET || '';
 const publicKey = process.env.JWT_PUBLIC_KEY?.replace(/\\n/g, '\n') || process.env.JWT_SECRET || '';
 
+const JWT_ALGORITHM = (process.env.JWT_ALGORITHM || 'HS256') as jwt.Algorithm;
+const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d';
+const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_TOKEN_EXPIRATION || '7d';
+
 interface TokenPayload extends JwtPayload {
   [key: string]: any;
   username: string;
@@ -21,8 +25,8 @@ export function generateAccessToken(userTokenInfo: UserTokenInfo): string {
   }
   
   const options = {
-    algorithm: process.env.JWT_ALGORITHM as jwt.Algorithm,
-    expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION!
+    algorithm: JWT_ALGORITHM,
+    expiresIn: JWT_ACCESS_EXPIRATION
   } as jwt.SignOptions;
   
   return jwt.sign(userTokenInfo, privateKey as jwt.Secret, options);
@@ -34,8 +38,8 @@ export function generateRefreshToken(userTokenInfo: UserTokenInfo): string {
   }
   
   const options = {
-    algorithm: process.env.JWT_ALGORITHM as jwt.Algorithm,
-    expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRATION!
+    algorithm: JWT_ALGORITHM,
+    expiresIn: JWT_REFRESH_EXPIRATION
   } as jwt.SignOptions;
   
   return jwt.sign(userTokenInfo, privateKey as jwt.Secret, options);
@@ -52,7 +56,7 @@ export function verifyToken(token: string): TokenPayload {
       token,
       publicKey,
       {
-        algorithms: [process.env.JWT_ALGORITHM as jwt.Algorithm]
+        algorithms: [JWT_ALGORITHM]
       }
     ) as TokenPayload;
   } catch (error) {

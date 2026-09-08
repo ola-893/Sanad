@@ -1311,7 +1311,9 @@ export class AttestcoinOracleRelayerService {
       }
 
       const proofData = proofResult.data;
-      const contract = this.getContract();
+      // Use the owner-authorized contract when no borrower signature is provided.
+      // The deployed oracle accepts an empty signature only when msg.sender is owner().
+      const contract = await this.getOwnerAuthorizedOracleContract();
 
       // Record the pawnshop payment as a verified event on CC3
       const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);

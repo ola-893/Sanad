@@ -3,7 +3,7 @@
 import axios, { AxiosError } from 'axios'
 import { cookies } from 'next/headers';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002';
 
 const apiServerInstance = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api/v1`,

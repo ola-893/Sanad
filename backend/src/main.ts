@@ -24,14 +24,19 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:5002", "http://localhost:3000", "https:"],
+      imgSrc: ["'self'", "data:", "https:", ...allowedOrigins],
       fontSrc: ["'self'", "https:"],
       styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", ...allowedOrigins],
+      connectSrc: ["'self'", "wss:", "ws:", ...allowedOrigins],
     },
   },
 }));

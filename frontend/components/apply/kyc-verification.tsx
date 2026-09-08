@@ -142,7 +142,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
     setScanMessage(null)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -179,7 +179,7 @@ export function KYCVerification({ nextStep }: KYCVerificationProps) {
       eventsProven: 0,
       eventsFailed: 0,
     })
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
 
     try {
       const startResponse = await fetch(`${apiUrl}/api/v1/credit-oracle/auto-prove-all`, {

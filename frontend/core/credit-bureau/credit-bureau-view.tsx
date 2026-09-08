@@ -117,7 +117,7 @@ export function CreditBureauView() {
     setErrorMessage(null)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
       setScanStep(2)
       const res = await fetch(`${apiUrl}/api/v1/credit-oracle/discover`, {
         method: "POST",
@@ -148,7 +148,7 @@ export function CreditBureauView() {
     setSignatureStatus(null)
 
     const topEvent = discoveredEvents[0]
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002"
 
     try {
       let signature = "0x"
