@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 
 interface Borrower {
+  id: string
   borrowerId: string
   borrowerWallet: string
   borrowerFirstName: string
@@ -166,7 +167,7 @@ export default function BorrowersPage() {
               const isOverdue = new Date() > realMaturity && !isFullyRepaid
 
               return (
-                <Link key={b.borrowerId} href={`/pawnshop/borrowers/${b.borrowerId}`}>
+                <Link key={b.id} href={`/pawnshop/borrowers/${b.id}`}>
                   <Card className="group cursor-pointer border-white/60 bg-white/70 backdrop-blur-sm transition-all hover:border-[#e1bac2]/40 hover:shadow-md hover:shadow-[#e1bac2]/10">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between gap-4">

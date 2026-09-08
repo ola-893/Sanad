@@ -86,22 +86,6 @@ interface PledgeRequest {
   updatedAt: string
 }
 
-interface Investment {
-  id: number
-  userId: string
-  sagTokenId: string
-  amountUsd: string
-  ethAmount: string
-  sourceTxHash: string
-  sourceChain: string
-  cc3TxHash: string
-  status: string
-  investorFirstName: string
-  investorLastName: string
-  investorWallet: string
-  createdAt: string
-}
-
 interface Repayment {
   id: number
   pledgeRequestId: string
@@ -115,12 +99,6 @@ interface Repayment {
   createdAt: string
   borrowerFirstName: string
   borrowerLastName: string
-}
-
-interface BorrowerDetail {
-  requests: PledgeRequest[]
-  investments: Investment[]
-  repayments: Repayment[]
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -189,28 +167,33 @@ function getImageUrl(url: string): string {
 export default function BorrowerDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const borrowerId = params.id as string
+  const requestId = params.id as string
 
-  const [detail, setDetail] = useState<BorrowerDetail | null>(null)
+  const [request, setRequest] = useState<any>(null)
+  const [repayments, setRepayments] = useState<Repayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
     fetchDetail()
-  }, [borrowerId])
+  }, [requestId])
 
   const fetchDetail = async () => {
     setLoading(true)
     setError("")
     try {
-      const res = await apiInstance.get(`/pledge-requests/borrowers/${borrowerId}`)
-      if (res.data.success) {
-        setDetail(res.data.data)
+      const [reqRes, repayRes] = await Promise.all([
+        apiInstance.get(`/pledge-requests/${requestId}`),
+        apiInstance.get(`/pledge-requests/${requestId}/repayments`).catch(() => ({ data: { data: [] } })),
+      ])
+      if (reqRes.data.success) {
+        setRequest(reqRes.data.data)
+        setRepayments(repayRes.data?.data || [])
       } else {
-        setError("Borrower not found")
+        setError("Loan not found")
       }
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Failed to load borrower details")
+      setError(e?.response?.data?.error || "Failed to load loan details")
     } finally {
       setLoading(false)
     }
@@ -224,11 +207,11 @@ export default function BorrowerDetailPage() {
     )
   }
 
-  if (error || !detail) {
+  if (error || !request) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
           <AlertTriangle className="mb-4 h-12 w-12 text-red-400" />
-          <p className="text-lg font-bold text-[#171414]">{error || "Borrower not found"}</p>
+          <p className="text-lg font-bold text-[#171414]">{error || "Loan not found"}</p>
           <Button onClick={() => router.back()} className="mt-4" variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
           </Button>
@@ -236,21 +219,17 @@ export default function BorrowerDetailPage() {
     )
   }
 
-  const { requests, investments, repayments } = detail
-  const latestRequest = requests[0]
-  const gold = latestRequest?.goldDetails || {}
-  const loanStatus = latestRequest?.status || "pending"
+  const gold = request.goldDetails || {}
+  const loanStatus = request.status || "pending"
   const cfg = statusConfig[loanStatus] || statusConfig.pending
   const StatusIcon = cfg.icon
-  // Compute REAL maturity from origination + duration (ignore test-mode loanMaturityDate)
-  const originationDate = latestRequest?.createdAt ? new Date(latestRequest.createdAt) : new Date()
-  const durationMonths = latestRequest?.loanDurationMonths || 3
+  const originationDate = request.createdAt ? new Date(request.createdAt) : new Date()
+  const durationMonths = request.loanDurationMonths || 3
   const realMaturityDate = new Date(originationDate.getTime() + durationMonths * 30 * 24 * 60 * 60 * 1000)
   const isExpired = new Date() > realMaturityDate
 
-  const totalInvested = investments.reduce((sum, inv) => sum + Number(inv.amountUsd || 0), 0)
-  const investmentTarget = Number(latestRequest?.investmentTargetUsd || 0)
-  const investmentFilled = Number(latestRequest?.investmentFilledUsd || 0)
+  const investmentTarget = Number(request?.investmentTargetUsd || 0)
+  const investmentFilled = Number(request?.investmentFilledUsd || 0)
   const fundingPct = investmentTarget > 0 ? Math.min(100, (investmentFilled / investmentTarget) * 100) : 0
 
   // Lifecycle progress
@@ -274,23 +253,23 @@ export default function BorrowerDetailPage() {
             <div className="flex items-start justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#171414] text-lg font-bold text-[#e1bac2]">
-                  {latestRequest.borrowerFirstName?.[0] || "?"}
-                  {latestRequest.borrowerLastName?.[0] || ""}
+                  {request.borrowerFirstName?.[0] || "?"}
+                  {request.borrowerLastName?.[0] || ""}
                 </div>
                 <div>
                   <h1 className="text-2xl font-extrabold text-[#171414]">
-                    {latestRequest.borrowerFirstName} {latestRequest.borrowerLastName}
+                    {request.borrowerFirstName} {request.borrowerLastName}
                   </h1>
                   <div className="mt-1 flex items-center gap-3">
                     <button
-                      onClick={() => navigator.clipboard.writeText(latestRequest.borrowerWallet)}
+                      onClick={() => navigator.clipboard.writeText(request.borrowerWallet)}
                       className="flex items-center gap-1 font-mono text-xs text-[#4A4A4A]/60 hover:text-[#171414]"
                     >
-                      {truncateAddress(latestRequest.borrowerWallet)}
+                      {truncateAddress(request.borrowerWallet)}
                       <Copy className="h-3 w-3" />
                     </button>
                     <a
-                      href={`${SEPOLIA_EXPLORER}/address/${latestRequest.borrowerWallet}`}
+                      href={`${SEPOLIA_EXPLORER}/address/${request.borrowerWallet}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#4A4A4A]/40 hover:text-[#e1bac2]"
@@ -298,8 +277,8 @@ export default function BorrowerDetailPage() {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
-                  {latestRequest.borrowerEmail && (
-                    <p className="mt-1 text-xs text-[#4A4A4A]/50">{latestRequest.borrowerEmail}</p>
+                  {request.borrowerEmail && (
+                    <p className="mt-1 text-xs text-[#4A4A4A]/50">{request.borrowerEmail}</p>
                   )}
                 </div>
               </div>
@@ -360,12 +339,12 @@ export default function BorrowerDetailPage() {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Asset", value: `${gold.assetType || "Gold"} ${latestRequest.verifiedKarat || gold.karat}K` },
-                    { label: "Weight", value: `${latestRequest.verifiedWeightG || gold.weightG}g` },
-                    { label: "Purity", value: latestRequest.verifiedPurity || gold.purity || "—" },
-                    { label: "Appraised Value", value: `$${Number(latestRequest.verifiedAppraisedValueUsd || gold.estimatedValue || 0).toLocaleString()}` },
-                    { label: "Loan Amount", value: `$${Number(latestRequest.paymentAmountUsd || 0).toLocaleString()}` },
-                    { label: "Duration", value: latestRequest.loanDurationMonths ? `${latestRequest.loanDurationMonths} months` : "—" },
+                    { label: "Asset", value: `${gold.assetType || "Gold"} ${request.verifiedKarat || gold.karat}K` },
+                    { label: "Weight", value: `${request.verifiedWeightG || gold.weightG}g` },
+                    { label: "Purity", value: request.verifiedPurity || gold.purity || "—" },
+                    { label: "Appraised Value", value: `$${Number(request.verifiedAppraisedValueUsd || gold.estimatedValue || 0).toLocaleString()}` },
+                    { label: "Loan Amount", value: `$${Number(request.paymentAmountUsd || 0).toLocaleString()}` },
+                    { label: "Duration", value: request.loanDurationMonths ? `${request.loanDurationMonths} months` : "—" },
                     { label: "Maturity Date", value: formatDate(realMaturityDate.toISOString()) },
                     { label: "Time Remaining", value: getTimeRemaining(realMaturityDate.toISOString()) },
                   ].map((item) => (
@@ -375,10 +354,10 @@ export default function BorrowerDetailPage() {
                     </div>
                   ))}
                 </div>
-                {latestRequest.pawnshopNotes && (
+                {request.pawnshopNotes && (
                   <div className="mt-3 rounded-lg bg-[#171414]/3 p-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Pawnshop Notes</p>
-                    <p className="mt-1 text-xs text-[#4A4A4A]">{latestRequest.pawnshopNotes}</p>
+                    <p className="mt-1 text-xs text-[#4A4A4A]">{request.pawnshopNotes}</p>
                   </div>
                 )}
               </CardContent>
@@ -397,25 +376,25 @@ export default function BorrowerDetailPage() {
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Credit Score</span>
                     <span className={`mt-1 text-2xl font-extrabold ${
-                      latestRequest.borrowerCreditScore >= 700 ? "text-emerald-600" :
-                      latestRequest.borrowerCreditScore >= 500 ? "text-amber-600" :
-                      latestRequest.borrowerCreditScore > 0 ? "text-red-500" : "text-[#4A4A4A]/40"
+                      request.borrowerCreditScore >= 700 ? "text-emerald-600" :
+                      request.borrowerCreditScore >= 500 ? "text-amber-600" :
+                      request.borrowerCreditScore > 0 ? "text-red-500" : "text-[#4A4A4A]/40"
                     }`}>
-                      {latestRequest.borrowerCreditScore || "—"}
+                      {request.borrowerCreditScore || "—"}
                     </span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Tier</span>
                     <Badge variant="outline" className="mt-1 w-fit border-[#e1bac2] bg-[#e1bac2]/10 text-[#8c5a63]">
-                      {latestRequest.borrowerCreditTier || "Unscored"}
+                      {request.borrowerCreditTier || "Unscored"}
                     </Badge>
                   </div>
                 </div>
-                {latestRequest.borrowerEvents && latestRequest.borrowerEvents.length > 0 && (
+                {request.borrowerEvents && request.borrowerEvents.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Proven DeFi Events ({latestRequest.borrowerEvents.length})</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Proven DeFi Events ({request.borrowerEvents.length})</p>
                     <div className="mt-2 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                      {latestRequest.borrowerEvents.map((evt: any, i: number) => {
+                      {request.borrowerEvents.map((evt: any, i: number) => {
                         const eventNum = Number(evt.eventType)
                         const protoNum = Number(evt.protocol)
                         return (
@@ -437,12 +416,12 @@ export default function BorrowerDetailPage() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Loan Funding */}
-            {latestRequest.sagTokenId && (
+            {request.sagTokenId && (
               <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#171414]">
                     <Coins className="h-4 w-4 text-[#e1bac2]" />
-                    Loan Funding (SAG #{latestRequest.sagTokenId})
+                    Loan Funding (SAG #{request.sagTokenId})
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -464,7 +443,7 @@ export default function BorrowerDetailPage() {
             )}
 
             {/* Payment Details */}
-            {latestRequest.paymentTxHash && (
+            {request.paymentTxHash && (
               <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#171414]">
@@ -477,38 +456,38 @@ export default function BorrowerDetailPage() {
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Amount Paid</span>
                       <span className="mt-1 text-lg font-extrabold text-[#171414]">
-                        ${Number(latestRequest.paymentAmountUsd || 0).toLocaleString()}
+                        ${Number(request.paymentAmountUsd || 0).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Paid On</span>
                       <span className="mt-1 text-sm font-bold text-[#171414]">
-                        {formatDateTime(latestRequest.paidAt)}
+                        {formatDateTime(request.paidAt)}
                       </span>
                     </div>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Sepolia Tx</span>
                     <a
-                      href={`${SEPOLIA_EXPLORER}/tx/${latestRequest.paymentTxHash}`}
+                      href={`${SEPOLIA_EXPLORER}/tx/${request.paymentTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 flex items-center gap-1 text-xs font-mono text-[#e1bac2] hover:underline"
                     >
-                      {truncateAddress(latestRequest.paymentTxHash)}
+                      {truncateAddress(request.paymentTxHash)}
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
-                  {latestRequest.paymentCc3TxHash && (
+                  {request.paymentCc3TxHash && (
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">CC3 Proof Tx</span>
                       <a
-                        href={`${CC3_EXPLORER}/tx/${latestRequest.paymentCc3TxHash}`}
+                        href={`${CC3_EXPLORER}/tx/${request.paymentCc3TxHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-1 flex items-center gap-1 text-xs font-mono text-[#e1bac2] hover:underline"
                       >
-                        {truncateAddress(latestRequest.paymentCc3TxHash)}
+                        {truncateAddress(request.paymentCc3TxHash)}
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </div>
@@ -518,7 +497,7 @@ export default function BorrowerDetailPage() {
             )}
 
             {/* Contact Info (if shared) */}
-            {latestRequest.pawnshopContactName && (
+            {request.pawnshopContactName && (
               <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#171414]">
@@ -530,15 +509,15 @@ export default function BorrowerDetailPage() {
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#4A4A4A]/60">Contact</span>
-                      <span className="font-bold text-[#171414]">{latestRequest.pawnshopContactName}</span>
+                      <span className="font-bold text-[#171414]">{request.pawnshopContactName}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#4A4A4A]/60">Phone</span>
-                      <span className="font-bold text-[#171414]">{latestRequest.pawnshopContactPhone}</span>
+                      <span className="font-bold text-[#171414]">{request.pawnshopContactPhone}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#4A4A4A]/60">Location</span>
-                      <span className="font-bold text-[#171414]">{latestRequest.pawnshopLocation}</span>
+                      <span className="font-bold text-[#171414]">{request.pawnshopLocation}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -546,7 +525,7 @@ export default function BorrowerDetailPage() {
             )}
 
             {/* Repayment Tracker */}
-            {latestRequest.paymentAmountUsd && (
+            {request.paymentAmountUsd && (
               <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#171414]">
@@ -556,7 +535,7 @@ export default function BorrowerDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {(() => {
-                    const loanAmount = Number(latestRequest.paymentAmountUsd || 0)
+                    const loanAmount = Number(request.paymentAmountUsd || 0)
                     const totalRepaid = repayments.reduce((sum, r) => sum + Number(r.amountUsd || 0), 0)
                     const remaining = Math.max(0, loanAmount - totalRepaid)
                     const pct = loanAmount > 0 ? Math.min(100, (totalRepaid / loanAmount) * 100) : 0
@@ -663,17 +642,17 @@ export default function BorrowerDetailPage() {
             )}
 
             {/* Gold Images */}
-            {latestRequest.goldImages && latestRequest.goldImages.length > 0 && (
+            {request.goldImages && request.goldImages.length > 0 && (
               <Card className="border-white/60 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#171414]">
                     <FileText className="h-4 w-4 text-[#e1bac2]" />
-                    Gold Photos ({latestRequest.goldImages.length})
+                    Gold Photos ({request.goldImages.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2">
-                    {latestRequest.goldImages.map((url: string, i: number) => (
+                    {request.goldImages.map((url: string, i: number) => (
                       <img
                         key={i}
                         src={getImageUrl(url)}

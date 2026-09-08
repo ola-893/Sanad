@@ -398,6 +398,7 @@ export async function getBorrowersByPawnshop(pawnshopId: string): Promise<any[]>
   const { pool } = await import("@/db/index.js");
   const result = await pool.query(
     `SELECT 
+      pr.id as "id",
       pr.borrower_id as "borrowerId",
       pr.borrower_wallet as "borrowerWallet",
       u.user_first_name as "borrowerFirstName",
