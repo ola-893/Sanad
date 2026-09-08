@@ -22,6 +22,15 @@ Service settings: root `/`, Dockerfile `backend/dockerfile`, start command
 `node scripts/bootstrap-database.mjs`. Set `CORS_ORIGIN` to the exact frontend
 origin. The API uses Railway's `PORT`, `DATABASE_URL`, and `REDIS_URL`.
 
+Uploads persist on `sanad-volume` (`e0d49a0d-2b60-4640-b21b-ad5bebd1f56d`,
+500 MB), mounted at `/app/public/uploads` on the API service. Keep this mount
+when changing deployments. Both Multer and Express use this directory; no
+`UPLOADS_PATH` override is needed. `UPLOAD_BASE_URL` is set to the HTTPS API
+origin so newly returned image URLs are not mixed-content HTTP links.
+The volume was installed on 2026-09-08 after confirming the previous upload
+directory was empty. Older missing files require restoration or re-upload;
+creating a volume cannot recover discarded container files.
+
 The pre-deploy script initializes an **empty** `main` schema transactionally
 from `postgres/bootstrap.sql`. It never seeds accounts or changes existing
 tables. A partial schema requires a reviewed migration. The historical migration
