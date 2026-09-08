@@ -610,18 +610,19 @@ export default function PawnshopRequestsPage() {
                               {req.borrowerEvents && req.borrowerEvents.length > 0 && (
                                 <div className="space-y-1.5">
                                   <p className="text-[10px] font-mono text-muted-foreground mb-1">Verified DeFi Events:</p>
-                                  {req.borrowerEvents.map((evt, i) => (
+                                   {req.borrowerEvents.map((evt, i) => {
+                                    const eventNum = Number(evt.eventType)
+                                    const protoNum = Number(evt.protocol)
+                                    return (
                                     <div key={i} className="flex items-center gap-2 text-xs">
                                       <span className="text-muted-foreground">
-                                        {typeof evt.eventType === "number"
-                                          ? EVENT_TYPE_NAMES[evt.eventType]
-                                          : evt.eventType}
+                                        {EVENT_TYPE_NAMES[eventNum] || evt.eventType}
                                       </span>
                                       <span className="text-muted-foreground">on</span>
-                                      <span className="font-medium text-[#171414]">{evt.protocol}</span>
+                                      <span className="font-medium text-[#171414]">{PROTOCOL_NAMES[protoNum] || evt.protocol}</span>
                                       <span className="text-muted-foreground ml-auto">{formatVolume(evt.volumeUSD)}</span>
                                     </div>
-                                  ))}
+                                  )})}
                                 </div>
                               )}
                             </div>

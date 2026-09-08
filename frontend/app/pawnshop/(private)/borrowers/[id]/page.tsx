@@ -32,6 +32,17 @@ import {
 const SEPOLIA_EXPLORER = "https://eth-sepolia.blockscout.com"
 const CC3_EXPLORER = "https://creditcoin-testnet.blockscout.com"
 
+const PROTOCOL_NAMES: Record<number, string> = {
+  0: "Aave v3", 1: "Compound v3", 2: "Morpho Blue", 3: "Spark Protocol",
+  4: "MakerDAO", 5: "Euler v2", 6: "Fluid", 7: "Maple Finance",
+  8: "Goldfinch", 9: "Fraxlend",
+}
+
+const EVENT_TYPE_NAMES: Record<number, string> = {
+  0: "Clean Repayment", 1: "Liquidation", 2: "Default",
+  3: "Collateral Supply", 4: "Active Borrow",
+}
+
 interface PledgeRequest {
   id: string
   borrowerId: string
@@ -404,15 +415,18 @@ export default function BorrowerDetailPage() {
                   <div className="mt-4">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A4A]/50">Proven DeFi Events ({latestRequest.borrowerEvents.length})</p>
                     <div className="mt-2 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                      {latestRequest.borrowerEvents.map((evt: any, i: number) => (
+                      {latestRequest.borrowerEvents.map((evt: any, i: number) => {
+                        const eventNum = Number(evt.eventType)
+                        const protoNum = Number(evt.protocol)
+                        return (
                         <div key={i} className="flex items-center justify-between rounded-lg bg-[#171414]/3 p-2 text-xs">
                           <div>
-                            <span className="font-bold text-[#171414]">{evt.protocol}</span>
-                            <span className="ml-2 text-[#4A4A4A]">{evt.eventType}</span>
+                            <span className="font-bold text-[#171414]">{PROTOCOL_NAMES[protoNum] || evt.protocol}</span>
+                            <span className="ml-2 text-[#4A4A4A]">{EVENT_TYPE_NAMES[eventNum] || evt.eventType}</span>
                           </div>
                           <span className="text-[#4A4A4A]/60">${Number(evt.volumeUSD || 0).toLocaleString()}</span>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   </div>
                 )}

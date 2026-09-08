@@ -716,18 +716,21 @@ export default function BorrowerApplyPage() {
                       <div className="mt-3 pt-3 border-t border-[#171414]/10">
                         <p className="text-[10px] font-mono text-muted-foreground mb-2">Verified DeFi Events:</p>
                         <div className="space-y-1.5">
-                          {creditProfile.provenEvents.slice(0, 3).map((evt, i) => (
+                          {creditProfile.provenEvents.slice(0, 3).map((evt, i) => {
+                            const eventNum = Number(evt.eventType)
+                            const protoNum = Number(evt.protocol)
+                            return (
                             <div key={i} className="flex items-center gap-2 text-[10px]">
                               <span className="text-muted-foreground">
-                                {typeof evt.eventType === "number" ? EVENT_TYPE_NAMES[evt.eventType] : evt.eventType}
+                                {EVENT_TYPE_NAMES[eventNum] || evt.eventType}
                               </span>
                               <span className="text-muted-foreground">on</span>
-                              <span className="font-medium text-[#171414]">{evt.protocol}</span>
+                              <span className="font-medium text-[#171414]">{PROTOCOL_NAMES[protoNum] || evt.protocol}</span>
                               <span className="text-muted-foreground ml-auto font-mono">
                                 {evt.cc3TxHash ? "CC3 Proven" : "Pending"}
                               </span>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     )}

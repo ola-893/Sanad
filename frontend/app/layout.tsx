@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/hooks/use-language"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { EnhancedChatWidget } from "@/components/ai-chat/enhanced-chat-widget"
 import { Toaster } from "@/components/ui/sonner"
 import { ConditionalLayout } from "@/components/conditional-layout"
 import { QueryProvider } from "@/components/query-client-provider"
@@ -47,7 +46,6 @@ export default function RootLayout({
                 <ConditionalLayout>
                   {children}
                 </ConditionalLayout>
-                <EnhancedChatWidget />
                 <ProofBanner />
                 <Toaster />
               </AuthProvider>

@@ -76,15 +76,7 @@ export default function BorrowersPage() {
     }
   }
 
-  // Group borrowers by borrowerId, show the latest status per borrower
-  const uniqueBorrowers = borrowers.reduce<Record<string, Borrower>>((acc, b) => {
-    if (!acc[b.borrowerId] || new Date(b.updatedAt) > new Date(acc[b.borrowerId].updatedAt)) {
-      acc[b.borrowerId] = b
-    }
-    return acc
-  }, {})
-
-  const borrowerList = Object.values(uniqueBorrowers).filter((b) => {
+  const borrowerList = borrowers.filter((b) => {
     if (!search) return true
     const q = search.toLowerCase()
     return (
