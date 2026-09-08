@@ -3,6 +3,13 @@
 Deploy from the repository root, not `backend/`. The Docker build includes the
 Node API and `agent/` Python evaluator. Local environment files are excluded.
 
+Always pass the explicit API service ID shown below. Never run `railway up`
+against the Postgres service: a source upload can deploy the Node app there,
+replacing the database process even while the service still lists a Postgres
+image. On 2026-09-08 this caused the database outage. The original volume was
+preserved and service `374beec7-f41b-4475-9ad9-12a72e5c5335` was restored to
+`ghcr.io/railwayapp-templates/postgres-ssl:18`.
+
 Railway service: `e125e32f-4fb3-4539-94ba-a064ec2c231e`
 Project: `6d6d4c8f-6af3-4872-8af7-c39f06066ce2`
 

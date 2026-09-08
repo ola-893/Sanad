@@ -13,6 +13,10 @@ const nextConfig = {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002';
     return [
       {
+        source: '/api/uploads/:path*',
+        destination: `${backendUrl}/uploads/:path*`,
+      },
+      {
         source: '/uploads/:path*',
         destination: `${backendUrl}/uploads/:path*`,
       },
