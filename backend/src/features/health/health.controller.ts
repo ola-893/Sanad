@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 // DB 
 import { db } from '@/db/index';
-import { test } from "@/db/db.model";
+import { sql } from 'drizzle-orm';
 // Error Types
 import { Error } from '@/error/index';
 
@@ -11,8 +11,8 @@ export const healthCheck = (req: Request, res: Response) => {
 
 export const dbHealthCheck = async (req: Request, res: Response) => {
   try {
-    const result = await db.select().from(test);
-    res.send(result);
+    await db.execute(sql`SELECT 1`);
+    res.json({ success: true, database: 'connected' });
   } catch (error) {
     console.error('DB Health Check error:', error);
     res.status(500).json({

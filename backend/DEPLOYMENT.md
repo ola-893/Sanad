@@ -29,6 +29,13 @@ journal references a missing `0013` file; do not replay it against the new
 baseline or run the demo seed script in production (it resets an admin password).
 Future schema changes need versioned, reviewed migrations against this baseline.
 
+For existing databases missing investment/repayment tables, the explicit repair
+is `node scripts/repair-production-tables.mjs`. This runs the approved
+`postgres/production-repair.sql` transactionally with bounded lock/statement
+timeouts. It creates only missing tables/indexes and preserves existing tables.
+Applied successfully to production on 2026-09-08. The existing `main.test`
+table retains its legacy columns; database health now checks `SELECT 1`.
+
 The baseline was exported offline with:
 `npx drizzle-kit export --config drizzle.bootstrap.config.ts`.
 Tests: `node --test scripts/bootstrap-database.test.mjs`.
