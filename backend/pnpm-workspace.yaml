@@ -1,2 +1,8 @@
 packages:
   - .
+
+onlyBuiltDependencies:
+  - bcrypt
+  - esbuild
+  - msgpackr-extract
+  - '@scarf/scarf'
