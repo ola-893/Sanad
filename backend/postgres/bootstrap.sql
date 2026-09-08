@@ -3,8 +3,8 @@
 CREATE SCHEMA IF NOT EXISTS "main";
 
 CREATE TABLE "main"."test" (
-	"testId" varchar PRIMARY KEY NOT NULL,
-	"status" varchar NOT NULL
+	"test_id" varchar(40) PRIMARY KEY NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 
 CREATE TABLE "main"."company_admin" (
@@ -313,3 +313,38 @@ CREATE TABLE "main"."sag" (
 	"closed_at" timestamp,
 	CONSTRAINT "sag_cert_no_unique" UNIQUE("cert_no")
 );
+
+CREATE TABLE "main"."investment" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" varchar(40) NOT NULL,
+	"sag_token_id" varchar(100) NOT NULL,
+	"pledge_request_id" varchar(40) NOT NULL,
+	"amount_usd" numeric NOT NULL,
+	"eth_amount" numeric,
+	"source_tx_hash" varchar(66),
+	"source_chain" integer DEFAULT 1,
+	"cc3_tx_hash" varchar(66),
+	"status" varchar(20) DEFAULT 'completed',
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS "idx_investment_user" ON "main"."investment" ("user_id");
+CREATE INDEX IF NOT EXISTS "idx_investment_sag" ON "main"."investment" ("sag_token_id");
+CREATE INDEX IF NOT EXISTS "idx_investment_pledge" ON "main"."investment" ("pledge_request_id");
+
+CREATE TABLE "main"."loan_repayment" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"pledge_request_id" varchar(40) NOT NULL,
+	"borrower_id" varchar(40) NOT NULL,
+	"pawnshop_id" varchar(40) NOT NULL,
+	"amount_usd" numeric NOT NULL,
+	"tx_hash" varchar(66),
+	"cc3_tx_hash" varchar(66),
+	"notes" text DEFAULT '',
+	"status" varchar(20) DEFAULT 'completed',
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS "idx_loan_repayment_pledge" ON "main"."loan_repayment" ("pledge_request_id");
+CREATE INDEX IF NOT EXISTS "idx_loan_repayment_borrower" ON "main"."loan_repayment" ("borrower_id");
