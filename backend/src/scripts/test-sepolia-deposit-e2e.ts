@@ -34,7 +34,7 @@ const SANAD_LIQUIDITY_POOL_ABI = [
 
 async function main() {
   console.log('========================================================================');
-  console.log('🧪 CR3DX SEPARATION & SOLVENCY INTEGRITY TEST (CC3 TESTNET)');
+  console.log('🧪 CREDIT SEPARATION & SOLVENCY INTEGRITY TEST (CC3 TESTNET)');
   console.log('========================================================================');
 
   const sepoliaProvider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
@@ -128,7 +128,7 @@ async function main() {
   console.log(`     CC3 Explorer: https://creditcoin-testnet.blockscout.com/tx/${recordTx.hash}`);
 
   // 5. Verify On-Chain State After Deposit Settlement
-  console.log('\n[5/6] Verifying On-Chain State Under Cr3dX Separation Rules...');
+  console.log('\n[5/6] Verifying On-Chain State Under Credit Separation Rules...');
   const finalLpBalance = await poolContract.lpBalances(sepoliaSigner.address);
   const finalProvenCapital = await poolContract.investorTotalProvenCapital(sepoliaSigner.address);
   const finalPoolLiquidity = await poolContract.totalPoolLiquidity();
@@ -144,10 +144,10 @@ async function main() {
 
   // Assertions
   if (finalLpBalance !== initialLpBalance) {
-    throw new Error(`CR3DX SEPARATION VIOLATION: lpBalances was modified by cross-chain proof! Delta: ${finalLpBalance - initialLpBalance}`);
+    throw new Error(`CREDIT SEPARATION VIOLATION: lpBalances was modified by cross-chain proof! Delta: ${finalLpBalance - initialLpBalance}`);
   }
   if (finalPoolLiquidity !== initialPoolLiquidity) {
-    throw new Error(`CR3DX SEPARATION VIOLATION: totalPoolLiquidity was inflated by cross-chain proof! Delta: ${finalPoolLiquidity - initialPoolLiquidity}`);
+    throw new Error(`CREDIT SEPARATION VIOLATION: totalPoolLiquidity was inflated by cross-chain proof! Delta: ${finalPoolLiquidity - initialPoolLiquidity}`);
   }
   if (finalProvenCapital - initialProvenCapital !== depositAmountUnits) {
     throw new Error(`PROVEN CAPITAL MISMATCH: expected +${depositAmountUnits}, got +${finalProvenCapital - initialProvenCapital}`);

@@ -966,7 +966,7 @@ export class AttestcoinOracleRelayerService {
 
       // Resolve the actual ETH sent in the Sepolia deposit tx
       const sourceEthWei = await this.resolveSourceTxValue(sourceTxHash, chainKey);
-      console.log(`[AttestcoinRelayer] Sepolia deposit value: ${ethers.formatEther(sourceEthWei)} ETH (Cr3dX Separation: recorded on CC3 as proven reputation capital without unbacked native LP dilution)`);
+      console.log(`[AttestcoinRelayer] Sepolia deposit value: ${ethers.formatEther(sourceEthWei)} ETH (Credit Separation: recorded on CC3 as proven reputation capital without unbacked native LP dilution)`);
 
       console.log(`[AttestcoinRelayer] Calling verifyAndRecordDeposit on CC3 pool (${CREDITCOIN_CONFIG.contracts.liquidityPoolAddress})...`);
       const tx = await poolContract.verifyAndRecordDeposit(

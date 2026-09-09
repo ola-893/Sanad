@@ -30,7 +30,7 @@ export const SANAD_LIQUIDITY_POOL_ABI = [
   "function lpBalances(address provider) external view returns (uint256)",
   "function totalPoolLiquidity() external view returns (uint256)",
 
-  // Proven Cross-Chain Investor Capital & Credit Ledger (Cr3dX Separation)
+  // Proven Cross-Chain Investor Capital & Credit Ledger (Credit Separation)
   "function investorTotalProvenCapital(address investor) external view returns (uint256)",
   "function totalCrossChainProvenCapital() external view returns (uint256)",
   "function getInvestorProvenDeposits(address investor) external view returns (tuple(uint64 chainKey, bytes32 sourceTxHash, uint256 amount, uint256 timestamp)[])",

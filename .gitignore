@@ -64,3 +64,6 @@ public/uploads/
 .qoder/
 # Local Netlify folder
 .netlify
+
+# Temporary files
+tmp/

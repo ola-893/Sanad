@@ -1,113 +1,81 @@
-# 🧪 Sanad Protocol - Tester Quickstart & Login Guide
+# Local setup and testing
 
-Welcome to Sanad! This guide walks you through setting up the environment, launching the PostgreSQL database and Redis queues, seeding test accounts, and testing both borrower and investor flows on Creditcoin CC3.
+Run these commands from the repository root unless stated otherwise. Use a disposable local database and testnet wallets; do not point local seed scripts at production.
 
----
+## 1. Install dependencies
 
-## ⚡ 1. Fast Setup (3 Steps)
+You need Node.js 20 or newer, npm, Docker Compose, and an EVM wallet for on-chain tests. Foundry is needed for Solidity tests. Python is optional unless testing the evaluator.
 
-### Step 1: Configure Environments
-Copy the sample environment variables:
-
-```bash
-# 1. Backend environment
-cp backend/.env.example backend/.env
-
-# 2. Frontend environment
-cp frontend/.env.example frontend/.env.local
+```sh
+cd backend
+npm install
+cd ../frontend
+npm install
+cd ..
 ```
 
----
+## 2. Configure the environment
 
-### Step 2: Start Database & Services via Docker
-Launch PostgreSQL (port `5432` / `15432`) and Redis (port `6379`):
+If the files do not already exist, copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Preserve existing configuration.
 
-```bash
-# From repository root:
+Set backend `PORT=5002`, local database/Redis connection settings, and `CORS_ORIGIN=http://localhost:3000`. Set frontend `NEXT_PUBLIC_API_URL=http://localhost:5002`. The backend otherwise falls back to port 8000; all API and socket URLs must agree with your chosen port.
+
+Sample credentials and private keys are placeholders, not valid production signers. Configure testnet RPC access and appropriately authorized test wallets only when needed. Never put a private key in a `NEXT_PUBLIC_*` variable.
+
+## 3. Start the database and Redis
+
+```sh
 docker compose up -d postgres redis
 ```
 
----
+Match the database host port and credentials to your local Compose configuration.
 
-### Step 3: Run Database Migrations & Seed Test Users
-Initialize the database schemas, roles, and pre-configured accounts:
+For a disposable development database only:
 
-```bash
+```sh
 cd backend
-npm install
 npm run seed
 ```
 
-> **Result**: Creates the `main` schema, tables, and 5 pre-configured demo users with password `Password123!`.
+The seed script may reset demo/admin credentials. Never use it as a production migration. Follow the [deployment runbook](../deployment/production.md) for production initialization and repairs.
 
----
+## 4. Start the application
 
-## 🚀 2. Running Backend & Frontend
+Backend terminal, from `backend/`:
 
-Open two terminal windows:
-
-### Terminal 1: Backend API (Port 5001)
-```bash
-cd backend
+```sh
 npm run dev
 ```
-* **Backend API**: `http://localhost:5001`
-* **Swagger / OpenAPI Docs**: `http://localhost:5001/api-docs`
-* **Creditcoin Indexer**: Listens for CC3 on-chain events on WebSocket & REST.
 
-### Terminal 2: Frontend dApp (Port 3000)
-```bash
-cd frontend
-npm install
+Frontend terminal, from `frontend/`:
+
+```sh
 npm run dev
 ```
-* **Web App**: `http://localhost:3000`
 
----
+Open http://localhost:3000 and check http://localhost:5002/api/v1/health and http://localhost:5002/api/v1/health/db. Register a test wallet through the application. On-chain actions require network gas and the relevant contract role, not just an application account.
 
-## 🔑 3. Test Credentials & Login Matrix
+## 5. Verify changes
 
-All test accounts share the same default password: **`Password123!`**
+From `backend/`:
 
-| User Role | Email / Username | Password | Target Dashboard / Pages to Test |
-| :--- | :--- | :--- | :--- |
-| **Gold Borrower** | `borrower@sanad.finance` | `Password123!` | [http://localhost:3000/dashboard/borrower/credit](http://localhost:3000/dashboard/borrower/credit)<br>[http://localhost:3000/payment](http://localhost:3000/payment) |
-| **Liquidity Investor (LP)** | `investor@sanad.finance` | `Password123!` | [http://localhost:3000/dashboard](http://localhost:3000/dashboard)<br>[http://localhost:3000/dashboard/browse](http://localhost:3000/dashboard/browse) |
-| **Pawnshop Operator** | `pawnshop@sanad.finance` | `Password123!` | [http://localhost:3000/pawnshop/dashboard](http://localhost:3000/pawnshop/dashboard)<br>[http://localhost:3000/pawnshop/nfts/new](http://localhost:3000/pawnshop/nfts/new) |
-| **Company Admin (HQ)** | `manager@sanad.finance` | `Password123!` | [http://localhost:3000/admin/dashboard](http://localhost:3000/admin/dashboard)<br>[http://localhost:3000/admin/kyc](http://localhost:3000/admin/kyc) |
-| **Super Admin / Regulator** | `admin@sanad.finance` | `Password123!` | [http://localhost:3000/admin/compliance](http://localhost:3000/admin/compliance)<br>[http://localhost:3000/admin/dashboard](http://localhost:3000/admin/dashboard) |
+```sh
+npm run build
+node --test scripts/bootstrap-database.test.mjs
+```
 
----
+From `frontend/`:
 
-## 🌐 4. MetaMask / Web3 Wallet Configuration
+```sh
+npm run build
+```
 
-To test on-chain actions (Credit scoring, Minting, Freezing, Repayment, Liquidity Supply), add **Creditcoin 3 (CC3) Testnet** to your EVM wallet:
+From `backend/src/contracts/sepolia/`:
 
-* **Network Name**: `Creditcoin 3 Testnet`
-* **New RPC URL**: `https://rpc.cc3-testnet.creditcoin.network`
-* **Chain ID**: `102031` (Hex: `0x18e8f`)
-* **Currency Symbol**: `tCTC`
-* **Block Explorer URL**: `https://creditcoin-testnet.blockscout.com`
+```sh
+forge test -vvv
+```
 
----
+E2E scripts in `backend/src/scripts/` may send real testnet transactions. Read the selected script and confirm addresses, signers, and network before running it.
 
-## 🔍 5. Key Testing Flows to Validate
-
-1. **Borrower Credit Bureau & Attestcoin Proof** (`/dashboard/borrower/credit`):
-   - Connect EVM wallet.
-   - Scan DeFi history across Aave v3, Morpho, Spark, Compound, Maker, and Euler.
-   - Generate Attestcoin cryptographic proof for active borrow / repayment and submit to `SanadCreditOracle` (`0x74357E5FED91D6dDdd39847304b8651634693A00`).
-   - Observe on-chain score dynamically recalculate and upgrade tier (Bronze/Silver/Gold).
-
-2. **Investor Liquidity Pool** (`/dashboard`):
-   - Connect on Creditcoin CC3.
-   - Use the **Sanad Liquidity Pool** manager to execute a payable deposit of native tCTC into `SanadLiquidityPool` (`0x0Ba0B4cecb4c5Ad16043744b504059E95b1fCE70`).
-   - View updated LP stake, pool share, and browse asset-backed SAG notes (`/dashboard/browse`).
-
-3. **Pawnshop Gold Origination** (`/pawnshop/nfts/new`):
-   - Submit gold specs (weight, 22K/916 karat purity) to get AI valuation and mint SAG NFT collateral receipt.
-
-4. **Regulator & Compliance Oversight** (`/admin/compliance`):
-   - Check real-time audit ledger stream.
-   - Test targeted **Token Freeze / Address Freeze** with compliance case numbers.
-   - Test **Administrative Seizure / Wipe** dialog.
+For an application walkthrough, see the [demo guide](demo-pitch-script.md). For optional appraisal support, see [Python setup](../development/python-setup.md).

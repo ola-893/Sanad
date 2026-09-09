@@ -1,5 +1,8 @@
 # Production deployment
 
+Run commands from the repository root unless another directory is specified.
+This is an operational runbook, not a live deployment-status report.
+
 Deploy from the repository root, not `backend/`. The Docker build includes the
 Node API and `agent/` Python evaluator. Local environment files are excluded.
 

@@ -217,7 +217,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
     address public investorVaultAddress;
 
     // =========================================================================
-    // PROVEN CROSS-CHAIN INVESTOR CAPITAL & REPUTATION LEDGER (Cr3dX Separation)
+    // PROVEN CROSS-CHAIN INVESTOR CAPITAL & REPUTATION LEDGER (Credit Separation)
     // Value stays where it landed (Sepolia treasury). CC3 records cryptographic truth
     // without inflating unbacked withdrawable native lpBalances.
     // =========================================================================
@@ -364,7 +364,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         // 7. Mark source transaction as settled to prevent replay
         processedSourceTransactions[sourceTxHash] = true;
 
-        // 8. Record verified cross-chain deposit in investor credit/reputation history (Cr3dX Separation)
+        // 8. Record verified cross-chain deposit in investor credit/reputation history (Credit Separation)
         // Value stays where it landed (Sepolia treasury). CC3 records cryptographic truth without unbacked LP balance inflation.
         investorProvenDeposits[from].push(
             ProvenInvestorDeposit({
@@ -391,7 +391,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
 
     /**
      * @notice Verifies an Attestcoin inclusion proof on-chain for a peer-to-peer cross-chain loan funding event on Sepolia.
-     * @dev Follows Cr3dX separation: real ETH moved directly from investor to borrower on Sepolia in InvestorVault.fundLoan().
+     * @dev Follows Credit separation: real ETH moved directly from investor to borrower on Sepolia in InvestorVault.fundLoan().
      *      This CC3 function verifies the cryptographic proof and updates CC3 accounting/bookkeeping only.
      *      NO native CTC is transferred out of the pool (address(this).balance and totalPoolLiquidity remain untouched).
      *      The verified sender "from" extracted directly from the signed transaction envelope is the sole source of truth for investor identity.
@@ -480,7 +480,7 @@ contract SanadLiquidityPool is Ownable, ReentrancyGuard {
         // 8. Mark source transaction as settled to prevent replay
         processedSourceTransactions[sourceTxHash] = true;
 
-        // 9. Bookkeeping on CC3 (Cr3dX Separation: DO NOT disburse CTC!)
+        // 9. Bookkeeping on CC3 (Credit Separation: DO NOT disburse CTC!)
         tokenLoanBalance[tokenId] = value;
         loanInvestors[tokenId] = from;
 

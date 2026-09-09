@@ -1,106 +1,32 @@
-# 📚 Sanad Protocol Documentation
+# Sanad documentation
 
-Welcome to the Sanad Protocol documentation. This directory contains all project documentation organized by category.
+Start with setup if you want to run the project, or architecture if you want to understand it.
 
-## 📖 Table of Contents
+| Read | Purpose |
+| --- | --- |
+| [Quickstart](guides/quickstart-guide.md) | Local installation, configuration, and verification |
+| [Architecture](architecture/overview.md) | Source map, loan workflow, authentication, and trust boundaries |
+| [Credit bureau](architecture/backend-credit-bureau.md) | Discovery, batch proving, API, and frontend integration |
+| [Production deployment](deployment/production.md) | Railway/Netlify runbook, database safety, and image troubleshooting |
+| [Design direction](architecture/design-direction.md) | Visual design system and UI acceptance criteria |
+| [Python evaluator](development/python-setup.md) | Optional evaluator setup and troubleshooting |
+| [Demo walkthrough](guides/demo-pitch-script.md) | Reproducible demonstration and claim boundaries |
+| [White paper](white-paper.md) | Detailed protocol description, equations, references, and roadmap |
 
-### 🚀 [Deployment](./deployment/)
-Documentation for deploying Sanad to various platforms.
+## Source of truth
 
-- **[Railway Deployment Guide](./deployment/railway-deployment.md)** - Deploy to Railway (FREE tier, recommended)
-- **[Render Deployment Guide](./deployment/render-deployment.md)** - Alternative: Deploy to Render
+- Contract addresses: [deployed-addresses.ts](../backend/src/config/deployed-addresses.ts).
+- Database models: [db.schema.ts](../backend/src/db/db.schema.ts).
+- Production database baseline: [bootstrap.sql](../backend/postgres/bootstrap.sql).
+- API behavior: [backend feature routes](../backend/src/features/) and [credit-bureau routes](../backend/src/core/credit-bureau/credit-oracle.routes.ts).
+- Dependencies and scripts: [backend package](../backend/package.json) and [frontend package](../frontend/package.json).
 
-### 🏗️ [Architecture](./architecture/)
-System architecture, design documents, and technical specifications.
+The old SQL/API snapshots in `architecture/` are legacy reference artifacts, not migration inputs or an authoritative API contract. Use the sources above for implementation work.
 
-- **[Database Schema](./architecture/database-schema.sql)** - PostgreSQL database schema
-- **[Database Interlinking Matrix](./architecture/database-interlinking-matrix.md)** - Database relationships and connections
-- **[API Documentation](./architecture/api-documentation.json)** - REST API specifications
-- **[Functional Requirements Document](./architecture/functional-requirements-document.md)** - FRD for the entire system
-- **[Detailed Frontend-Backend FRD](./architecture/detailed-frontend-backend-frd.md)** - Frontend and backend requirements
-- **[Technical Requirements](./architecture/technical-requirements.md)** - Technical specs and constraints
-- **[Design Direction](./architecture/design-direction.md)** - UI/UX design guidelines
-- **[Suyula Liquid Project Plan](./architecture/suyula-liquid-project-plan.md)** - Project planning documentation
+## Documentation policy
 
-**Component Documentation:**
-- **[Backend Credit Bureau](./architecture/backend-credit-bureau.md)** - Credit bureau service architecture
-- **[Backend Investor](./architecture/backend-investor.md)** - Investor service architecture
-- **[Backend Services](./architecture/backend-services.md)** - Backend services overview
-- **[Frontend Credit Bureau](./architecture/frontend-credit-bureau.md)** - Frontend credit bureau implementation
-- **[Frontend Auth](./architecture/frontend-auth.md)** - Authentication system documentation
+Keep maintained project Markdown here; the repository root README is the entry point. Do not duplicate documents under frontend or backend folders. Third-party dependency documentation stays with its dependency.
 
-### 💻 [Development](./development/)
-Setup guides and development workflows.
+Keep durable instructions rather than one-off “deployment completed” reports. Record current deployment status in the hosting platform, and use Git history for superseded plans and incident reports. Never put private keys, access tokens, or production passwords in documentation.
 
-- **[Python Setup Guide](./development/python-setup.md)** - Setting up Python environment for AI agent
-
-### 📝 [Guides](./guides/)
-User guides, tutorials, and demo scripts.
-
-- **[Quickstart Guide](./guides/quickstart-guide.md)** - Quick start guide for testers
-- **[Demo & Pitch Script](./guides/demo-pitch-script.md)** - Demo walkthrough and pitch presentation
-
----
-
-## 🎯 Quick Links
-
-### For Developers
-- [Backend README](../backend/README.md)
-- [Frontend README](../frontend/README.md)
-- [Python Agent README](../agent/README.md)
-
-### For Deployment
-- [Render Deployment](./deployment/render-deployment.md)
-- [Docker Compose Setup](../docker-compose.yml)
-
-### For Understanding the System
-- [Architecture Overview](../README.md#architecture)
-- [Database Schema](./architecture/database-schema.sql)
-- [API Documentation](./architecture/api-documentation.json)
-
----
-
-## 📂 Documentation Structure
-
-```
-docs/
-├── README.md                          # This file
-├── deployment/                        # Deployment guides
-│   └── render-deployment.md
-├── architecture/                      # System architecture & design
-│   ├── database-schema.sql
-│   ├── api-documentation.json
-│   ├── functional-requirements-document.md
-│   ├── detailed-frontend-backend-frd.md
-│   ├── technical-requirements.md
-│   ├── design-direction.md
-│   ├── database-interlinking-matrix.md
-│   ├── backend-credit-bureau.md
-│   ├── backend-investor.md
-│   ├── backend-services.md
-│   ├── frontend-credit-bureau.md
-│   └── frontend-auth.md
-├── development/                       # Development setup
-│   └── python-setup.md
-└── guides/                           # User guides
-    ├── quickstart-guide.md
-    └── demo-pitch-script.md
-```
-
----
-
-## 🤝 Contributing to Documentation
-
-When adding new documentation:
-1. Place it in the appropriate category folder
-2. Use kebab-case for filenames (e.g., `my-new-guide.md`)
-3. Update this README.md with a link to your new doc
-4. Follow the existing markdown formatting style
-
----
-
-## 📧 Need Help?
-
-- Check the [Quickstart Guide](./guides/quickstart-guide.md)
-- Review the [Architecture Documentation](./architecture/)
-- See the main [README](../README.md)
+The white-paper source lives here; its generated PDF remains in `output/pdf/`. Rebuild it with the existing Python builder in that directory using an environment with ReportLab and pypdf.
