@@ -167,28 +167,31 @@ function getImageUrl(url: string): string {
 export default function BorrowerDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const requestId = params.id as string
+  const borrowerId = params.id as string
 
   const [request, setRequest] = useState<any>(null)
+  const [requests, setRequests] = useState<any[]>([])
+  const [investments, setInvestments] = useState<any[]>([])
   const [repayments, setRepayments] = useState<Repayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
     fetchDetail()
-  }, [requestId])
+  }, [borrowerId])
 
   const fetchDetail = async () => {
     setLoading(true)
     setError("")
     try {
-      const [reqRes, repayRes] = await Promise.all([
-        apiInstance.get(`/pledge-requests/${requestId}`),
-        apiInstance.get(`/pledge-requests/${requestId}/repayments`).catch(() => ({ data: { data: [] } })),
-      ])
-      if (reqRes.data.success) {
-        setRequest(reqRes.data.data)
-        setRepayments(repayRes.data?.data || [])
+      const res = await apiInstance.get(`/pledge-requests/borrowers/${borrowerId}`)
+      if (res.data.success && res.data.data) {
+        const data = res.data.data
+        const reqs = data.requests || []
+        setRequests(reqs)
+        setInvestments(data.investments || [])
+        setRepayments(data.repayments || [])
+        setRequest(reqs[0] || null)
       } else {
         setError("Loan not found")
       }
