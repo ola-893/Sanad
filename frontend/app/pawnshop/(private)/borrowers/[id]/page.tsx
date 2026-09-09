@@ -167,31 +167,39 @@ function getImageUrl(url: string): string {
 export default function BorrowerDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const borrowerId = params.id as string
+  const requestId = params.id as string
 
   const [request, setRequest] = useState<any>(null)
-  const [requests, setRequests] = useState<any[]>([])
   const [investments, setInvestments] = useState<any[]>([])
   const [repayments, setRepayments] = useState<Repayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [requests, setRequests] = useState<PledgeRequest[]>([])
 
   useEffect(() => {
     fetchDetail()
-  }, [borrowerId])
+  }, [requestId])
 
   const fetchDetail = async () => {
     setLoading(true)
     setError("")
     try {
-      const res = await apiInstance.get(`/pledge-requests/borrowers/${borrowerId}`)
+      const res = await apiInstance.get(`/pledge-requests/${requestId}`)
       if (res.data.success && res.data.data) {
-        const data = res.data.data
-        const reqs = data.requests || []
-        setRequests(reqs)
-        setInvestments(data.investments || [])
-        setRepayments(data.repayments || [])
-        setRequest(reqs[0] || null)
+        const loan = res.data.data
+        const [detailRes, repaymentRes] = await Promise.all([
+          apiInstance.get(`/pledge-requests/borrowers/${loan.borrowerId}`),
+          apiInstance.get(`/pledge-requests/${requestId}/repayments`),
+        ])
+        const detail = detailRes.data.data
+        const matchingLoan = detail.requests.find((item: PledgeRequest) => item.id === requestId)
+        if (!matchingLoan) throw new Error("Loan not found for this pawnshop")
+        setRequests(detail.requests)
+        setRequest({ ...loan, ...matchingLoan })
+        setInvestments((detail.investments || []).filter((item: any) =>
+          loan.sagTokenId != null && String(item.sagTokenId) === String(loan.sagTokenId)
+        ))
+        setRepayments(repaymentRes.data.data || [])
       } else {
         setError("Loan not found")
       }
