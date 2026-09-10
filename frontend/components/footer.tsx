@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Linkedin, X } from "lucide-react"
+
 import { Logo } from "@/components/logo"
 
 const quickLinks = [
@@ -42,22 +42,7 @@ export function Footer() {
               A Shariah-compliant gold-backed credit network. Physical gold collateral, tokenized on
               Creditcoin and financed by global liquidity.
             </p>
-            <div className="flex items-center gap-3 pt-2">
-              <a
-                href="https://x.com/sanadfinance"
-                className="text-ivory/60 transition-colors hover:text-[#E1BAC2]"
-                aria-label="X (Twitter)"
-              >
-                <X className="h-4 w-4" />
-              </a>
-              <a
-                href="https://www.linkedin.com/company/sanad-finance"
-                className="text-ivory/60 transition-colors hover:text-[#E1BAC2]"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-4 w-4" />
-              </a>
-            </div>
+
           </div>
 
           {/* Navigate */}

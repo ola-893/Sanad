@@ -54,7 +54,7 @@ export default function ContactPage() {
             <Phone className="h-5 w-5 text-[#E1BAC2]" />
           </div>
           <h3 className="font-display text-lg font-bold text-[#171414]">Phone</h3>
-          <p className="mt-1 text-[#4A4A4A]">+234 901 234 5678</p>
+          <p className="mt-1 text-[#4A4A4A]">+234 812 163 9716</p>
           <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
             Monday to Friday, 9AM to 6PM
           </p>
@@ -66,7 +66,7 @@ export default function ContactPage() {
           </div>
           <h3 className="font-display text-lg font-bold text-[#171414]">Email</h3>
           <p className="mt-1 text-[#4A4A4A]">
-            <a href="mailto:frank@unitedalliedbusiness.com">frank@unitedalliedbusiness.com</a>
+            <a href="mailto:deonoluleye@gmail.com">deonoluleye@gmail.com</a>
           </p>
           <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#4A4A4A]">
             We&apos;ll respond as soon as possible
