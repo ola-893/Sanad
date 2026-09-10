@@ -85,10 +85,10 @@ const steps = [
   {
     step: "02",
     title: "Appraise",
-    subtitle: "AI valuation",
+    subtitle: "Pawnshop verification",
     icon: TrendingDown,
-    description: "The AI gold evaluator computes fair market value, applies purity haircuts, and checks volatility against live policy.",
-    detail: "LTV, purity, and volatility — every risk metric computed transparently.",
+    description: "A verified pawnshop inspects the gold in person — verifying weight, karat, and purity — and appraises the collateral value.",
+    detail: "Physical custody and appraisal stay at the branch. No remote assumptions.",
   },
   {
     step: "03",

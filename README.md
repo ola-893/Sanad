@@ -2,6 +2,8 @@
 
 **Attestcoin-powered cross-chain credit verification for gold-backed financing on Creditcoin.**
 
+DeFi credit history is fragmented across chains. Gold-backed lenders can't verify it. Sanad solves this: borrowers pledge physical gold, pawnshops appraise it in person, and Attestcoin cryptographically verifies Ethereum DeFi history on Creditcoin CC3 — turning cross-chain activity into verifiable credit scores.
+
 Sanad connects borrowers, pawnshops, and investors by turning supported Ethereum transaction history into verifiable credit evidence on Creditcoin CC3. Its core integration is **Attestcoin readability**: Sanad contracts verify transaction proofs before recording credit events or updating financing evidence.
 
 [Open the app](https://sanad-protocol.netlify.app) · [Backend health](https://sanad-production-6fa3.up.railway.app/api/v1/health) · [Technical documentation](docs/README.md)
