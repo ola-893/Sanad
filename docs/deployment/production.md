@@ -4,7 +4,9 @@ Run commands from the repository root unless another directory is specified.
 This is an operational runbook, not a live deployment-status report.
 
 Deploy from the repository root, not `backend/`. The Docker build includes the
-Node API and `agent/` Python evaluator. Local environment files are excluded.
+Node API and legacy `agent/` assets; packaging those assets does not establish an implemented gold-evaluation feature. Local environment files are excluded.
+
+The deployment serves Sanad's Attestcoin proof-construction and submission workflow. Check source RPC access, CC3 connectivity, the configured oracle address, and signer authorization as well as HTTP health. See the [integration guide](../architecture/backend-credit-bureau.md) and [public proof evidence](../../README.md#proof-of-integration). Never send a test proof from a production signer as an unapproved health check.
 
 Always pass the explicit API service ID shown below. Never run `railway up`
 against the Postgres service: a source upload can deploy the Node app there,

@@ -1,5 +1,9 @@
 # Sanad Protocol — UI Design Direction (Flux)
 
+## Attestcoin product emphasis
+
+The interface should make Sanad's Attestcoin integration understandable: distinguish discovered candidates, proof construction, submission, confirmation, and accepted credit state. Show source-chain and CC3 explorer links together. Never label a queued proof as verified or a verified payment as automatically settled. The [integration overview](overview.md) and [public proof evidence](../../README.md#proof-of-integration) define the technical story this design supports. Do not present AI/Python gold appraisal as an implemented feature.
+
 **Status:** Governing direction for the full-product redesign (marketing + all portals)
 **Reference:** The **Flux** design system (warm editorial luxury DeFi) — `/Users/deonorla/Documents/Github/Flux`
 **Date:** August 2026 (v3 — supersedes Midnight & Copper and the deep-green/gold editorial direction)

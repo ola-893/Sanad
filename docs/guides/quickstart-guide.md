@@ -1,10 +1,12 @@
 # Local setup and testing
 
+This guide runs the application supporting Sanad's Attestcoin proof pipeline. Start with the [integration overview and proof evidence](../../README.md#proof-of-integration) to understand what to verify.
+
 Run these commands from the repository root unless stated otherwise. Use a disposable local database and testnet wallets; do not point local seed scripts at production.
 
 ## 1. Install dependencies
 
-You need Node.js 20 or newer, npm, Docker Compose, and an EVM wallet for on-chain tests. Foundry is needed for Solidity tests. Python is optional unless testing the evaluator.
+You need Node.js 20 or newer, npm, Docker Compose, and an EVM wallet for on-chain tests. Foundry is needed for Solidity tests.
 
 ```sh
 cd backend
@@ -78,4 +80,4 @@ forge test -vvv
 
 E2E scripts in `backend/src/scripts/` may send real testnet transactions. Read the selected script and confirm addresses, signers, and network before running it.
 
-For an application walkthrough, see the [demo guide](demo-pitch-script.md). For optional appraisal support, see [Python setup](../development/python-setup.md).
+For an application walkthrough, see the [demo guide](demo-pitch-script.md). Verify the source transaction, successful CC3 proof submission, and emitted credit update rather than relying on a frontend success message alone.

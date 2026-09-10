@@ -4,6 +4,8 @@ The **Sanad On-Chain Credit Bureau** is the primary core component for vetting b
 
 ## Architecture
 
+For an observed execution, see the [successful single-proof submission and score update](../../README.md#proof-of-integration). Source code for [proof construction](../../backend/src/core/credit-bureau/attestcoin-oracle-relayer.service.ts), [oracle validation](../../backend/src/contracts/SanadCreditOracle.sol), and the [frontend proof interface](../../frontend/core/credit-bureau/) makes the integration traceable end to end. A single successful transaction is not evidence that every protocol or batch path is fully validated.
+
 1. **Discovery & Indexer (`defi-discovery.service.ts`):**
    - Scans Ethereum Mainnet logs for historical lending transactions across Aave v3, Compound v3, Maple Finance, and Goldfinch.
    - Categorizes events into Positive Signals (Clean Repayments, Collateral Supply) and Negative Signals (Overcollateralized Liquidations, Undercollateralized Defaults).

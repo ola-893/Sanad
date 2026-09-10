@@ -1,72 +1,50 @@
-# Architecture overview
+# Attestcoin integration architecture
 
-Sanad is a gold-backed financing protocol with cross-chain credit verification. Borrowers pledge physical gold through licensed pawnshops, receive SAG collateral NFTs on Creditcoin, and unlock credit from on-chain investors. The system proves Ethereum lending history on Creditcoin using the Attestcoin protocol.
+Sanad connects supported Ethereum transaction evidence to credit profiles and gold-backed financing records on Creditcoin CC3. Attestcoin verification is the core integration; physical gold appraisal remains the pawnshop's responsibility.
 
-## Components
+## Components and source map
 
-| Component | Purpose |
+| Component | Responsibility |
 | --- | --- |
-| **Frontend** (`frontend/`) | Next.js borrower, investor, pawnshop, and admin portals |
-| **Backend API** (`backend/src/`) | Express REST API, loan lifecycle, credit proofs, scheduler |
-| **Database** (`backend/postgres/`) | PostgreSQL loan records, accounts, investments, KYC, images |
-| **Contracts** (`backend/src/contracts/sepolia/`) | Solidity payment (Sepolia), collateral & credit (Creditcoin CC3) |
-| **Agent** (`agent/`) | Python gold-risk evaluator (optional, integrates via REST) |
-| **Credit bureau** (`backend/src/core/credit-bureau/`) | Discovery, Attestcoin relayer, on-chain verification |
+| [Backend credit bureau](../../backend/src/core/credit-bureau/) | Discover candidates, construct proofs, submit transactions, and track results |
+| [Frontend credit bureau](../../frontend/core/credit-bureau/) | Display discovery, proof progress, and accepted credit profiles |
+| [SanadCreditOracle](../../backend/src/contracts/SanadCreditOracle.sol) | Call BlockProver, validate claims, record events, and recalculate credit |
+| [SanadLiquidityPool](../../backend/src/contracts/SanadLiquidityPool.sol) | Verify supported payment evidence and maintain pool/loan accounting |
+| [SAGToken](../../backend/src/contracts/SAGToken.sol) | Record collateral NFTs and enforce contract roles |
+| [Sepolia gateways](../../backend/src/contracts/sepolia/) | InvestorVault funding/disbursement and RepaymentGateway repayment/settlement |
+| [Database schema](../../backend/src/db/db.schema.ts) | Application accounts, pledge requests, investments, repayments, and proof references |
 
-## Trust boundaries
+## Proof execution boundary
 
-- **Physical custody:** Pawnshops hold real gold; the protocol does not replace physical appraisal or security.
-- **Off-chain KYC:** Application admins approve accounts; contract roles remain separate.
-- **Cross-chain credit:** Ethereum transaction history is proven on Creditcoin for credit decisions, not fund bridging.
-- **Testnet only:** Current deployment uses test-ETH (Sepolia) and CC3 testnet.
+1. Discovery identifies candidate source-chain transactions; it does not establish accepted credit history.
+2. The proof service uses the Attestcoin SDK and remote or raw proof construction. ChainInfo at `0xFD3` supports attestation queries.
+3. Encoded transactions, Merkle proofs, and continuity evidence are submitted to CC3.
+4. Sanad calls BlockProver at `0xFD2` and requires verification.
+5. Application-specific validation interprets the transaction before recording a credit or financing event.
+6. The frontend and database track results using transaction hashes; a queued job is not a confirmed proof.
 
-## Loan workflow
+The oracle supports up to ten events per batch with shared continuity evidence. Owner-authorized KYC submission skips an extra borrower signature, not verification.
 
-1. **KYC registration:** Borrower submits identity documents; admin reviews and approves.
-2. **Gold submission:** Borrower delivers physical gold to pawnshop; pawnshop records weight, purity, appraised value.
-3. **SAG minting:** Backend mints a Sanad Asset Gateway (SAG) NFT on Creditcoin representing the collateral.
-4. **Credit discovery:** Optional DeFi history scan on Ethereum mainnet; batch proof submitted to Creditcoin via Attestcoin.
-5. **Loan creation:** Borrower requests loan amount and duration; admin or pawnshop approves terms.
-6. **Investment:** Investors browse active loans, fund via Sepolia test-ETH payment gateway.
-7. **Repayment:** Borrower makes installment payments tracked on-chain and in database.
-8. **Settlement:** Upon full repayment, borrower reclaims gold; on default, pawnshop liquidates and investors recover proportionally.
+See [credit-bureau details](backend-credit-bureau.md) and the [README proof transaction](../../README.md#proof-of-integration) for inspectable evidence.
 
-## Authentication and roles
+## Financing and Credit separation
 
-- **Application auth:** JWT tokens issued after wallet signature verification; role stored in database (`User.role`).
-- **Contract roles:** Separate on-chain permissions (pawnshop operator, oracle owner, SAG minter) enforced by Solidity modifiers.
-- **Admin dashboard:** Application-level account approval, loan review, KYC verification. Does not grant contract ownership.
+Each pledge request identifies a distinct loan workflow. SAG means **Sanad Asset-backed Gold**; the NFT records collateral information, not independently verified physical possession.
 
-## Network configuration
+Sepolia funding flows from investor to pawnshop, then from pawnshop to borrower. Repayment and investor settlement are separate actions. Attestcoin lets CC3 record supported payment evidence; it does not automatically move ETH to CC3 or settle an investor.
 
-- **Ethereum Sepolia:** Test-ETH payment gateway contracts (`PaymentGateway`, `LoanPaymentProcessor`).
-- **Creditcoin CC3 Testnet:** SAG collateral NFTs (`SanadAssetGateway`), credit oracle (`SanadCreditOracle`), CC3 native proofs.
-- **Database:** PostgreSQL for off-chain loan state, investment records, user accounts.
-- **IPFS:** Gold images and appraisal metadata uploaded via Pinata.
+Native CTC liquidity and cross-chain funding evidence must remain separate ledgers. Some demo paths attach relayer-funded CTC; these are not a trustless bridge.
 
-Contract addresses: [deployed-addresses.ts](../../backend/src/config/deployed-addresses.ts).
+## Permissions and limitations
 
-## Key services
+Application authentication and roles are distinct from oracle ownership and SAG minting/compliance roles. Off-chain registration does not grant on-chain control.
 
-- **Scheduler** (`backend/src/bullmq/`): BullMQ job queues for loan state transitions, payment processing, interest accrual.
-- **Credit bureau** ([credit-bureau docs](backend-credit-bureau.md)): Discovery, Attestcoin proof relay, on-chain verification.
-- **Payment processing:** Monitors Sepolia gateway events, reconciles on-chain payments with database loan records.
-- **SAG lifecycle:** Mints collateral NFTs, tracks custody transfers, burns on redemption or liquidation.
+Source inclusion and financial interpretation are different checks. Pool payment paths check successful receipts; credit-oracle receipt checks and protocol-specific semantics need further hardening. Selected evidence does not establish complete borrower liabilities.
 
-## Data sources
+There is no implemented AI/Python gold-evaluation feature in the product scope documented here. Legacy files are not evidence of a shipped capability.
 
-- **Loan state:** PostgreSQL `loans` table is the application source of truth; on-chain events verify payments.
-- **Credit profiles:** Read directly from `SanadCreditOracle` contract on CC3; cached queries improve frontend performance.
-- **Gold metadata:** IPFS URIs referenced by SAG token metadata; images served via Pinata gateway or local uploads.
-- **DeFi history:** Discovery scans Ethereum mainnet via RPC; no local transaction archive.
+## Networks and roadmap
 
-See the [credit bureau architecture](backend-credit-bureau.md) for proof flow details and [white paper](../white-paper.md) for protocol equations and Shariah analysis.
+CC3 Testnet hosts the oracle, pool, and SAG contracts. Sepolia hosts InvestorVault and RepaymentGateway. Ethereum mainnet supplies historical DeFi activity. Within the current CC3 testnet setup, Attestcoin chain keys are 1 for Sepolia and 3 for mainnet; these differ from EVM chain IDs.
 
-## Legacy artifacts
-
-The `architecture/` folder contains snapshot exports (`api-documentation.json`, `database-schema.sql`) from earlier iterations. These are reference artifacts, not authoritative contracts or migration inputs. Use the live sources:
-
-- **API contracts:** [feature routes](../../backend/src/features/) and [controller implementations](../../backend/src/core/).
-- **Database schema:** [db.schema.ts](../../backend/src/db/db.schema.ts) and [production baseline](../../backend/postgres/bootstrap.sql).
-
-For deployment operations, see the [production runbook](../deployment/production.md).
+Use the [contract registry](../../backend/src/config/deployed-addresses.ts), [deployment runbook](../deployment/production.md), and [white paper](../white-paper.md) for configuration and limitations. Future writability requires supported deployments, redesigned escrow, authenticated messages, retries, and execution confirmation.
